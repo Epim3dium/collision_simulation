@@ -35,6 +35,8 @@ namespace EPI_NAMESPACE {
         ImGui::SFML::UpdateFontTexture();
     }
     void Sim::setup() {
+        pm.bounciness_select = eSelectMode::Max;
+        pm.friction_select = eSelectMode::Max;
 
         aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
         //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
@@ -69,64 +71,41 @@ namespace EPI_NAMESPACE {
         if (event.type == sf::Event::Closed)
             window.close();
         if(event.type == sf::Event::MouseButtonPressed) {
-            if(event.mouseButton.button == sf::Mouse::Button::Left) {
-                last_mpos = (vec2f)sf::Mouse::getPosition(window);
-                selected= nullptr;
-                for(auto& p : polys) {
-                    if(!p->isStatic && PointVPoly(last_mpos, *p)) {
-                        selected = p.get();
-                        p->isStatic = true;
-                        break;
-                    }
+            if(!hovered_now) {
+                polygon_creation_vec.push_back((vec2f)sf::Mouse::getPosition(window));
+            }else {
+                if(hovered_now) {
+                    isThrowing = true;
+                    last_mpos = (vec2f)sf::Mouse::getPosition(window);
                 }
-                for(auto& c : circs) {
-                    if(!c->isStatic && PointVCircle(last_mpos, *c)) {
-                        selected = c.get();
-                        c->isStatic = true;
-                        break;
-                    }
-                }
-                Node* closest_node = nullptr;
-                float closest_len = INFINITY;
-                /*
-                for(auto& n : softy.getNodes()) {
-                    float len = qlen(last_mpos - n->pos) - n->radius * n->radius;
-                    if(len < closest_len) {
-                        closest_len = len;
-                        closest_node = n.get();
-                    }
-                }
-                if(len(closest_node->pos - last_mpos) < 50.f) {
-                    selected_node = closest_node;
-                }
-                */
             }
         }
         if(event.type == sf::Event::MouseButtonReleased) {
             if(event.mouseButton.button == sf::Mouse::Button::Left) {
-                auto mpos = (vec2f)sf::Mouse::getPosition(window);
-                auto dif = mpos - last_mpos;
-                if(selected) {
-                    selected->isStatic = false;
-                    selected->vel += dif / 10.f;
-                }else if(!selected_node) {
-                    saved_point_vec.push_back(mpos);
+                if(isThrowing) {
+                    auto mpos = (vec2f)sf::Mouse::getPosition(window);
+                    auto dif = mpos - last_mpos;
+                    if(hovered_last) {
+                        hovered_last->vel += dif / 10.f;
+                    }else if(!selected_node) {
+                        polygon_creation_vec.push_back(mpos);
+                    }
+                    isThrowing = false;
                 }
-                selected = nullptr;
             }
             selected_node = nullptr;
         }
         if(event.type == sf::Event::KeyPressed) {
             if(event.key.code == sf::Keyboard::R) {
-                saved_point_vec.clear();
+                polygon_creation_vec.clear();
             }
             bool curIsStatic = false;
             if(event.key.code == sf::Keyboard::S) {
                 curIsStatic = true;
             }
-            if(event.key.code == sf::Keyboard::S || event.key.code == sf::Keyboard::D) {
-                if(saved_point_vec.size() >= 3) {
-                    RigidPolygon t(PolygonPoints(saved_point_vec));
+            if((event.key.code == sf::Keyboard::S || event.key.code == sf::Keyboard::D) && !hovered_now) {
+                if(polygon_creation_vec.size() >= 3) {
+                    RigidPolygon t(PolygonPoints(polygon_creation_vec));
                     t.isStatic = curIsStatic;
                     t.mass = 1.f;
                     polys.push_back(std::make_unique<RigidPolygon>(t));
@@ -134,40 +113,103 @@ namespace EPI_NAMESPACE {
                     pm.bind(polys.back().get());
                 }
                 else {
-                    RigidCircle t((vec2f)sf::Mouse::getPosition(window), 50.f);
+                    RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
                     t.isStatic = curIsStatic;
                     circs.push_back(std::make_unique<RigidCircle>(t));
                     pm.bind(circs.back().get());
                 }
-                saved_point_vec.clear();
-            }
-            if(event.key.code == sf::Keyboard::BackSpace && selected) {
+                polygon_creation_vec.clear();
+            }else if(event.key.code == sf::Keyboard::D && hovered_now) {
+                hovered_now->isStatic = false;
+            }else if(event.key.code == sf::Keyboard::S && hovered_now) {
+                hovered_now->isStatic = true;
+            } else if(event.key.code == sf::Keyboard::BackSpace && hovered_now) {
                 for(auto p = polys.begin(); p != polys.end(); p++) {
-                    if((void*)p->get() == (void*)selected) {
+                    if((void*)p->get() == (void*)hovered_now) {
                         polys.erase(p);
-                        pm.unbind((RigidPolygon*)selected);
+                        pm.unbind((RigidPolygon*)hovered_now);
                         break;
                     }
                 }
                 for(auto c = circs.begin(); c != circs.end(); c++) {
-                    if((void*)c->get() == (void*)selected) {
+                    if((void*)c->get() == (void*)hovered_now) {
                         circs.erase(c);
-                        pm.unbind((RigidCircle*)selected);
+                        pm.unbind((RigidCircle*)hovered_now);
                         break;
                     }
                 }
-
-                selected = nullptr;
+                hovered_now = nullptr;
+                hovered_last = nullptr;
             }
         }
     }
     void Sim::update() {
+        if(!isThrowing)
+        {
+            auto mpos = (vec2f)sf::Mouse::getPosition(window);
+            Rigidbody* found = nullptr;
+            for(auto& p : polys) {
+                if(PointVPoly(mpos, *p)) {
+                    found = p.get();
+                    break;
+                }
+            }
+            for(auto& c : circs) {
+                if(PointVCircle(mpos, *c)) {
+                    found = c.get();
+                    break;
+                }
+            }
+            hovered_now = found;
+            if(found) {
+                hovered_last = found;
+            }
+        }
 
         ImGui::Begin("Demo window");
         {
-            static int tsteps = 2;
-            ImGui::SliderInt("change step count" , &tsteps, 1, 50);
-            pm.steps = tsteps;
+            static int tab_open = 0;
+            ImGui::BeginTabBar("Settings");
+            {
+                static bool open_global = true;
+                if(ImGui::BeginTabItem("global settings", &open_global))
+                {
+                    static int tsteps = 2;
+                    ImGui::SliderInt("change step count" , &tsteps, 1, 50);
+                    pm.steps = tsteps;
+                    ImGui::SliderFloat("change gravity" , &pm.grav, -1.5f, 1.5f);
+                    ImGui::SliderFloat("radius" , &default_dynamic_radius, 10.f, 50.f);
+                    const char* select_modes[] = { "Min", "Max", "Avg" };
+                    {
+                        static int cur_choice_friction = 0;
+                        ImGui::ListBox("choose mode friction", &cur_choice_friction, select_modes, 3);
+                        pm.friction_select = (eSelectMode)cur_choice_friction;
+                    }
+                    {
+                        static int cur_choice_bounce = 0;
+                        ImGui::ListBox("choose mode bounce", &cur_choice_bounce, select_modes, 3);
+                        pm.bounciness_select = (eSelectMode)cur_choice_bounce;
+                    }ImGui::EndTabItem();
+                } 
+                static bool open_object = true;
+                if(ImGui::BeginTabItem("object settings", &open_object))
+                {
+                    if(hovered_last) {
+                        if(ImGui::Button("isStatic")) {
+                            hovered_last->isStatic = !hovered_last->isStatic;
+                        }
+                        ImGui::Text("properties of selected object");
+                        ImGui::SliderFloat("change mass" , &hovered_last->mass, 1.0f, 100.f);
+                        ImGui::SliderFloat("change air_drag" , &hovered_last->mat.air_drag, 0.0f, 1.f);
+                        ImGui::SliderFloat("change static fric" , &hovered_last->mat.sfriction, 0.0f, 1.f);
+                        ImGui::SliderFloat("change dynamic fric" , &hovered_last->mat.dfriction, 0.0f, 1.f);
+                        ImGui::SliderFloat("change restitution" , &hovered_last->mat.restitution, 0.0f, 1.f);
+                    }else {
+                        ImGui::Text("NONE SELECTED");
+                    }ImGui::EndTabItem();
+                }
+            }
+            ImGui::EndTabBar();
         }
         ImGui::End();
 
@@ -176,45 +218,60 @@ namespace EPI_NAMESPACE {
 
 
         pm.update();
-        window.clear(PastelColor::bg3);
+        window.clear(PastelColor::bg4);
         //drawing
 
         //drawFill(window, softy, PastelColor::blue);
         sf::CircleShape c(10.f);
         c.setPosition(softy.center() - vec2f(10.f, 10.f));
-        c.setFillColor(PastelColor::orange);
+        c.setFillColor(PastelColor::Orange);
         window.draw(c);
         //softy.update(pm.m_polys);
         for(auto& p : polys) {
-            clr_t color = PastelColor::gray;
-            if(!p->isStatic) {
-                if(PointVPoly((vec2f)sf::Mouse::getPosition(window), *p))
-                    color = PastelColor::red;
-                else
-                    color = PastelColor::aqua;
+            clr_t color = PastelColor::bg1;
+            if(PointVPoly((vec2f)sf::Mouse::getPosition(window), *p)) {
+                color = PastelColor::Red;
+            } else {
+                if(!p->isStatic) {
+                    color = PastelColor::Aqua;
+                }
             }
             drawFill(window, *p, color);
         }
         for(auto& c : circs) {
-            clr_t color = PastelColor::gray;
-            if(!c->isStatic) {
-                if(PointVCircle((vec2f)sf::Mouse::getPosition(window), *c))
-                    color = PastelColor::red;
-                else
-                    color = PastelColor::aqua;
+            clr_t color = PastelColor::Gray;
+            if(PointVCircle((vec2f)sf::Mouse::getPosition(window), *c)) {
+                color = PastelColor::Red;
+            } else {
+                if(!c->isStatic) {
+                    color = PastelColor::Aqua;
+                }
             }
             sf::CircleShape cs(c->radius);
             cs.setPosition(c->pos - vec2f(c->radius, c->radius));
             cs.setFillColor(color);
             window.draw(cs);
+            float r = 5.f;
+            cs.setRadius(r);
+            cs.setPosition(c->pos + vec2f(cos(c->rot), sin(c->rot)) * c->radius / 2.f - vec2f(r, r));
+            cs.setFillColor(PastelColor::bg3);
+            window.draw(cs);
         }
-        for(auto p : saved_point_vec) {
+        for(auto p : polygon_creation_vec) {
             float r = 5.f;
             sf::CircleShape c(r);
             c.setPosition(p - vec2f(r, r));
             c.setFillColor(clr_t::Magenta);
             window.draw(c);
         }
+        for(auto cp : g_cps) {
+            float r = 5.f;
+            sf::CircleShape c(r);
+            c.setPosition(cp - vec2f(r, r));
+            c.setFillColor(PastelColor::Purple);
+            window.draw(c);
+        }
+        g_cps.clear();
     }
     void Sim::Run() {
         sf::Clock DeltaClock;
@@ -249,7 +306,5 @@ namespace EPI_NAMESPACE {
         softy.m_nodes[idx - 2]->isStatic = true;
         */
         setup();
-
     }
-
 }

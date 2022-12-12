@@ -31,4 +31,3 @@
 *.exe
 *.out
 *.app
-./vendor/*

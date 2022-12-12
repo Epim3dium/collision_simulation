@@ -1,13 +1,15 @@
 #include "collision.h"
+#include <vector>
 namespace EPI_NAMESPACE {
     enum class eSelectMode {
         Min,
         Max,
         Avg
     };
+#define PHYSICS_MANAGER_MIN_VEL_THRESHOLD 0.001f
     class PhysicsManager {
         template<class T>
-        static T selectFrom(T a, T b, eSelectMode mode) {
+        static T m_selectFrom(T a, T b, eSelectMode mode) {
             switch(mode) {
                 case eSelectMode::Avg:
                     return (a + b) / 2.f;
@@ -17,7 +19,26 @@ namespace EPI_NAMESPACE {
                     return std::max(a, b);
             }
         }
-                
+        enum class eColType {
+            CircCirc,
+            PolyPoly,
+            CircPoly
+        };
+        struct ColInfo {
+            Rigidbody* rb1;
+            Rigidbody* rb2;
+            float overlap;
+            eColType type;
+        };
+
+        void processBroadPhase(std::vector<ColInfo>& col_list, std::vector<Rigidbody*>& no_col_list);
+        void processNarrowPhase(const std::vector<ColInfo>& col_info);
+        void processSleepingObjs(const std::vector<Rigidbody*>& no_col_list);
+
+        void m_processCollisions();
+
+        void m_updateRigidbody(Rigidbody& rb, float delT);
+        void m_updatePhysics(float delT);
 
     public:
         std::vector<RigidPolygon*> m_polys;
@@ -45,8 +66,6 @@ namespace EPI_NAMESPACE {
             if(itr != m_circs.end())
                 m_circs.erase(itr);
         }
-        void processCollisions();
-        void updatePhysics(float delT);
         void update();
 
         friend RigidPolygon;

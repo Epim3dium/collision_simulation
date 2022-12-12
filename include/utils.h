@@ -21,14 +21,15 @@ namespace EPI_NAMESPACE {
         const clr_t bg1 =    clr_t(0xa89984ff);
         const clr_t bg2 =    clr_t(0xbdae93ff);
         const clr_t bg3 =    clr_t(0xebdbb2ff);
-        const clr_t red =    clr_t(0x9d0006ff);
-        const clr_t green =  clr_t(0x79740eff);
-        const clr_t yellow = clr_t(0xb57614ff);
-        const clr_t blue =   clr_t(0x076678ff);
-        const clr_t purple = clr_t(0x8f3f71ff);
-        const clr_t aqua =   clr_t(0x427b58ff);
-        const clr_t orange = clr_t(0xaf3a03ff);
-        const clr_t gray =   clr_t(0x928374ff);
+        const clr_t bg4 =    clr_t(0x1E3A4CFF);
+        const clr_t Red =    clr_t(0x9d0006ff);
+        const clr_t Green =  clr_t(0x79740eff);
+        const clr_t Yellow = clr_t(0xb57614ff);
+        const clr_t Blue =   clr_t(0x076678ff);
+        const clr_t Purple = clr_t(0x8f3f71ff);
+        const clr_t Aqua =   clr_t(0x427b58ff);
+        const clr_t Orange = clr_t(0xaf3a03ff);
+        const clr_t Gray =   clr_t(0x928374ff);
     };
 
     float len(vec2f);

@@ -6,7 +6,9 @@
 #include <numeric>
 #include <vector>
 
+
 namespace EPI_NAMESPACE {
+    std::vector<vec2f > g_cps;
     bool possibleIntersection(const Polygon& r1, const Polygon& r2) {
         return AABBvAABB(r1.getAABB(), r2.getAABB());
     }
@@ -175,40 +177,56 @@ namespace EPI_NAMESPACE {
         return abs(mmoi);
     }
     void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
-           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, vec2f cp)
+           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps)
     {
-        auto inertia1 = rb1.inertia();
-        auto inertia2 = rb2.inertia();
-        if(inertia1 != 0.f)
-            inertia1 = 1.f / inertia1;
+        float mass1 = rb1.isStatic ? INFINITY : rb1.mass;
+        float mass2 = rb2.isStatic ? INFINITY : rb2.mass;
+        float inv_inertia1 = rb1.isStatic ? INFINITY : rb1.inertia();
+        float inv_inertia2 = rb2.isStatic ? INFINITY : rb2.inertia();
+        if(inv_inertia1 != 0.f)
+            inv_inertia1 = 1.f / inv_inertia1;
+        if(inv_inertia2 != 0.f)
+            inv_inertia2 = 1.f / inv_inertia2;
 
-        if(inertia2 != 0.f)
-            inertia2 = 1.f / inertia2;
-        vec2f rad1 = cp - pos1;
-        vec2f rad2 = cp - pos2;
-        vec2f rad1perp(-rad1.y, rad1.x);
-        vec2f rad2perp(-rad2.y, rad2.x);
-        vec2f p1ang_vel_lin = rad1perp * rb1.ang_vel;
-        vec2f p2ang_vel_lin = rad2perp * rb2.ang_vel;
 
-        //calculate relative velocity
-        vec2f rel_vel = (rb2.vel + p2ang_vel_lin) -
-            (rb1.vel + p1ang_vel_lin);
+        vec2f impulse (0, 0);
+        vec2f rb1vel(0, 0); float rb1ang_vel = 0.f;
+        vec2f rb2vel(0, 0); float rb2ang_vel = 0.f;
 
-        float j = getReactImpulse(rad1perp, inertia1, rb1.mass, rad2perp, inertia2, rb2.mass, bounce, rel_vel, cn);
-        vec2f impulse = cn * j - 
-            getFricImpulse(inertia1, rb1.mass, rad1perp, inertia2, rb2.mass, rad2perp, sfric, dfric, j, rel_vel, cn);
 
-        if(!rb1.isStatic) {
-            rb1.vel -= impulse / rb1.mass;
+        for(auto& cp : cps) {
+            g_cps.push_back(cp);
+            vec2f rad1 = cp - pos1;
+            vec2f rad2 = cp - pos2;
 
-            rb1.ang_vel += cross(impulse, rad1) * inertia1;
+            vec2f rad1perp(-rad1.y, rad1.x);
+            vec2f rad2perp(-rad2.y, rad2.x);
+
+            vec2f p1ang_vel_lin = rad1perp * rb1.ang_vel;
+            vec2f p2ang_vel_lin = rad2perp * rb2.ang_vel;
+
+            vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : rb1.vel + p1ang_vel_lin;
+            vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : rb2.vel + p2ang_vel_lin;
+
+            //calculate relative velocity
+            vec2f rel_vel = vel_sum2 - vel_sum1;
+
+            float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, cn);
+            impulse += cn * j - 
+                getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, cn);
+            if(!rb1.isStatic) {
+                rb1vel -= impulse / rb1.mass;
+                rb1ang_vel += cross(impulse, rad1) * inv_inertia1;
+            }
+            if(!rb2.isStatic) {
+                rb2vel += impulse / rb2.mass;
+                rb2ang_vel -= cross(impulse, rad2) * inv_inertia2;
+            }
         }
-        if(!rb2.isStatic) {
-            rb2.vel += impulse / rb2.mass;
-
-            rb2.ang_vel -= cross(impulse, rad2) * inertia2;
-        }
+        rb1.vel +=     rb1vel;
+        rb1.ang_vel += rb1ang_vel;
+        rb2.vel +=     rb2vel;
+        rb2.ang_vel += rb2ang_vel;
     }
     void handle(vec2f& pos, Rigidbody& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
         if(r1.isStatic && r2.isStatic) {
@@ -249,7 +267,7 @@ namespace EPI_NAMESPACE {
                 r1.pos += cn * overlap / 2.f;
                 r2.setPos(r2.getPos() + -cn * overlap / 2.f);
             }
-            processReaction(r1.pos, r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, cp);
+            processReaction(r1.pos, r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, {cp});
         }
 
     }
@@ -270,15 +288,13 @@ namespace EPI_NAMESPACE {
                 r1.setPos(r1.getPos() + cn * overlap / 2.f);
                 r2.setPos(r2.getPos() + -cn * overlap / 2.f);
             }
-            for(auto cp : cps)
-                processReaction(r1.getPos(), r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, cp);
+            processReaction(r1.getPos(), r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, cps);
         }
     }
     void handle(RigidCircle& r1, RigidCircle& r2, float restitution, float sfriction, float dfriction) {
         if(r1.isStatic && r2.isStatic) {
             return;
         }
-
         vec2f cn, cp;
         float overlap;
 
@@ -291,7 +307,7 @@ namespace EPI_NAMESPACE {
                 r1.pos += cn * overlap / 2.f;
                 r2.pos += -cn * overlap / 2.f;
             }
-            processReaction(r1.pos, r1, r1.mat, r2.pos, r2, r2.mat, restitution, sfriction, dfriction, cn, cp);
+            processReaction(r1.pos, r1, r1.mat, r2.pos, r2, r2.mat, restitution, sfriction, dfriction, cn, {cp});
         }
     }
     void RigidPolygon::addForce(vec2f force, vec2f cp) {
@@ -323,7 +339,7 @@ namespace EPI_NAMESPACE {
         float r1perp_dotN = dot(rad1perp, cn);
         float r2perp_dotN = dot(rad2perp, cn);
 
-        float denom = 1.f / mass1 + 1.f / mass2 + 
+        float denom = 1.f / mass1 + 1.f / mass2 +
             (r1perp_dotN * r1perp_dotN) *  p1inertia +
             (r2perp_dotN * r2perp_dotN) *  p2inertia;
 
@@ -331,7 +347,7 @@ namespace EPI_NAMESPACE {
         j /= denom;
         return j;
     }
-    vec2f getFricImpulse(float p1inertia, float mass1, vec2f rad1perp, float p2inertia, float mass2, const vec2f& rad2perp, 
+    vec2f getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1perp, float p2inv_inertia, float mass2, const vec2f& rad2perp, 
             float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn) {
         vec2f tangent = rel_vel - cn * dot(rel_vel, cn);
 
@@ -345,8 +361,8 @@ namespace EPI_NAMESPACE {
         float r2perp_dotT = dot(rad2perp, tangent);
 
         float denom = 1.f / mass1 + 1.f / mass2 + 
-            (r1perp_dotT * r1perp_dotT) *  p1inertia +
-            (r2perp_dotT * r2perp_dotT) *  p2inertia;
+            (r1perp_dotT * r1perp_dotT) *  p1inv_inertia +
+            (r2perp_dotT * r2perp_dotT) *  p2inv_inertia;
 
         float contact_vel_mag = dot(rel_vel, tangent);
         float jt = -contact_vel_mag;

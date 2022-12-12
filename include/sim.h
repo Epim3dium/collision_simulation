@@ -1,5 +1,6 @@
 #pragma once
 #include "SFML/Window/Event.hpp"
+#include "collision.h"
 #include "imgui.h"
 
 #include "utils.h"
@@ -26,10 +27,15 @@ namespace EPI_NAMESPACE {
         RigidPolygon model_softbody = PolygonReg(vec2f(500.f, 500.f), 0.f, 5U, 100.f);
         SoftBody softy;
 
-        std::vector<vec2f> saved_point_vec;
+        std::vector<vec2f> polygon_creation_vec;
         vec2f last_mpos;
-        Rigidbody* selected = nullptr;
+
+        bool isThrowing = false;
+        Rigidbody* hovered_last = nullptr;
+        Rigidbody* hovered_now = nullptr;
         Node* selected_node = nullptr;
+
+        float default_dynamic_radius = 50.f;
 
 
         void Run();

@@ -5,26 +5,31 @@
 #include <cstddef>
 #include <vector>
 namespace EPI_NAMESPACE {
-    extern std::vector<vec2f > m_cps;
+    extern std::vector<vec2f > g_cps;
     struct Material {
         float restitution = 0.0f;
         float sfriction = 0.4f;
         float dfriction = 0.4f;
-        float air_drag = 0.01f;
+        float air_drag = 0.0001f;
     };
     struct Rigidbody {
         bool isStatic = false;
+        bool isSleeping = false;
         vec2f vel;
         float ang_vel = 0.f;
         float mass = 1.f;
         Material mat;
         virtual float inertia() const { return INFINITY; };
+        virtual void updateMovement(float delT = 1.f) {}
     };
 
     float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
 
     class RigidPolygon  : public Rigidbody, public Polygon {
     private:
+        float m_inertia;
+        float m_maxr = 0.f;
+    public:
         void onChange() {
             m_maxr = 0.f;
             for(auto& p : getVertecies())
@@ -32,16 +37,13 @@ namespace EPI_NAMESPACE {
             //since getInertia doesnt work just assume everything is a circle
             m_inertia = getInertia(vec2f(0, 0), getModelVertecies(), mass);
         }
-        float m_inertia;
-        float m_maxr = 0.f;
-    public:
-        float inertia() const override {
-            return m_inertia;
-        }
-        float getMaxR() const {
-            return m_maxr;
-        }
+        inline float getMaxR() const { return m_maxr; }
         void addForce(vec2f dir, vec2f cp);
+        float inertia() const override { return m_inertia; }
+        void updateMovement(float delT) override {
+            setPos(getPos() + this->vel * delT);
+            setRot(getRot() + this->ang_vel * delT);
+        }
 
         RigidPolygon(const Polygon& poly) : Polygon(poly) { onChange(); }
         RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : Polygon(pos_, rot_, model_) 
@@ -51,8 +53,13 @@ namespace EPI_NAMESPACE {
     };
     struct RigidCircle : public Rigidbody, public Circle {
         public:
+        float rot;
         float inertia() const override {
             return 0.25f * mass * radius * radius;
+        }
+        void updateMovement(float delT) override {
+            this->pos += vel * delT;
+            this->rot += ang_vel * delT;
         }
         RigidCircle(const Circle& c) : Circle(c) {}
         RigidCircle(vec2f pos, float radius) : Circle(pos, radius) {}
@@ -63,7 +70,7 @@ namespace EPI_NAMESPACE {
             float restitution, const vec2f& rel_vel, vec2f cn);
 
     void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
-           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, vec2f cp);
+           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps);
 
     bool possibleIntersection(const Polygon& r1, const Polygon& r2);
     bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn = nullptr, float* t = nullptr);
