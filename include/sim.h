@@ -33,7 +33,9 @@ namespace EPI_NAMESPACE {
         bool isThrowing = false;
         Rigidbody* hovered_last = nullptr;
         Rigidbody* hovered_now = nullptr;
-        Node* selected_node = nullptr;
+        //Node* selected_node = nullptr;
+        float pin_angle = 0.f;
+        vec2f pin_offset;
 
         float default_dynamic_radius = 50.f;
 

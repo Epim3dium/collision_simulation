@@ -1,4 +1,5 @@
 #include "collision.h"
+#include <algorithm>
 #include <vector>
 namespace EPI_NAMESPACE {
     enum class eSelectMode {
@@ -29,17 +30,25 @@ namespace EPI_NAMESPACE {
             Rigidbody* rb2;
             float overlap;
             eColType type;
+            vec2f col_pos;
         };
 
-        void processBroadPhase(std::vector<ColInfo>& col_list, std::vector<Rigidbody*>& no_col_list);
+        std::vector<ColInfo> processBroadPhase();
+        void sortCollisionList(std::vector<ColInfo>& col_list);
         void processNarrowPhase(const std::vector<ColInfo>& col_info);
-        void processSleepingObjs(const std::vector<Rigidbody*>& no_col_list);
+        void processDormant();
 
         void m_processCollisions();
 
         void m_updateRigidbody(Rigidbody& rb, float delT);
         void m_updatePhysics(float delT);
 
+        std::vector<Rigidbody*> m_rigidbodies;
+        void m_unbindFromRb(Rigidbody* rb) {
+            auto itr = std::find(m_rigidbodies.begin(), m_rigidbodies.end(), rb);
+            if(itr != m_rigidbodies.end())
+                m_rigidbodies.erase(itr);
+        }
     public:
         std::vector<RigidPolygon*> m_polys;
         std::vector<RigidCircle*> m_circs;
@@ -52,16 +61,20 @@ namespace EPI_NAMESPACE {
 
         inline void bind(RigidPolygon* rb) {
             m_polys.push_back(rb);
+            m_rigidbodies.push_back(rb);
         }
         inline void bind(RigidCircle* rb) {
             m_circs.push_back(rb);
+            m_rigidbodies.push_back(rb);
         }
         void unbind(RigidPolygon* rb) {
+            m_unbindFromRb(rb);
             auto itr = std::find(m_polys.begin(), m_polys.end(), rb);
             if(itr != m_polys.end())
                 m_polys.erase(itr);
         }
         void unbind(RigidCircle* rb) {
+            m_unbindFromRb(rb);
             auto itr = std::find(m_circs.begin(), m_circs.end(), rb);
             if(itr != m_circs.end())
                 m_circs.erase(itr);

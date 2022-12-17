@@ -31,3 +31,8 @@
 *.exe
 *.out
 *.app
+
+#vendors
+vendor/
+
+notes.md

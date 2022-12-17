@@ -1,5 +1,5 @@
 CC=clang++
-DEPS=$(wildcard include/*.h)
+DEPS=$(wildcard include/*.h) $(wildcard include/*.hpp)
 
 CFLAGS=@compile_flags.txt
 

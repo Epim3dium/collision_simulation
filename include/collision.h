@@ -3,24 +3,56 @@
 #include "utils.h"
 #include <cmath>
 #include <cstddef>
+#include <iterator>
 #include <vector>
 namespace EPI_NAMESPACE {
-    extern std::vector<vec2f > g_cps;
+    struct Rigidbody;
+
+    struct Collider {
+    private:
+        static size_t getNextLayer() {
+            static size_t id = 0;
+            return ++id;
+        }
+    public:
+        size_t layer;
+        bool isSleeping = false;
+        Rigidbody* now_colliding = nullptr;
+        Collider() : layer(getNextLayer()) {}
+    };
     struct Material {
         float restitution = 0.0f;
         float sfriction = 0.4f;
         float dfriction = 0.4f;
         float air_drag = 0.0001f;
     };
-    struct Rigidbody {
+#define MIN_VEL_TO_SLEEP 0.1f
+#define MIN_ANG_VEL_TO_SLEEP 0.09f
+#define MIN_TIME_DORMANT 15U
+    class Rigidbody {
+        static size_t getNextID()  {
+            static size_t s_id = 1;
+            return s_id++;
+        }
+        size_t m_id;
+    public:
         bool isStatic = false;
-        bool isSleeping = false;
         vec2f vel;
         float ang_vel = 0.f;
         float mass = 1.f;
         Material mat;
+        Collider collider;
+
         virtual float inertia() const { return INFINITY; };
         virtual void updateMovement(float delT = 1.f) {}
+        void addForce(vec2f force) {
+            vel += force / mass;
+        }
+
+        size_t getID() const {
+            return m_id;
+        }
+        Rigidbody() : m_id(getNextID()) {}
     };
 
     float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
@@ -29,7 +61,6 @@ namespace EPI_NAMESPACE {
     private:
         float m_inertia;
         float m_maxr = 0.f;
-    public:
         void onChange() {
             m_maxr = 0.f;
             for(auto& p : getVertecies())
@@ -37,12 +68,16 @@ namespace EPI_NAMESPACE {
             //since getInertia doesnt work just assume everything is a circle
             m_inertia = getInertia(vec2f(0, 0), getModelVertecies(), mass);
         }
+    public:
         inline float getMaxR() const { return m_maxr; }
         void addForce(vec2f dir, vec2f cp);
-        float inertia() const override { return m_inertia; }
+        float inertia() const override { 
+            return m_inertia; 
+        }
         void updateMovement(float delT) override {
             setPos(getPos() + this->vel * delT);
             setRot(getRot() + this->ang_vel * delT);
+            m_inertia = getInertia(vec2f(0, 0), getModelVertecies(), mass);
         }
 
         RigidPolygon(const Polygon& poly) : Polygon(poly) { onChange(); }
@@ -74,15 +109,15 @@ namespace EPI_NAMESPACE {
 
     bool possibleIntersection(const Polygon& r1, const Polygon& r2);
     bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn = nullptr, float* t = nullptr);
-    void handle(RigidPolygon& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
+    bool handle(RigidPolygon& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
 
     bool possibleIntersection(const Circle& r1, const Polygon& r2);
     bool detect(const Circle &c, const Polygon &r, vec2f* cn = nullptr, float* overlap = nullptr, vec2f* cp = nullptr);
-    void handle(RigidCircle& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
+    bool handle(RigidCircle& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
 
     bool detect(const Circle&c1, const Circle &c2, vec2f* cn = nullptr, float* t = nullptr, vec2f* cp = nullptr);
-    void handle(RigidCircle& r1, RigidCircle& r2, float restitution, float sfriction, float dfriction);
+    bool handle(RigidCircle& r1, RigidCircle& r2, float restitution, float sfriction, float dfriction);
 
     bool detect(const vec2f& v, const Polygon &c2, vec2f* cn = nullptr, float* t = nullptr, vec2f* cp = nullptr);
-    void handle(vec2f& pos, Rigidbody& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
+    bool handle(vec2f& pos, Rigidbody& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
 }

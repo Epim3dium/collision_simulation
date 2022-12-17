@@ -5,7 +5,10 @@
 #include <numeric>
 namespace EPI_NAMESPACE {
     vec2f norm(vec2f v) {
-        return v / len(v);
+        float l = len(v);
+        if(l == 0.f)
+            return v;
+        return v / l;
     }
     float len(vec2f v) {
         return sqrt(v.x * v.x + v.y * v.y);

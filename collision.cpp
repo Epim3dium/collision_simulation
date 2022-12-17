@@ -2,13 +2,13 @@
 #include "col_utils.h"
 #include "utils.h"
 #include <algorithm>
+#include <random>
 #include <cmath>
 #include <numeric>
 #include <vector>
 
 
 namespace EPI_NAMESPACE {
-    std::vector<vec2f > g_cps;
     bool possibleIntersection(const Polygon& r1, const Polygon& r2) {
         return AABBvAABB(r1.getAABB(), r2.getAABB());
     }
@@ -100,7 +100,7 @@ namespace EPI_NAMESPACE {
         return true;
     }
     bool possibleIntersection(const Circle& r1, const Polygon& r2) {
-        return len(r1.pos - r2.getPos()) < r1.radius + len(r2.getAABB().size());
+        return len(r1.pos - r2.getPos()) < r1.radius + len(r2.getAABB().size()) / 2.f;
     }
     bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f* cp) {
         vec2f max_reach = c.pos + norm(r.getPos() - c.pos) * c.radius;
@@ -193,9 +193,7 @@ namespace EPI_NAMESPACE {
         vec2f rb1vel(0, 0); float rb1ang_vel = 0.f;
         vec2f rb2vel(0, 0); float rb2ang_vel = 0.f;
 
-
         for(auto& cp : cps) {
-            g_cps.push_back(cp);
             vec2f rad1 = cp - pos1;
             vec2f rad2 = cp - pos2;
 
@@ -212,8 +210,10 @@ namespace EPI_NAMESPACE {
             vec2f rel_vel = vel_sum2 - vel_sum1;
 
             float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, cn);
-            impulse += cn * j - 
-                getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, cn);
+            vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, cn);
+            impulse += cn * j - fj;
+
+            impulse /= (float)cps.size();
             if(!rb1.isStatic) {
                 rb1vel -= impulse / rb1.mass;
                 rb1ang_vel += cross(impulse, rad1) * inv_inertia1;
@@ -228,9 +228,9 @@ namespace EPI_NAMESPACE {
         rb2.vel +=     rb2vel;
         rb2.ang_vel += rb2ang_vel;
     }
-    void handle(vec2f& pos, Rigidbody& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
+    bool handle(vec2f& pos, Rigidbody& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
         if(r1.isStatic && r2.isStatic) {
-            return;
+            return false;
         }
         vec2f cn;
         vec2f cp;
@@ -247,11 +247,13 @@ namespace EPI_NAMESPACE {
             if(!r2.isStatic) {
                 r2.vel += impulse / r2.mass;
             }
+            return true;
         }
+        return false;
     }
-    void handle(RigidCircle& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
+    bool handle(RigidCircle& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
         if(r1.isStatic && r2.isStatic) {
-            return;
+            return false;
         }
 
         vec2f cn;
@@ -268,12 +270,14 @@ namespace EPI_NAMESPACE {
                 r2.setPos(r2.getPos() + -cn * overlap / 2.f);
             }
             processReaction(r1.pos, r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, {cp});
+            return true;
         }
+        return false;
 
     }
-    void handle(RigidPolygon& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
+    bool handle(RigidPolygon& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction) {
         if(r1.isStatic && r2.isStatic) {
-            return;
+            return false;
         }
         vec2f cn;
         float overlap;
@@ -289,11 +293,13 @@ namespace EPI_NAMESPACE {
                 r2.setPos(r2.getPos() + -cn * overlap / 2.f);
             }
             processReaction(r1.getPos(), r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, cps);
+            return true;
         }
+        return false;
     }
-    void handle(RigidCircle& r1, RigidCircle& r2, float restitution, float sfriction, float dfriction) {
+    bool handle(RigidCircle& r1, RigidCircle& r2, float restitution, float sfriction, float dfriction) {
         if(r1.isStatic && r2.isStatic) {
-            return;
+            return false;
         }
         vec2f cn, cp;
         float overlap;
@@ -308,7 +314,9 @@ namespace EPI_NAMESPACE {
                 r2.pos += -cn * overlap / 2.f;
             }
             processReaction(r1.pos, r1, r1.mat, r2.pos, r2, r2.mat, restitution, sfriction, dfriction, cn, {cp});
+            return true;
         }
+        return false;
     }
     void RigidPolygon::addForce(vec2f force, vec2f cp) {
         cp = findPointOnEdge(cp, *this);
@@ -369,10 +377,11 @@ namespace EPI_NAMESPACE {
         jt /= denom;
 
         vec2f friction_impulse;
-        if(abs(jt) <= j * sfric)
+        if(abs(jt) <= j * sfric) {
             friction_impulse = tangent * jt;
-        else
+        } else {
             friction_impulse = tangent * -j * dfric;
+        }
         return friction_impulse;
     }
 }

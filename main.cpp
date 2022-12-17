@@ -1,4 +1,5 @@
 #include "sim.h"
+#include <ostream>
 
 using namespace epi;
 int main() {
@@ -6,6 +7,4 @@ int main() {
     s.Run();
 
     return 0;
-
-
 }
