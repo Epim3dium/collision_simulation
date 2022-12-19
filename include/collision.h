@@ -10,7 +10,7 @@ namespace EPI_NAMESPACE {
 
     struct Collider {
     private:
-        static size_t getNextLayer() {
+        inline static size_t getNextLayer() {
             static size_t id = 0;
             return ++id;
         }
@@ -30,7 +30,7 @@ namespace EPI_NAMESPACE {
 #define MIN_ANG_VEL_TO_SLEEP 0.09f
 #define MIN_TIME_DORMANT 15U
     class Rigidbody {
-        static size_t getNextID()  {
+        inline static size_t getNextID()  {
             static size_t s_id = 1;
             return s_id++;
         }
@@ -45,11 +45,11 @@ namespace EPI_NAMESPACE {
 
         virtual float inertia() const { return INFINITY; };
         virtual void updateMovement(float delT = 1.f) {}
-        void addForce(vec2f force) {
+        inline void addForce(vec2f force) {
             vel += force / mass;
         }
 
-        size_t getID() const {
+        inline size_t getID() const {
             return m_id;
         }
         Rigidbody() : m_id(getNextID()) {}
@@ -60,45 +60,40 @@ namespace EPI_NAMESPACE {
     class RigidPolygon  : public Rigidbody, public Polygon {
     private:
         float m_inertia;
-        float m_maxr = 0.f;
-        void onChange() {
-            m_maxr = 0.f;
-            for(auto& p : getVertecies())
-                m_maxr = std::max(m_maxr, len(p - getPos()));
-            //since getInertia doesnt work just assume everything is a circle
+        inline void onChange() {
             m_inertia = getInertia(vec2f(0, 0), getModelVertecies(), mass);
         }
     public:
-        inline float getMaxR() const { return m_maxr; }
         void addForce(vec2f dir, vec2f cp);
-        float inertia() const override { 
+        inline float inertia() const override { 
             return m_inertia; 
         }
-        void updateMovement(float delT) override {
+        inline void updateMovement(float delT) override {
             setPos(getPos() + this->vel * delT);
             setRot(getRot() + this->ang_vel * delT);
-            m_inertia = getInertia(vec2f(0, 0), getModelVertecies(), mass);
         }
 
-        RigidPolygon(const Polygon& poly) : Polygon(poly) { onChange(); }
-        RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : Polygon(pos_, rot_, model_) 
-        { 
+        RigidPolygon(const Polygon& poly) : Polygon(poly) { 
+            onChange(); 
+        }
+        RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : Polygon(pos_, rot_, model_) { 
             onChange(); 
         }
     };
     struct RigidCircle : public Rigidbody, public Circle {
         public:
         float rot;
-        float inertia() const override {
+        inline float inertia() const override {
             return 0.25f * mass * radius * radius;
         }
-        void updateMovement(float delT) override {
+        inline void updateMovement(float delT) override {
             this->pos += vel * delT;
             this->rot += ang_vel * delT;
         }
         RigidCircle(const Circle& c) : Circle(c) {}
         RigidCircle(vec2f pos, float radius) : Circle(pos, radius) {}
     };
+
     vec2f getFricImpulse(float p1inertia, float mass1, vec2f rad1perp, float p2inertia, float mass2, const vec2f& rad2perp, 
             float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn);
     float getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const vec2f& rad2perp, float p2inertia, float mass2, 
@@ -115,9 +110,7 @@ namespace EPI_NAMESPACE {
     bool detect(const Circle &c, const Polygon &r, vec2f* cn = nullptr, float* overlap = nullptr, vec2f* cp = nullptr);
     bool handle(RigidCircle& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
 
+    bool possibleIntersection(const Circle& r1, const Circle& r2);
     bool detect(const Circle&c1, const Circle &c2, vec2f* cn = nullptr, float* t = nullptr, vec2f* cp = nullptr);
     bool handle(RigidCircle& r1, RigidCircle& r2, float restitution, float sfriction, float dfriction);
-
-    bool detect(const vec2f& v, const Polygon &c2, vec2f* cn = nullptr, float* t = nullptr, vec2f* cp = nullptr);
-    bool handle(vec2f& pos, Rigidbody& r1, RigidPolygon& r2, float restitution, float sfriction, float dfriction);
 }

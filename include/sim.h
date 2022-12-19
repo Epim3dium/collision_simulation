@@ -7,12 +7,11 @@
 #include "col_utils.h"
 #include "physics_manager.hpp"
 #include "utils.h"
-#include "soft_body.hpp"
 
 namespace EPI_NAMESPACE {
     class Sim {
         sf::RenderWindow window;
-        public:
+    public:
 
         float m_width, m_height;
         PhysicsManager pm;
@@ -25,7 +24,6 @@ namespace EPI_NAMESPACE {
         AABB aabb_inner = aabb_outer;
 
         RigidPolygon model_softbody = PolygonReg(vec2f(500.f, 500.f), 0.f, 5U, 100.f);
-        SoftBody softy;
 
         std::vector<vec2f> polygon_creation_vec;
         vec2f last_mpos;

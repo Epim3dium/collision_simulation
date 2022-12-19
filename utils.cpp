@@ -25,6 +25,9 @@ namespace EPI_NAMESPACE {
     vec2f sign(vec2f x) {
         return { std::copysign(1.f, x.x), std::copysign(1.f, x.y) };
     }
+    AABB AABBfromCircle(const Circle& c) {
+        return AABB(c.pos - vec2f(c.radius, c.radius), c.pos + vec2f(c.radius, c.radius));
+    }
     AABB AABBmm(vec2f min, vec2f max) {
         AABB a;
         a.min = min;

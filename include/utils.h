@@ -141,6 +141,7 @@ namespace EPI_NAMESPACE {
         friend void draw(sf::RenderWindow& rw, const Polygon& poly, clr_t clr);
         friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, clr_t clr);
     };
+    AABB AABBfromCircle(const Circle& c);
 
     AABB AABBmm(vec2f min, vec2f max);
     AABB AABBcs(vec2f center, vec2f size);

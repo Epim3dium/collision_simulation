@@ -100,7 +100,8 @@ namespace EPI_NAMESPACE {
         return true;
     }
     bool possibleIntersection(const Circle& r1, const Polygon& r2) {
-        return len(r1.pos - r2.getPos()) < r1.radius + len(r2.getAABB().size()) / 2.f;
+        AABB circ_aabb(r1.pos - vec2f(r1.radius, r1.radius), r1.pos + vec2f(r1.radius, r1.radius));
+        return AABBvAABB(circ_aabb, r2.getAABB());
     }
     bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f* cp) {
         vec2f max_reach = c.pos + norm(r.getPos() - c.pos) * c.radius;
@@ -130,6 +131,10 @@ namespace EPI_NAMESPACE {
             *cp = closest;
         }
         return true;
+    }
+#define SQR(x) ((x) * (x))
+    bool possibleIntersection(const Circle& r1, const Circle& r2) {
+        return qlen(r1.pos - r2.pos) < SQR(r1.radius + r2.radius);
     }
     bool detect(const Circle &c1, const Circle &c2, vec2f* cn, float* overlap, vec2f* cp) {
         vec2f dist = c1.pos - c2.pos;
