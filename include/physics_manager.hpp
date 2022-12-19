@@ -1,4 +1,5 @@
 #include "collision.h"
+#include "rigidbody.hpp"
 #include <algorithm>
 #include <vector>
 namespace EPI_NAMESPACE {
@@ -28,13 +29,9 @@ namespace EPI_NAMESPACE {
         struct ColInfo {
             Rigidbody* rb1;
             Rigidbody* rb2;
-            float overlap;
-            eColType type;
-            vec2f col_pos;
         };
 
         std::vector<ColInfo> processBroadPhase();
-        void sortCollisionList(std::vector<ColInfo>& col_list);
         void processNarrowPhase(const std::vector<ColInfo>& col_info);
         void processDormant();
 
@@ -44,40 +41,19 @@ namespace EPI_NAMESPACE {
         void m_updatePhysics(float delT);
 
         std::vector<Rigidbody*> m_rigidbodies;
-        void m_unbindFromRb(Rigidbody* rb) {
-            auto itr = std::find(m_rigidbodies.begin(), m_rigidbodies.end(), rb);
-            if(itr != m_rigidbodies.end())
-                m_rigidbodies.erase(itr);
-        }
     public:
-        std::vector<RigidPolygon*> m_polys;
-        std::vector<RigidCircle*> m_circs;
-
-
         float grav = 0.5f;
         size_t steps = 2;
         eSelectMode bounciness_select = eSelectMode::Min;
         eSelectMode friction_select = eSelectMode::Min;
 
-        inline void bind(RigidPolygon* rb) {
-            m_polys.push_back(rb);
+        inline void bind(Rigidbody* rb) {
             m_rigidbodies.push_back(rb);
         }
-        inline void bind(RigidCircle* rb) {
-            m_circs.push_back(rb);
-            m_rigidbodies.push_back(rb);
-        }
-        void unbind(RigidPolygon* rb) {
-            m_unbindFromRb(rb);
-            auto itr = std::find(m_polys.begin(), m_polys.end(), rb);
-            if(itr != m_polys.end())
-                m_polys.erase(itr);
-        }
-        void unbind(RigidCircle* rb) {
-            m_unbindFromRb(rb);
-            auto itr = std::find(m_circs.begin(), m_circs.end(), rb);
-            if(itr != m_circs.end())
-                m_circs.erase(itr);
+        void unbind(Rigidbody* rb) {
+            auto itr = std::find(m_rigidbodies.begin(), m_rigidbodies.end(), rb);
+            if(itr != m_rigidbodies.end())
+                m_rigidbodies.erase(itr);
         }
         void update();
 

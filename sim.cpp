@@ -9,7 +9,6 @@
 #include "collision.h"
 #include "imgui.h"
 #include "utils.h"
-#include "soft_body.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -71,11 +70,13 @@ void Sim::setup() {
 static void copyToPrevious(Rigidbody& rb, Rigidbody* prev) {
     if(!prev)
         return;
-    auto tmp = rb;
+    float ang_vel = rb.ang_vel;
+    auto vel = rb.vel;
+    auto layer = rb.collider.layer;
     rb = *prev;
-    rb.ang_vel = tmp.ang_vel;
-    rb.vel = tmp.vel;
-    rb.collider.layer = tmp.collider.layer;
+    rb.ang_vel = ang_vel;
+    rb.vel = vel;
+    rb.collider.layer = layer;
 }
 void Sim::onEvent(const sf::Event &event) {
     if (event.type == sf::Event::Closed)
