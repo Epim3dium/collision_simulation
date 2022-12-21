@@ -52,6 +52,7 @@ void RigidPolygon::addForce(vec2f force, vec2f cp) {
     vel += force;
     ang_vel -= cross(force, rad)/ inertia();
 }
+/*
 bool RigidPolygon::detectPossibleOverlap(Rigidbody *other) {
     if(other->getType() == typeid(RigidPolygon).name()) {
         return possibleOverlap(*this, *(RigidPolygon*)other);
@@ -68,6 +69,7 @@ bool RigidCircle::detectPossibleOverlap(Rigidbody *other) {
     }
     return false;
 }
+*/
 
 CollisionManifold RigidPolygon::handleOverlap(Rigidbody *other) {
     if(other->getType() == typeid(RigidPolygon).name()) {

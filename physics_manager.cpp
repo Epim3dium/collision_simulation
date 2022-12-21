@@ -1,22 +1,59 @@
 #include "physics_manager.hpp"
 #include "collision.h"
+#include "rigidbody.hpp"
+#include <map>
+#include <set>
 #include <vector>
 
 #define SQR(x) ((x) * (x))
+
 namespace EPI_NAMESPACE {
+
+typedef int hash_vec;
+
+static  hash_vec hash(vec2i pos) {
+    const hash_vec a = 73856093;
+    const hash_vec b = 83492791;
+    return (pos.x * a) ^ (pos.y * b);
+}
+std::vector<int> hash(AABB shape, float seg_size) {
+    vec2i min_hash(shape.min / seg_size);
+    vec2i max_hash(shape.max / seg_size);
+    std::vector<hash_vec> r;
+    for(int y = min_hash.y; y <= max_hash.y; y++) {
+        for(int x = min_hash.x; x <= max_hash.x; x++) {
+            r.push_back(hash(vec2i(x, y)) );
+        }
+    }
+    return r;
+}
+
 static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
     return (( rb1.isStatic || rb1.collider.isSleeping) && (rb2.isStatic || rb2.collider.isSleeping)) || 
             rb1.collider.layer == rb2.collider.layer;
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     std::vector<PhysicsManager::ColInfo> col_list;
+    std::map<hash_vec, std::vector<Rigidbody*>> segmented_rigidbodies;
+    for(auto& r : m_rigidbodies) {
+        r->debugFlag = 0U;
+        auto hashed = hash(r->aabb());
+        for(auto h : hashed)
+            segmented_rigidbodies[h].push_back(r);
+    }
     float overlap;
-    for(int i = 0; i < m_rigidbodies.size(); i++) {
-        for(int ii = i + 1; ii < m_rigidbodies.size(); ii++) {
-            if(areCompatible(*m_rigidbodies[i], *m_rigidbodies[ii]))
-                continue;
-            if(m_rigidbodies[i]->detectPossibleOverlap(m_rigidbodies[ii]))
-                col_list.push_back({m_rigidbodies[i], m_rigidbodies[ii]});
+    for(auto& seg_pair : segmented_rigidbodies) {
+        auto& vec = seg_pair.second;
+        for(int i = 0; i < vec.size(); i++) {
+            for(int ii = i + 1; ii < vec.size(); ii++) {
+                if(areCompatible(*vec[i], *vec[ii]))
+                    continue;
+                if( AABBvAABB(vec[i]->aabb(), vec[ii]->aabb()) ) {
+                    col_list.push_back({vec[i], vec[ii]});
+                    vec[i]->debugFlag = seg_pair.first;
+                    vec[ii]->debugFlag = seg_pair.first;
+                }
+            }
         }
     }
     return col_list;

@@ -17,6 +17,12 @@
 #include <numeric>
 #include <vector>
 namespace EPI_NAMESPACE {
+unsigned long long int hashInt(long long int x) {
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = ((x >> 16) ^ x) * 0x45d9f3b;
+    x = (x >> 16) ^ x;
+    return x;
+}
 
 void setupImGuiFont() {
     sf::Font consolas;
@@ -35,6 +41,7 @@ void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 void Sim::setup() {
+    pm.steps = 10;
     pm.bounciness_select = eSelectMode::Max;
     pm.friction_select = eSelectMode::Max;
 
@@ -106,44 +113,44 @@ void Sim::onEvent(const sf::Event &event) {
         }
     }
     else if(event.type == sf::Event::KeyPressed) {
-        if(event.key.code == sf::Keyboard::R) {
-            polygon_creation_vec.clear();
-        }
-        bool curIsStatic = false;
-        if(event.key.code == sf::Keyboard::S) {
-            curIsStatic = true;
-        }
-        if((event.key.code == sf::Keyboard::S || event.key.code == sf::Keyboard::D) && !hovered_now) {
-            if(polygon_creation_vec.size() >= 3) {
-                RigidPolygon t(PolygonPoints(polygon_creation_vec));
-                t.isStatic = curIsStatic;
-                copyToPrevious(t, hovered_last);
-                polys.push_back(std::make_unique<RigidPolygon>(t));
-                //std::cerr << getInertia(vec2f(0, 0), t.getModelVertecies(), t.mass) << "\n";
-                pm.bind(polys.back().get());
-            }
-            polygon_creation_vec.clear();
-        }else if(event.key.code == sf::Keyboard::D && hovered_now) {
-            hovered_now->isStatic = false;
-        }else if(event.key.code == sf::Keyboard::S && hovered_now) {
-            hovered_now->isStatic = true;
-        }
-        if(event.key.code == sf::Keyboard::C) {
-            RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
-            copyToPrevious(t, hovered_last);
-            circs.push_back(std::make_unique<RigidCircle>(t));
-            pm.bind(circs.back().get());
-        }
-        if(event.key.code == sf::Keyboard::V) {
-            vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-            RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
-            copyToPrevious(t, hovered_last);
-            polys.push_back(std::make_unique<RigidPolygon>(t));
-            pm.bind(polys.back().get());
-        }
     }
 }
 void Sim::update() {
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
+        polygon_creation_vec.clear();
+    }
+    bool curIsStatic = false;
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+        curIsStatic = true;
+    }
+    if((sf::Keyboard::isKeyPressed(sf::Keyboard::S) || sf::Keyboard::isKeyPressed(sf::Keyboard::D)) && !hovered_now) {
+        if(polygon_creation_vec.size() >= 3) {
+            RigidPolygon t(PolygonPoints(polygon_creation_vec));
+            t.isStatic = curIsStatic;
+            copyToPrevious(t, hovered_last);
+            polys.push_back(std::make_unique<RigidPolygon>(t));
+            //std::cerr << getInertia(vec2f(0, 0), t.getModelVertecies(), t.mass) << "\n";
+            pm.bind(polys.back().get());
+        }
+        polygon_creation_vec.clear();
+    }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::D) && hovered_now) {
+        hovered_now->isStatic = false;
+    }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::S) && hovered_now) {
+        hovered_now->isStatic = true;
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
+        RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
+        copyToPrevious(t, hovered_last);
+        circs.push_back(std::make_unique<RigidCircle>(t));
+        pm.bind(circs.back().get());
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
+        vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
+        RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
+        copyToPrevious(t, hovered_last);
+        polys.push_back(std::make_unique<RigidPolygon>(t));
+        pm.bind(polys.back().get());
+    }
     if(!isThrowing) {
         auto mpos = (vec2f)sf::Mouse::getPosition(window);
         Rigidbody* found = nullptr;
@@ -191,7 +198,7 @@ void Sim::update() {
             static bool open_global = true;
             if(ImGui::BeginTabItem("global settings", &open_global))
             {
-                static int tsteps = 2;
+                static int tsteps = 10;
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 pm.steps = tsteps;
                 ImGui::SliderFloat("change gravity" , &pm.grav, -1.5f, 1.5f, "%.1f");
@@ -234,9 +241,23 @@ void Sim::update() {
 
     pm.update();
     window.clear(PastelColor::bg4);
-    //drawing
+    //delete when out of frame
+    for(int i = 0; i < polys.size(); i++) {
+        if(!AABBvAABB(aabb_outer, polys[i]->aabb())) {
+            pm.unbind(polys[i].get());
+            polys.erase(polys.begin() + i);
+            i--;
+        }
+    }
+    for(int i = 0; i < circs.size(); i++) {
+        if(!AABBvAABB(aabb_outer, circs[i]->aabb())) {
+            pm.unbind(circs[i].get());
+            circs.erase(circs.begin() + i);
+            i--;
+        }
+    }
 
-    //softy.update(pm.m_polys);
+    //drawing
     for(auto& p : polys) {
         clr_t color = PastelColor::bg1;
         if(PointVPoly((vec2f)sf::Mouse::getPosition(window), *p)) {
@@ -244,8 +265,9 @@ void Sim::update() {
         } else {
             if(!p->isStatic) {
                 color = PastelColor::Aqua;
-                if(p->collider.isSleeping)
-                    color = PastelColor::Yellow;
+                if(p->debugFlag) {
+                    color = clr_t(hashInt(p->debugFlag) | 0x000000ff);
+                }
             }
         }
         drawFill(window, *p, color);
@@ -259,6 +281,9 @@ void Sim::update() {
                 color = PastelColor::Aqua;
                 if(c->collider.isSleeping)
                     color = PastelColor::Yellow;
+                if(c->debugFlag) {
+                    color = clr_t(hashInt(c->debugFlag) | 0x000000ff);
+                }
             }
         }
         sf::CircleShape cs(c->radius);
@@ -269,7 +294,10 @@ void Sim::update() {
         float r = c->radius / 2.f;
         cs.setRadius(r);
         cs.setPosition(c->pos + vec2f(cos(c->rot), sin(c->rot)) * c->radius / 2.f - vec2f(r, r));
-        cs.setFillColor(PastelColor::Green);
+        color.r /= 1.2f;
+        color.g /= 1.2f;
+        color.b /= 1.2f;
+        cs.setFillColor(color);
         window.draw(cs);
     }
     for(auto p : polygon_creation_vec) {

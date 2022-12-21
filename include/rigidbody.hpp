@@ -47,6 +47,7 @@ class Rigidbody {
     }
     size_t m_id;
 public:
+    unsigned int debugFlag = false;
     bool isStatic = false;
     vec2f vel;
     float ang_vel = 0.f;
@@ -57,7 +58,8 @@ public:
     virtual float inertia() const = 0;
     virtual void updateMovement(float delT = 1.f) = 0;
     virtual std::string getType() const = 0;
-    virtual bool detectPossibleOverlap(Rigidbody* other) = 0;
+    //virtual bool detectPossibleOverlap(Rigidbody* other) = 0;
+    virtual AABB aabb() const = 0;
     virtual CollisionManifold handleOverlap(Rigidbody* other) = 0;
 
     inline void addForce(vec2f force) {
@@ -89,8 +91,10 @@ public:
     inline std::string getType() const  override  {
         return typeid(*this).name();
     }
-    bool detectPossibleOverlap(Rigidbody* other) override;
     CollisionManifold handleOverlap(Rigidbody* other) override;
+    AABB aabb() const override {
+        return this->getAABB();
+    }
 
     RigidPolygon(const Polygon& poly) : Polygon(poly) { 
         onChange(); 
@@ -112,7 +116,10 @@ struct RigidCircle : public Rigidbody, public Circle {
     inline std::string getType() const  override  {
         return typeid(*this).name();
     }
-    bool detectPossibleOverlap(Rigidbody* other) override;
+    AABB aabb() const override {
+        return AABBfromCircle(*this);
+    }
+    //bool detectPossibleOverlap(Rigidbody* other) override;
     CollisionManifold handleOverlap(Rigidbody* other) override;
     RigidCircle(const Circle& c) : Circle(c) {}
     RigidCircle(vec2f pos, float radius) : Circle(pos, radius) {}

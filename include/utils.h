@@ -151,6 +151,8 @@ namespace EPI_NAMESPACE {
 
     Polygon PolygonReg(vec2f pos, float rot, size_t count, float dist);
     Polygon PolygonPoints(std::vector<vec2f> verticies);
+    // hue: 0-360°; sat: 0.f-1.f; val: 0.f-1.f
+    clr_t hsv(int hue, float sat, float val);
 
     vec2f operator* (vec2f a, vec2f b);
 }
