@@ -1,5 +1,5 @@
 # todo
-* satysfying noises
+ * satysfying noises
 * baunce
 * super collisions
 # modifiers
