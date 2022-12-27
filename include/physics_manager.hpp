@@ -1,6 +1,7 @@
 #include "collision.h"
 #include "rigidbody.hpp"
 #include <algorithm>
+#include <functional>
 #include <vector>
 namespace EPI_NAMESPACE {
 enum class eSelectMode {
@@ -28,32 +29,40 @@ class PhysicsManager {
         PolyPoly,
         CircPoly
     };
-    struct ColInfo {
-        Rigidbody* rb1;
-        Rigidbody* rb2;
+    struct RigidObj {
+        Rigidbody* rb;
+        std::function<void(Rigidbody*, Rigidbody*)> onHit;
     };
-
-    std::vector<ColInfo> processBroadPhase();
+    struct ColInfo {
+        RigidObj r1;
+        RigidObj r2;
+    };
+    std::map<int, std::vector<RigidObj>> devideToSegments();
+    std::vector<ColInfo> processBroadPhase(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies);
+    void processDormants(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies);
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
-    void processDormant();
 
     void m_processCollisions();
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
     void m_updatePhysics(float delT);
 
-    std::vector<Rigidbody*> m_rigidbodies;
+    std::vector<RigidObj> m_rigidbodies;
 public:
     float grav = 0.5f;
     size_t steps = 2;
     eSelectMode bounciness_select = eSelectMode::Min;
     eSelectMode friction_select = eSelectMode::Min;
 
-    inline void bind(Rigidbody* rb) {
-        m_rigidbodies.push_back(rb);
+    inline void bind(Rigidbody* rb, std::function<void(Rigidbody*, Rigidbody*)> onHit = nullptr) {
+        m_rigidbodies.push_back({rb, onHit});
     }
     void unbind(Rigidbody* rb) {
-        auto itr = std::find(m_rigidbodies.begin(), m_rigidbodies.end(), rb);
+        auto itr = m_rigidbodies.begin();
+        for(; itr != m_rigidbodies.end(); itr++) {
+            if(itr->rb == rb)
+                break;
+        }
         if(itr != m_rigidbodies.end())
             m_rigidbodies.erase(itr);
     }

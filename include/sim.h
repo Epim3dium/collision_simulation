@@ -3,10 +3,9 @@
 #include "collision.h"
 #include "imgui.h"
 
-#include "utils.h"
+#include "types.hpp"
 #include "col_utils.h"
 #include "physics_manager.hpp"
-#include "utils.h"
 
 namespace EPI_NAMESPACE {
     class Sim {
@@ -22,8 +21,6 @@ namespace EPI_NAMESPACE {
         AABB aabb_outer = {{0, 0}, (vec2f)window.getSize()};
         float padding = 50.f;
         AABB aabb_inner = aabb_outer;
-
-        RigidPolygon model_softbody = PolygonReg(vec2f(500.f, 500.f), 0.f, 5U, 100.f);
 
         std::vector<vec2f> polygon_creation_vec;
         vec2f last_mpos;

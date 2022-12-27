@@ -42,15 +42,15 @@ void RigidPolygon::addForce(vec2f force, vec2f cp) {
     vec2f rad = cp - getPos();
     vec2f radperp(-rad.y, rad.x);
 
-    vec2f pang_vel_lin = radperp * ang_vel;
+    vec2f pang_vel_lin = radperp * angular_velocity;
 
     float rperp_dotN = dot(radperp, cn);
     //calculate relative velocity
     vec2f rel_vel = force -
-        (vel + pang_vel_lin);
+        (velocity + pang_vel_lin);
 
-    vel += force;
-    ang_vel -= cross(force, rad)/ inertia();
+    velocity += force;
+    angular_velocity -= cross(force, rad)/ inertia();
 }
 /*
 bool RigidPolygon::detectPossibleOverlap(Rigidbody *other) {

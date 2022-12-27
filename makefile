@@ -3,7 +3,7 @@ DEPS=$(wildcard include/*.h) $(wildcard include/*.hpp)
 
 CFLAGS=@compile_flags.txt
 
-OBJ=sim.o utils.o col_utils.o collision.o node.o physics_manager.o rigidbody.o
+OBJ=sim.o types.o col_utils.o collision.o physics_manager.o rigidbody.o
 EXECUTABLE=main.o 
 
 %.o: %.cpp $(DEPS)

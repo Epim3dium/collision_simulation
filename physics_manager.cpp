@@ -1,6 +1,7 @@
 #include "physics_manager.hpp"
 #include "collision.h"
 #include "rigidbody.hpp"
+#include <cmath>
 #include <map>
 #include <set>
 #include <vector>
@@ -9,9 +10,9 @@
 
 namespace EPI_NAMESPACE {
 
-typedef int hash_vec;
 
-static  hash_vec hash(vec2i pos) {
+typedef int hash_vec;
+static hash_vec hash(vec2i pos) {
     const hash_vec a = 73856093;
     const hash_vec b = 83492791;
     return (pos.x * a) ^ (pos.y * b);
@@ -29,72 +30,98 @@ std::vector<int> hash(AABB shape, float seg_size) {
 }
 
 static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
-    return (( rb1.isStatic || rb1.collider.isSleeping) && (rb2.isStatic || rb2.collider.isSleeping)) || 
-            rb1.collider.layer == rb2.collider.layer;
+    return (( rb1.isStatic && rb2.isStatic) || 
+            rb1.collider.layer == rb2.collider.layer);
 }
-std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
-    std::vector<PhysicsManager::ColInfo> col_list;
-    std::map<hash_vec, std::vector<Rigidbody*>> segmented_rigidbodies;
+std::map<int, std::vector<PhysicsManager::RigidObj>> PhysicsManager::devideToSegments() {
+    std::map<hash_vec, std::vector<RigidObj>> segmented_rigidbodies;
     for(auto& r : m_rigidbodies) {
-        r->debugFlag = 0U;
-        auto hashed = hash(r->aabb());
+        r.rb->debugFlag = 0U;
+        auto hashed = hash(r.rb->aabb());
         for(auto h : hashed)
             segmented_rigidbodies[h].push_back(r);
     }
+    return segmented_rigidbodies;
+
+}
+#define DORMANT_MIN_VEL 0.5f
+#define DORMANT_MIN_ANG_VEL 0.5f
+std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies) {
+    std::vector<PhysicsManager::ColInfo> col_list;
     float overlap;
     for(auto& seg_pair : segmented_rigidbodies) {
         auto& vec = seg_pair.second;
         for(int i = 0; i < vec.size(); i++) {
             for(int ii = i + 1; ii < vec.size(); ii++) {
-                if(areCompatible(*vec[i], *vec[ii]))
+                if(areCompatible(*vec[i].rb, *vec[ii].rb))
                     continue;
-                if( AABBvAABB(vec[i]->aabb(), vec[ii]->aabb()) ) {
+                if( AABBvAABB(vec[i].rb->aabb(), vec[ii].rb->aabb()) ) {
                     col_list.push_back({vec[i], vec[ii]});
-                    vec[i]->debugFlag = seg_pair.first;
-                    vec[ii]->debugFlag = seg_pair.first;
                 }
             }
         }
     }
     return col_list;
 }
+void PhysicsManager::processDormants(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies) {
+    for(auto& seg_pair : segmented_rigidbodies) {
+        bool all_dormant = true;
+        for(auto& r : seg_pair.second) {
+            if(qlen(r.rb->velocity) > DORMANT_MIN_VEL || r.rb->angular_velocity > DORMANT_MIN_ANG_VEL) {
+                all_dormant = false;
+                break;
+            }
+        }
+        for(auto& r : seg_pair.second) {
+            r.rb->collider.dormant_time = (all_dormant ? r.rb->collider.dormant_time + 1.f / steps: 0);
+        }
+    }
+}
 void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInfo>& col_list) {
     for(auto& ci : col_list) {
-        float restitution = m_selectFrom(ci.rb1->mat.restitution, ci.rb2->mat.restitution, bounciness_select);
-        float sfriction = m_selectFrom(ci.rb1->mat.sfriction, ci.rb2->mat.sfriction, friction_select);
-        float dfriction = m_selectFrom(ci.rb1->mat.dfriction, ci.rb2->mat.dfriction, friction_select);
+        float restitution = m_selectFrom(ci.r1.rb->material.restitution, ci.r2.rb->material.restitution, bounciness_select);
+        float sfriction = m_selectFrom(ci.r1.rb->material.sfriction, ci.r2.rb->material.sfriction, friction_select);
+        float dfriction = m_selectFrom(ci.r1.rb->material.dfriction, ci.r2.rb->material.dfriction, friction_select);
         //ewewewewewewwwwww pls dont judge me
-        auto man = ci.rb1->handleOverlap(ci.rb2);
+        auto man = ci.r1.rb->handleOverlap(ci.r2.rb);
         if(!man.detected)
             continue;
         processReaction(man, restitution, sfriction, dfriction);
+        man.r1->collider.now_colliding = man.r2;
+        man.r2->collider.now_colliding = man.r1;
+        if(ci.r1.onHit)
+            ci.r1.onHit(ci.r1.rb, ci.r2.rb);
+        if(ci.r2.onHit)
+            ci.r2.onHit(ci.r2.rb, ci.r1.rb);
     }
 }
 void PhysicsManager::m_processCollisions() {
     for(auto& r : m_rigidbodies) {
-        r->collider.now_colliding = nullptr;
+        r.rb->collider.now_colliding = nullptr;
     }
-    std::vector<ColInfo> col_list = processBroadPhase();
+    auto segments = devideToSegments();
+    auto col_list = processBroadPhase(segments);
+    processDormants(segments);
     processNarrowPhase(col_list);
 }
 
-void PhysicsManager::processDormant() {
-}
 void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     //updating velocity and physics
     if(rb.isStatic)
         return;
-    rb.vel.y += grav * delT;
-    if(qlen(rb.vel) > PHYSICS_MANAGER_MIN_VEL_THRESHOLD)
-        rb.vel -= norm(rb.vel) * std::clamp(qlen(rb.vel) * rb.mat.air_drag, 0.f, len(rb.vel)) * delT;
-    if(rb.ang_vel > PHYSICS_MANAGER_MIN_VEL_THRESHOLD)
-        rb.ang_vel -= std::copysign(1.f, rb.ang_vel) * std::clamp(rb.ang_vel * rb.ang_vel * rb.mat.air_drag, 0.f, rb.ang_vel) * delT;
+    if(rb.collider.isDormant())
+        return;
+    rb.velocity.y += grav * delT;
+    if(qlen(rb.velocity) > PHYSICS_MANAGER_MIN_VEL_THRESHOLD)
+        rb.velocity -= norm(rb.velocity) * std::clamp(qlen(rb.velocity) * rb.material.air_drag, 0.f, len(rb.velocity)) * delT;
+    if(rb.angular_velocity > PHYSICS_MANAGER_MIN_VEL_THRESHOLD)
+        rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, rb.angular_velocity) * delT;
 
     rb.updateMovement(delT);
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto& r : m_rigidbodies)
-        m_updateRigidbody(*r, delT);
+        m_updateRigidbody(*r.rb, delT);
 }
 void PhysicsManager::update() {
     float delT = 1.f / (float)steps;
@@ -102,6 +129,5 @@ void PhysicsManager::update() {
         m_updatePhysics(delT);
         m_processCollisions();
     }
-    processDormant();
 }
 }
