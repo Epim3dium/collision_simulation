@@ -11,6 +11,7 @@ namespace EPI_NAMESPACE {
     class Sim {
         sf::RenderWindow window;
     public:
+        sf::Clock deltaClock;
 
         float m_width, m_height;
         PhysicsManager pm;
@@ -36,9 +37,9 @@ namespace EPI_NAMESPACE {
 
 
         void Run();
-        virtual void update();
+        virtual void update(float delT);
         virtual void setup();
-        virtual void onEvent(const sf::Event& event);
+        virtual void onEvent(const sf::Event& event, float delT);
 
         Sim(float w, float h);
     };

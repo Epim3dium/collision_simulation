@@ -26,7 +26,7 @@ private:
         return ++id;
     }
 public:
-    bool isDormant() const {return dormant_time > 120.f;}
+    bool isDormant() const {return dormant_time > 1.f;}
     float dormant_time = 0;
 
     size_t layer;

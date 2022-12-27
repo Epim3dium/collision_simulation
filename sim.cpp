@@ -44,6 +44,7 @@ void setupImGuiFont() {
 }
 void Sim::setup() {
     pm.steps = 10;
+    pm.grav = 1000.f;
     pm.bounciness_select = eSelectMode::Max;
     pm.friction_select = eSelectMode::Max;
 
@@ -89,7 +90,7 @@ static void copyToPrevious(Rigidbody& rb, Rigidbody* prev) {
     rb.collider.layer = layer;
     rb.isStatic = stat;
 }
-void Sim::onEvent(const sf::Event &event) {
+void Sim::onEvent(const sf::Event &event, float delT) {
     if (event.type == sf::Event::Closed)
         window.close();
     else if(event.type == sf::Event::MouseButtonPressed) {
@@ -109,7 +110,7 @@ void Sim::onEvent(const sf::Event &event) {
                 auto mpos = (vec2f)sf::Mouse::getPosition(window);
                 auto dif = mpos - last_mpos;
                 if(hovered_last)
-                    hovered_last->addForce(dif / 5.f);
+                    hovered_last->velocity += dif * delT * 1000.f;
                     //hovered_last->vel += dif / 10.f;
                 isThrowing = false;
             }
@@ -122,7 +123,7 @@ void Sim::onEvent(const sf::Event &event) {
 static void changeDebugFlag(Rigidbody* r1, Rigidbody* r2) {
     r1->debugFlag = 0xfff;
 }
-void Sim::update() {
+void Sim::update(float delT) {
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
         polygon_creation_vec.clear();
     }
@@ -208,7 +209,7 @@ void Sim::update() {
                 static int tsteps = 10;
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 pm.steps = tsteps;
-                ImGui::SliderFloat("change gravity" , &pm.grav, -1.5f, 1.5f, "%.1f");
+                ImGui::SliderFloat("change gravity" , &pm.grav, -350.0f, 350.0f, "%.1f");
                 ImGui::SliderFloat("radius" , &default_dynamic_radius, 10.f, 50.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {
@@ -249,7 +250,7 @@ void Sim::update() {
     }
     ImGui::End();
 
-    pm.update();
+    pm.update(delT);
     window.clear(PastelColor::bg4);
     //delete when out of frame
     for(int i = 0; i < polys.size(); i++) {
@@ -330,14 +331,15 @@ void Sim::Run() {
     while (window.isOpen())
     {
         sf::Event event;
+        auto delT = DeltaClock.restart();
         while (window.pollEvent(event))
         {
             ImGui::SFML::ProcessEvent(event);
-            onEvent(event);
+            onEvent(event, delT.asSeconds());
         }
-        ImGui::SFML::Update(window, DeltaClock.restart());
+        ImGui::SFML::Update(window, delT);
 
-        update();
+        update(delT.asSeconds());
 
         ImGui::SFML::Render(window);
         window.display();
@@ -345,7 +347,7 @@ void Sim::Run() {
 
 }
 Sim::Sim(float w, float h) : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions") {
-    window.setFramerateLimit(60);
+    //window.setFramerateLimit(60);
     ImGui::SFML::Init(window);
 
     setupImGuiFont();

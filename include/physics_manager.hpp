@@ -9,9 +9,7 @@ enum class eSelectMode {
     Max,
     Avg
 };
-#define SEG_SIZE 300.f
-#define PHYSICS_MANAGER_MIN_VEL_THRESHOLD 0.001f
-std::vector<int> hash(AABB shape, float seg_size = SEG_SIZE);
+std::vector<int> hash(AABB shape, float seg_size);
 class PhysicsManager {
     template<class T>
     static T m_selectFrom(T a, T b, eSelectMode mode) {
@@ -39,10 +37,10 @@ class PhysicsManager {
     };
     std::map<int, std::vector<RigidObj>> devideToSegments();
     std::vector<ColInfo> processBroadPhase(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies);
-    void processDormants(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies);
+    void processDormants(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies, float delT);
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
 
-    void m_processCollisions();
+    void m_processCollisions(float delT);
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
     void m_updatePhysics(float delT);
@@ -51,6 +49,10 @@ class PhysicsManager {
 public:
     float grav = 0.5f;
     size_t steps = 2;
+    float min_dormant_velocity = 100.f;
+    float min_angular_dormant_velocity = INFINITY;
+    float segment_size = 300.f;
+
     eSelectMode bounciness_select = eSelectMode::Min;
     eSelectMode friction_select = eSelectMode::Min;
 
@@ -66,7 +68,7 @@ public:
         if(itr != m_rigidbodies.end())
             m_rigidbodies.erase(itr);
     }
-    void update();
+    void update(float delT);
 
     friend RigidPolygon;
 };

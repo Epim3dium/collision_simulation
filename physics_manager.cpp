@@ -37,15 +37,13 @@ std::map<int, std::vector<PhysicsManager::RigidObj>> PhysicsManager::devideToSeg
     std::map<hash_vec, std::vector<RigidObj>> segmented_rigidbodies;
     for(auto& r : m_rigidbodies) {
         r.rb->debugFlag = 0U;
-        auto hashed = hash(r.rb->aabb());
+        auto hashed = hash(r.rb->aabb(), segment_size);
         for(auto h : hashed)
             segmented_rigidbodies[h].push_back(r);
     }
     return segmented_rigidbodies;
 
 }
-#define DORMANT_MIN_VEL 0.5f
-#define DORMANT_MIN_ANG_VEL 0.5f
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies) {
     std::vector<PhysicsManager::ColInfo> col_list;
     float overlap;
@@ -63,17 +61,17 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase(const std
     }
     return col_list;
 }
-void PhysicsManager::processDormants(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies) {
+void PhysicsManager::processDormants(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies, float delT) {
     for(auto& seg_pair : segmented_rigidbodies) {
         bool all_dormant = true;
         for(auto& r : seg_pair.second) {
-            if(qlen(r.rb->velocity) > DORMANT_MIN_VEL || r.rb->angular_velocity > DORMANT_MIN_ANG_VEL) {
+            if(qlen(r.rb->velocity) > min_dormant_velocity || r.rb->angular_velocity > min_angular_dormant_velocity) {
                 all_dormant = false;
                 break;
             }
         }
         for(auto& r : seg_pair.second) {
-            r.rb->collider.dormant_time = (all_dormant ? r.rb->collider.dormant_time + 1.f / steps: 0);
+            r.rb->collider.dormant_time = (all_dormant ? r.rb->collider.dormant_time + delT: 0);
         }
     }
 }
@@ -82,7 +80,7 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         float restitution = m_selectFrom(ci.r1.rb->material.restitution, ci.r2.rb->material.restitution, bounciness_select);
         float sfriction = m_selectFrom(ci.r1.rb->material.sfriction, ci.r2.rb->material.sfriction, friction_select);
         float dfriction = m_selectFrom(ci.r1.rb->material.dfriction, ci.r2.rb->material.dfriction, friction_select);
-        //ewewewewewewwwwww pls dont judge me
+        //ewewewewewewwwwww pls don, float delTt judge me
         auto man = ci.r1.rb->handleOverlap(ci.r2.rb);
         if(!man.detected)
             continue;
@@ -95,13 +93,13 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
             ci.r2.onHit(ci.r2.rb, ci.r1.rb);
     }
 }
-void PhysicsManager::m_processCollisions() {
+void PhysicsManager::m_processCollisions(float delT) {
     for(auto& r : m_rigidbodies) {
         r.rb->collider.now_colliding = nullptr;
     }
     auto segments = devideToSegments();
     auto col_list = processBroadPhase(segments);
-    processDormants(segments);
+    processDormants(segments, delT);
     processNarrowPhase(col_list);
 }
 
@@ -112,10 +110,9 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     if(rb.collider.isDormant())
         return;
     rb.velocity.y += grav * delT;
-    if(qlen(rb.velocity) > PHYSICS_MANAGER_MIN_VEL_THRESHOLD)
+    if(qlen(rb.velocity) > 0.001f)
         rb.velocity -= norm(rb.velocity) * std::clamp(qlen(rb.velocity) * rb.material.air_drag, 0.f, len(rb.velocity)) * delT;
-    if(rb.angular_velocity > PHYSICS_MANAGER_MIN_VEL_THRESHOLD)
-        rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, rb.angular_velocity) * delT;
+    rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, rb.angular_velocity) * delT;
 
     rb.updateMovement(delT);
 }
@@ -123,11 +120,11 @@ void PhysicsManager::m_updatePhysics(float delT) {
     for(auto& r : m_rigidbodies)
         m_updateRigidbody(*r.rb, delT);
 }
-void PhysicsManager::update() {
-    float delT = 1.f / (float)steps;
+void PhysicsManager::update(float delT ) {
+    float deltaStep = delT / (float)steps;
     for(int i = 0; i < steps; i++) {
-        m_updatePhysics(delT);
-        m_processCollisions();
+        m_updatePhysics(deltaStep);
+        m_processCollisions(deltaStep);
     }
 }
 }
