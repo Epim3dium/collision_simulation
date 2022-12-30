@@ -38,27 +38,40 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     struct BoundInfo {
         Rigidbody* id;
         float val;
+        bool isEnding = false;
     };
     std::vector<BoundInfo> infos;
     for(auto& r : m_rigidbodies) {
-        infos.push_back({r, r->aabb().max.x});
         infos.push_back({r, r->aabb().min.x});
+        infos.push_back({r, r->aabb().max.x, true});
     }
     std::sort(infos.begin(), infos.end(), 
           [](const BoundInfo& bi1, const BoundInfo& bi2) {
               return bi1.val < bi2.val;
           });
-    std::set<Rigidbody*> open;
+    std::map<int, std::vector<Rigidbody*>> open;
     for(auto& i : infos) {
-        if(open.contains(i.id)) {
-            open.erase(i.id);
-        } else {
-            for(auto& o : open) {
-                if( AABBvAABB(i.id->aabb(), o->aabb()) ) {
-                    col_list.push_back({i.id, o});
-                }
+        auto minval = i.id->aabb().min.y;
+        auto maxval = i.id->aabb().max.y;
+        if(i.isEnding) {
+            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
+                if(open.find(j) == open.end())
+                    continue;
+                auto& vec = open.at(j);
+                auto itr = std::find(vec.begin(), vec.end(), i.id);
+                if(itr != vec.end())
+                    vec.erase(itr);
             }
-            open.emplace(i.id);
+        } else {
+            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
+                auto& vec = open[j];
+                for(auto& o : vec) {
+                    if( AABBvAABB(i.id->aabb(), o->aabb()) ) {
+                        col_list.push_back({i.id, o});
+                    }
+                }
+                vec.push_back(i.id);
+            }
         }
     }
     return col_list;

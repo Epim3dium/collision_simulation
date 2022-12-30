@@ -206,6 +206,7 @@ void Sim::update(float delT) {
             static bool open_global = true;
             if(ImGui::BeginTabItem("global settings", &open_global))
             {
+                ImGui::SliderFloat("change seg size" , &pm.segment_size, 5.0f, 300.0f, "%.0f");
                 static int tsteps = 10;
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 pm.steps = tsteps;
