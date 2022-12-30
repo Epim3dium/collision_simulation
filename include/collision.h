@@ -8,24 +8,42 @@
 #include <vector>
 namespace EPI_NAMESPACE {
 
-vec2f getFricImpulse(float p1inertia, float mass1, vec2f rad1perp, float p2inertia, float mass2, const vec2f& rad2perp, 
-        float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn);
-float getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const vec2f& rad2perp, float p2inertia, float mass2, 
-        float restitution, const vec2f& rel_vel, vec2f cn);
+struct CollisionManifold {
+    bool detected;
+    Rigidbody* r1;
+    Rigidbody* r2;
 
-void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
-       vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps);
-void processReaction(const CollisionManifold& maninfold, float bounce, float sfric, float dfric);
+    vec2f r1pos;
+    vec2f r2pos;
 
+    vec2f cn;
+    std::vector<vec2f> cps;
+    float overlap;
+};
+class InterfaceSolver {
+public:
+    virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
+};
+class BasicSolver : public InterfaceSolver {
+    static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
+public:
+    virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
+};
+class DefaultSolver : public InterfaceSolver {
+private:
+    static vec2f getFricImpulse(float p1inertia, float mass1, vec2f rad1perp, float p2inertia, float mass2, const vec2f& rad2perp, 
+            float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn);
+    static float getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const vec2f& rad2perp, float p2inertia, float mass2, 
+            float restitution, const vec2f& rel_vel, vec2f cn);
 
-bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn = nullptr, float* t = nullptr);
-CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2);
+    static void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
+           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps);
+    static void processReaction(const CollisionManifold& maninfold, float bounce, float sfric, float dfric);
 
-bool detect(const Circle &c, const Polygon &r, vec2f* cn = nullptr, float* overlap = nullptr, vec2f* cp = nullptr);
-CollisionManifold handleOverlap(RigidCircle& c, RigidPolygon& r);
+    static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
+public:
 
-bool detect(const Circle&c1, const Circle &c2, vec2f* cn = nullptr, float* t = nullptr, vec2f* cp = nullptr);
-CollisionManifold handleOverlap(RigidCircle& c1, RigidCircle& c2);
+    virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
+};
 
-bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 }

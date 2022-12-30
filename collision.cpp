@@ -1,4 +1,5 @@
 #include "collision.h"
+#include "rigidbody.hpp"
 #include <algorithm>
 #include <random>
 #include <cmath>
@@ -7,28 +8,8 @@
 
 
 namespace EPI_NAMESPACE {
-bool detect(const vec2f& v, const Polygon &p, vec2f* cn, float* t, vec2f* cp) {
-    if(!PointVPoly(v, p))
-        return false;
-    vec2f prev = p.getVertecies().back();
-    float dist = INFINITY;
-    vec2f closest;
-    for(auto p : p.getVertecies()) {
-        auto t = ClosestPointOnRay(p, prev - p, v);
-        if(qlen(closest - v) > qlen(t - v)) {
-            closest = t;
-        }
-        prev = p;
-    }
-    if(cp)
-        *cp = closest;
-    if(t)
-        *t = len(closest - v);
-    if(cn)
-        *cn = norm(closest - v);
-    return true;
-}
-bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
+
+static bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
     const Polygon *poly1 = &r1;
     const Polygon *poly2 = &r2;
 
@@ -94,7 +75,7 @@ bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
         *t = overlap;
     return true;
 }
-bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f* cp) {
+static bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f* cp) {
     vec2f max_reach = c.pos + norm(r.getPos() - c.pos) * c.radius;
 
     vec2f closest(INFINITY, INFINITY);
@@ -124,7 +105,7 @@ bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f*
     return true;
 }
 #define SQR(x) ((x) * (x))
-bool detect(const Circle &c1, const Circle &c2, vec2f* cn, float* overlap, vec2f* cp) {
+static bool detect(const Circle &c1, const Circle &c2, vec2f* cn, float* overlap, vec2f* cp) {
     vec2f dist = c1.pos - c2.pos;
     float dist_len = len(dist);
     if(dist_len > c1.radius + c2.radius) {
@@ -138,7 +119,70 @@ bool detect(const Circle &c1, const Circle &c2, vec2f* cn, float* overlap, vec2f
         *cp =  dist / dist_len * c2.radius + c2.pos;
     return true;
 }
-void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
+CollisionManifold handleOverlap(RigidCircle& r1, RigidPolygon& r2) {
+    if(r1.isStatic && r2.isStatic) {
+        return {false};
+    }
+
+    vec2f cn;
+    vec2f cp;
+    float overlap;
+
+    if(detect(r1, r2, &cn, &overlap, &cp)) {
+        if(r2.isStatic) {
+            r1.pos += cn * overlap;
+        } else if(r1.isStatic) {
+            r2.setPos(r2.getPos() + -cn * overlap);
+        } else {
+            r1.pos += cn * overlap / 2.f;
+            r2.setPos(r2.getPos() + -cn * overlap / 2.f);
+        }
+        return {true, &r1, &r2, r1.pos, r2.getPos(), cn, {cp} , overlap};
+    }
+    return {false};
+}
+CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2) {
+    if(r1.isStatic && r2.isStatic) {
+        return {false};
+    }
+    vec2f cn;
+    float overlap;
+    auto cps = getContactPoints(r1, r2);
+
+    if(detect(r1, r2, &cn, &overlap)) {
+        if(r2.isStatic) {
+            r1.setPos(r1.getPos() + cn * overlap);
+        } else if(r1.isStatic) {
+            r2.setPos(r2.getPos() + -cn * overlap);
+        } else {
+            r1.setPos(r1.getPos() + cn * overlap / 2.f);
+            r2.setPos(r2.getPos() + -cn * overlap / 2.f);
+        }
+        return {true, &r1, &r2, r1.getPos(), r2.getPos(), cn, cps, overlap};
+    }
+    return {false};
+}
+CollisionManifold handleOverlap(RigidCircle& r1, RigidCircle& r2) {
+    if(r1.isStatic && r2.isStatic) {
+        return {false};
+    }
+    vec2f cn, cp;
+    float overlap;
+
+    if(detect(r1, r2, &cn, &overlap, &cp)) {
+        if(r2.isStatic) {
+            r1.pos += cn * overlap;
+        } else if(r1.isStatic) {
+            r2.pos += -cn * overlap;
+        } else {
+            r1.pos += cn * overlap / 2.f;
+            r2.pos += -cn * overlap / 2.f;
+        }
+        return {true, &r1, &r2, r1.pos, r2.pos, cn, {cp}, overlap};
+    }
+    return {false};
+}
+void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
        vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps)
 {
     float mass1 = rb1.isStatic ? INFINITY : rb1.mass;
@@ -193,83 +237,10 @@ void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1,
     rb2.velocity +=     rb2vel;
     rb2.angular_velocity += rb2ang_vel;
 }
-void processReaction(const CollisionManifold& man, float bounce, float sfric, float dfric) {
+void DefaultSolver::processReaction(const CollisionManifold& man, float bounce, float sfric, float dfric) {
     processReaction(man.r1pos, *man.r1, man.r1->material, man.r2pos, *man.r2, man.r2->material, bounce, sfric, dfric, man.cn, man.cps);
 }
-CollisionManifold handleOverlap(RigidCircle& r1, RigidPolygon& r2) {
-    if(r1.isStatic && r2.isStatic) {
-        return {false};
-    }
-
-    vec2f cn;
-    vec2f cp;
-    float overlap;
-
-    if(detect(r1, r2, &cn, &overlap, &cp)) {
-        if(r2.isStatic) {
-            r1.pos += cn * overlap;
-        } else if(r1.isStatic) {
-            r2.setPos(r2.getPos() + -cn * overlap);
-        } else {
-            r1.pos += cn * overlap / 2.f;
-            r2.setPos(r2.getPos() + -cn * overlap / 2.f);
-        }
-        //processReaction(r1.pos, r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, {cp});
-        return {true, &r1, &r2, r1.pos, r2.getPos(), cn, {cp} , overlap};
-    }
-    return {false};
-}
-CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2) {
-    if(r1.isStatic && r2.isStatic) {
-        return {false};
-    }
-    vec2f cn;
-    float overlap;
-    auto cps = getContactPoints(r1, r2);
-
-    if(detect(r1, r2, &cn, &overlap)) {
-        if(r2.isStatic) {
-            r1.setPos(r1.getPos() + cn * overlap);
-        } else if(r1.isStatic) {
-            r2.setPos(r2.getPos() + -cn * overlap);
-        } else {
-            r1.setPos(r1.getPos() + cn * overlap / 2.f);
-            r2.setPos(r2.getPos() + -cn * overlap / 2.f);
-        }
-        //processReaction(r1.getPos(), r1, r1.mat, r2.getPos(), r2, r2.mat, restitution, sfriction, dfriction, cn, cps);
-        return {true, &r1, &r2, r1.getPos(), r2.getPos(), cn, cps, overlap};
-    }
-    return {false};
-}
-CollisionManifold handleOverlap(RigidCircle& r1, RigidCircle& r2) {
-    if(r1.isStatic && r2.isStatic) {
-        return {false};
-    }
-    vec2f cn, cp;
-    float overlap;
-
-    if(detect(r1, r2, &cn, &overlap, &cp)) {
-        if(r2.isStatic) {
-            r1.pos += cn * overlap;
-        } else if(r1.isStatic) {
-            r2.pos += -cn * overlap;
-        } else {
-            r1.pos += cn * overlap / 2.f;
-            r2.pos += -cn * overlap / 2.f;
-        }
-        //processReaction(r1.pos, r1, r1.mat, r2.pos, r2, r2.mat, restitution, sfriction, dfriction, cn, {cp});
-        return {true, &r1, &r2, r1.pos, r2.pos, cn, {cp}, overlap};
-    }
-    return {false};
-}
-bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction) {
-    if(!manifold.detected)
-        return false;
-    processReaction(manifold.r1pos, *manifold.r1, manifold.r1->material, manifold.r2pos, 
-                    *manifold.r2, manifold.r2->material, restitution, sfriction, dfriction, manifold.cn, manifold.cps);
-    return true;
-}
-float getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const vec2f& rad2perp, float p2inertia, float mass2, 
+float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const vec2f& rad2perp, float p2inertia, float mass2, 
         float restitution, const vec2f& rel_vel, vec2f cn) {
     float contact_vel_mag = dot(rel_vel, cn);
     if(contact_vel_mag < 0.f)
@@ -286,7 +257,7 @@ float getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const
     j /= denom;
     return j;
 }
-vec2f getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1perp, float p2inv_inertia, float mass2, const vec2f& rad2perp, 
+vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1perp, float p2inv_inertia, float mass2, const vec2f& rad2perp, 
         float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn) {
     vec2f tangent = rel_vel - cn * dot(rel_vel, cn);
 
@@ -315,4 +286,63 @@ vec2f getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1perp, float p2i
     }
     return friction_impulse;
 }
+bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction) {
+    if(!manifold.detected)
+        return false;
+    processReaction(manifold.r1pos, *manifold.r1, manifold.r1->material, manifold.r2pos, 
+                    *manifold.r2, manifold.r2->material, restitution, sfriction, dfriction, manifold.cn, manifold.cps);
+    return true;
+}
+bool DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
+    CollisionManifold man;
+    if(rb1->getType() == eRigidShape::Polygon && rb2->getType() == eRigidShape::Polygon) {
+        man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
+    } else if(rb1->getType() == eRigidShape::Circle && rb2->getType() == eRigidShape::Circle) {
+        man = handleOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
+    }
+    for(int i = 0; i < 2; i++) {
+        if(i == 1) {
+            auto t = rb2;
+            rb2 = rb1;
+            rb1 = t;
+        }
+        if(rb1->getType() == eRigidShape::Circle && rb2->getType() == eRigidShape::Polygon) {
+            man = handleOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
+        }
+    }
+    handle(man, restitution, sfriction, dfriction);
+    return man.detected;
+}
+bool BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
+    CollisionManifold man;
+    if(rb1->getType() == eRigidShape::Polygon && rb2->getType() == eRigidShape::Polygon) {
+        man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
+    } else if(rb1->getType() == eRigidShape::Circle && rb2->getType() == eRigidShape::Circle) {
+        man = handleOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
+    }
+    for(int i = 0; i < 2; i++) {
+        if(i == 1) {
+            auto t = rb2;
+            rb2 = rb1;
+            rb1 = t;
+        }
+        if(rb1->getType() == eRigidShape::Circle && rb2->getType() == eRigidShape::Polygon) {
+            man = handleOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
+        }
+    }
+    handle(man, restitution, sfriction, dfriction);
+    return man.detected;
+}
+bool BasicSolver::handle(const CollisionManifold& man, float restitution, float sfriction, float dfriction) {
+    if(!man.detected)
+        return false;
+    vec2f relvel = man.r1->velocity - man.r2->velocity;
+    vec2f impulse = dot(relvel, man.cn) * norm(man.cn) / 2.f;
+    if(!man.r1->isStatic)
+        man.r1->velocity -= impulse;
+    if(!man.r2->isStatic)
+        man.r2->velocity += impulse;
+    return true;
+}
+
 }

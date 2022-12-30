@@ -6,19 +6,12 @@
 #include <iterator>
 #include <vector>
 namespace EPI_NAMESPACE {
-struct Rigidbody;
-struct CollisionManifold {
-    bool detected;
-    Rigidbody* r1;
-    Rigidbody* r2;
 
-    vec2f r1pos;
-    vec2f r2pos;
-
-    vec2f cn;
-    std::vector<vec2f> cps;
-    float overlap;
+enum class eRigidShape {
+    Polygon,
+    Circle
 };
+struct Rigidbody;
 struct Collider {
 private:
     inline static size_t getNextLayer() {
@@ -26,7 +19,8 @@ private:
         return ++id;
     }
 public:
-    bool isDormant() const {return dormant_time > 1.f;}
+#define MIN_DORMANT_TIME 1.f
+    bool isDormant() const {return dormant_time > MIN_DORMANT_TIME;}
     float dormant_time = 0;
 
     size_t layer;
@@ -47,7 +41,6 @@ class Rigidbody {
     }
     size_t m_id;
 public:
-    unsigned int debugFlag = false;
     bool isStatic = false;
 
     vec2f velocity;
@@ -63,12 +56,11 @@ public:
     //update pos with valocity
     virtual void updateMovement(float delT = 1.f) = 0;
     //get type identificator
-    virtual std::string getType() const = 0;
+    virtual eRigidShape getType() const = 0;
     
     //get axis aligned bounding box of custom shape
     virtual AABB aabb() const = 0;
     //resolve overlap function for rigidbodies with diffrent types
-    virtual CollisionManifold handleOverlap(Rigidbody* other) = 0;
 
     inline void addForce(vec2f force) {
         velocity += force / mass;
@@ -98,10 +90,9 @@ public:
         if(!collider.lockRotation)
             setRot(getRot() + this->angular_velocity * delT);
     }
-    inline std::string getType() const  override  {
-        return typeid(*this).name();
+    inline eRigidShape getType() const  override  {
+        return eRigidShape::Polygon;
     }
-    CollisionManifold handleOverlap(Rigidbody* other) override;
     AABB aabb() const override {
         return this->getAABB();
     }
@@ -124,14 +115,13 @@ struct RigidCircle : public Rigidbody, public Circle {
         if(!collider.lockRotation)
             this->rot += angular_velocity * delT;
     }
-    inline std::string getType() const  override  {
-        return typeid(*this).name();
+    inline eRigidShape getType() const  override  {
+        return eRigidShape::Circle;
     }
     AABB aabb() const override {
         return AABBfromCircle(*this);
     }
     //bool detectPossibleOverlap(Rigidbody* other) override;
-    CollisionManifold handleOverlap(Rigidbody* other) override;
     RigidCircle(const Circle& c) : Circle(c) {}
     RigidCircle(vec2f pos, float radius) : Circle(pos, radius) {}
 };

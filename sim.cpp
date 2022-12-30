@@ -43,10 +43,12 @@ void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 void Sim::setup() {
+    pm.segment_size = 50.f;
     pm.steps = 10;
     pm.grav = 1000.f;
     pm.bounciness_select = eSelectMode::Max;
     pm.friction_select = eSelectMode::Max;
+    pm.bind(new BasicSolver());
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
@@ -84,10 +86,11 @@ static void copyToPrevious(Rigidbody& rb, Rigidbody* prev) {
     bool stat = rb.isStatic;
     auto vel = rb.velocity;
     auto layer = rb.collider.layer;
+    auto col = rb.collider;
     rb = *prev;
     rb.angular_velocity = ang_vel;
     rb.velocity = vel;
-    rb.collider.layer = layer;
+    rb.collider = col;
     rb.isStatic = stat;
 }
 void Sim::onEvent(const sf::Event &event, float delT) {
@@ -120,9 +123,6 @@ void Sim::onEvent(const sf::Event &event, float delT) {
     else if(event.type == sf::Event::KeyPressed) {
     }
 }
-static void changeDebugFlag(Rigidbody* r1, Rigidbody* r2) {
-    r1->debugFlag = 0xfff;
-}
 void Sim::update(float delT) {
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
         polygon_creation_vec.clear();
@@ -138,7 +138,7 @@ void Sim::update(float delT) {
             copyToPrevious(t, hovered_last);
             polys.push_back(std::make_unique<RigidPolygon>(t));
             //std::cerr << getInertia(vec2f(0, 0), t.getModelVertecies(), t.mass) << "\n";
-            pm.bind(polys.back().get(), changeDebugFlag);
+            pm.bind(polys.back().get());
         }
         polygon_creation_vec.clear();
     }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::D) && hovered_now) {
@@ -150,14 +150,14 @@ void Sim::update(float delT) {
         RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
         copyToPrevious(t, hovered_last);
         circs.push_back(std::make_unique<RigidCircle>(t));
-        pm.bind(circs.back().get(), changeDebugFlag);
+        pm.bind(circs.back().get());
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
         copyToPrevious(t, hovered_last);
         polys.push_back(std::make_unique<RigidPolygon>(t));
-        pm.bind(polys.back().get(), changeDebugFlag);
+        pm.bind(polys.back().get());
     }
     if(!isThrowing) {
         auto mpos = (vec2f)sf::Mouse::getPosition(window);
@@ -210,7 +210,7 @@ void Sim::update(float delT) {
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 pm.steps = tsteps;
                 ImGui::SliderFloat("change gravity" , &pm.grav, -350.0f, 350.0f, "%.1f");
-                ImGui::SliderFloat("radius" , &default_dynamic_radius, 10.f, 50.f);
+                ImGui::SliderFloat("radius" , &default_dynamic_radius, 5.f, 50.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {
                     static int cur_choice_friction = 0;
@@ -245,6 +245,7 @@ void Sim::update(float delT) {
                 }ImGui::EndTabItem();
             }
             ImGui::Text("total bodies: %d", int(polys.size() + circs.size()));
+            ImGui::Text("delta time: %f", delT);
         }
         ImGui::EndTabBar();
     }
@@ -278,6 +279,7 @@ void Sim::update(float delT) {
                 color = PastelColor::Aqua;
                 if(p->collider.isDormant())
                     color = PastelColor::Orange;
+                color.a = 255;
             }
         }
         drawFill(window, *p, color);
@@ -291,6 +293,7 @@ void Sim::update(float delT) {
                 color = PastelColor::Aqua;
                 if(c->collider.isDormant())
                     color = PastelColor::Orange;
+                color.a = 255;
             }
         }
         sf::CircleShape cs(c->radius);

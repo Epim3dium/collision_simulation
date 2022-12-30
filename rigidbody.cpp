@@ -52,39 +52,5 @@ void RigidPolygon::addForce(vec2f force, vec2f cp) {
     velocity += force;
     angular_velocity -= cross(force, rad)/ inertia();
 }
-/*
-bool RigidPolygon::detectPossibleOverlap(Rigidbody *other) {
-    if(other->getType() == typeid(RigidPolygon).name()) {
-        return possibleOverlap(*this, *(RigidPolygon*)other);
-    } else if(other->getType() == typeid(RigidCircle).name()) {
-        return possibleOverlap(*(RigidCircle*)other, *this);
-    }
-    return false;
-}
-bool RigidCircle::detectPossibleOverlap(Rigidbody *other) {
-    if(other->getType() == typeid(RigidPolygon).name()) {
-        return possibleOverlap(*this, *(RigidPolygon*)other);
-    } else if(other->getType() == typeid(RigidCircle).name()) {
-        return possibleOverlap(*(RigidCircle*)other, *this);
-    }
-    return false;
-}
-*/
 
-CollisionManifold RigidPolygon::handleOverlap(Rigidbody *other) {
-    if(other->getType() == typeid(RigidPolygon).name()) {
-        return epi::handleOverlap(*this, *(RigidPolygon*)other);
-    } else if(other->getType() == typeid(RigidCircle).name()) {
-        return epi::handleOverlap(*(RigidCircle*)other, *this);
-    }
-    return {false};
-}
-CollisionManifold RigidCircle::handleOverlap(Rigidbody *other) {
-    if(other->getType() == typeid(RigidPolygon).name()) {
-        return epi::handleOverlap(*this, *(RigidPolygon*)other);
-    } else if(other->getType() == typeid(RigidCircle).name()) {
-        return epi::handleOverlap(*(RigidCircle*)other, *this);
-    }
-    return {false};
-}
 }
