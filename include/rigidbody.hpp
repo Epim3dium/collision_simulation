@@ -105,6 +105,7 @@ public:
     }
 };
 struct RigidCircle : public Rigidbody, public Circle {
+    AABB m_aabb;
     public:
     float rot;
     inline float inertia() const override {
@@ -114,12 +115,13 @@ struct RigidCircle : public Rigidbody, public Circle {
         this->pos += velocity * delT;
         if(!collider.lockRotation)
             this->rot += angular_velocity * delT;
+        m_aabb = AABBfromCircle(*this);
     }
     inline eRigidShape getType() const  override  {
         return eRigidShape::Circle;
     }
     AABB aabb() const override {
-        return AABBfromCircle(*this);
+        return m_aabb;
     }
     //bool detectPossibleOverlap(Rigidbody* other) override;
     RigidCircle(const Circle& c) : Circle(c) {}

@@ -27,17 +27,11 @@ class PhysicsManager {
         PolyPoly,
         CircPoly
     };
-    struct RigidObj {
-        Rigidbody* rb;
-        std::function<void(Rigidbody*, Rigidbody*)> onHit;
-    };
     struct ColInfo {
-        RigidObj r1;
-        RigidObj r2;
+        Rigidbody* r1;
+        Rigidbody* r2;
     };
-    void devideToSegments(std::map<int, std::vector<RigidObj>>& result);
-    std::vector<ColInfo> processBroadPhase(const std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies);
-    void processDormants(std::map<int, std::vector<PhysicsManager::RigidObj>>& segmented_rigidbodies, float delT);
+    std::vector<ColInfo> processBroadPhase();
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
 
     void m_processCollisions(float delT);
@@ -45,7 +39,7 @@ class PhysicsManager {
     void m_updateRigidbody(Rigidbody& rb, float delT);
     void m_updatePhysics(float delT);
 
-    std::vector<RigidObj> m_rigidbodies;
+    std::vector<Rigidbody*> m_rigidbodies;
     InterfaceSolver* m_solver = new DefaultSolver();
 public:
     float grav = 0.5f;
@@ -58,7 +52,7 @@ public:
     eSelectMode friction_select = eSelectMode::Min;
 
     inline void bind(Rigidbody* rb, std::function<void(Rigidbody*, Rigidbody*)> onHit = nullptr) {
-        m_rigidbodies.push_back({rb, onHit});
+        m_rigidbodies.push_back(rb);
     }
     inline void bind(InterfaceSolver* solver) {
         m_solver = solver;
@@ -66,7 +60,7 @@ public:
     void unbind(Rigidbody* rb) {
         auto itr = m_rigidbodies.begin();
         for(; itr != m_rigidbodies.end(); itr++) {
-            if(itr->rb == rb)
+            if(*itr == rb)
                 break;
         }
         if(itr != m_rigidbodies.end())

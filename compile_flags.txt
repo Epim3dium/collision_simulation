@@ -16,4 +16,4 @@
 -Wno-unused-command-line-argument
 -Wno-deprecated-declarations
 -Wno-unused
--O3
+-glldb

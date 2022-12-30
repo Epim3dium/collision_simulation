@@ -48,7 +48,7 @@ void Sim::setup() {
     pm.grav = 1000.f;
     pm.bounciness_select = eSelectMode::Max;
     pm.friction_select = eSelectMode::Max;
-    pm.bind(new BasicSolver());
+    //pm.bind(new BasicSolver());
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
@@ -246,6 +246,10 @@ void Sim::update(float delT) {
             }
             ImGui::Text("total bodies: %d", int(polys.size() + circs.size()));
             ImGui::Text("delta time: %f", delT);
+            if(delT > 1.0 / 60.0) {
+                ImGui::SameLine();
+                ImGui::Text("BAD FRAMES");
+            }
         }
         ImGui::EndTabBar();
     }
