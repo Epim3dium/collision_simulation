@@ -1,5 +1,5 @@
 #include "physics_manager.hpp"
-#include "collision.h"
+#include "solver.hpp"
 #include "rigidbody.hpp"
 #include <cmath>
 #include <map>
@@ -108,6 +108,10 @@ static void devideToSegments(std::vector<Rigidbody*> rigidbodies, float segment_
             result[h].emplace(r);
     }
 }
+void PhysicsManager::m_updateRestraints(float delT) {
+    for(auto& r : m_restraints)
+        r->update(delT);
+}
 void PhysicsManager::m_processDormant(float delT) {
     std::map<int, std::set<Rigidbody*> > devided;
     devideToSegments(m_rigidbodies, segment_size, devided);
@@ -135,8 +139,6 @@ void PhysicsManager::m_processDormant(float delT) {
 
 void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     //updating velocity and physics
-    if(rb.collider.isDormant)
-        return;
     if(rb.isStatic)
         return;
     rb.velocity.y += grav * delT;
@@ -145,7 +147,8 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     if(abs(rb.angular_velocity) > 0.001f)
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
-    rb.updateMovement(delT);
+    rb.setPos(rb.getPos() + rb.velocity * delT);
+    rb.setRot(rb.getRot() + rb.angular_velocity * delT);
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto& r : m_rigidbodies)
@@ -155,6 +158,7 @@ void PhysicsManager::update(float delT ) {
     float deltaStep = delT / (float)steps;
     for(int i = 0; i < steps; i++) {
         m_updatePhysics(deltaStep);
+        m_updateRestraints(deltaStep);
         m_processCollisions(deltaStep);
     }
     m_processDormant(delT);

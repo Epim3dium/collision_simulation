@@ -5,9 +5,8 @@
 #include "SFML/Window/Keyboard.hpp"
 
 #include "SFML/Window/Mouse.hpp"
-#include "col_utils.h"
-#include "collision.h"
 #include "imgui.h"
+#include "restraint.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
 
@@ -49,6 +48,19 @@ void Sim::setup() {
     pm.bounciness_select = eSelectMode::Max;
     pm.friction_select = eSelectMode::Max;
     //pm.bind(new BasicSolver());
+    default_dynamic_radius = 10.f;
+    circs.push_back(std::make_unique<RigidCircle>( RigidCircle(vec2f(500.f, 100.f), default_dynamic_radius)) );
+    pm.bind(circs.back().get());
+    auto a = circs.back().get();
+    for(int i = 0; i < 15; i++) {
+        circs.push_back(std::make_unique<RigidCircle>( RigidCircle(a->pos + vec2f(0.f, default_dynamic_radius * 2.f), default_dynamic_radius)) );
+        pm.bind(circs.back().get());
+        auto b = circs.back().get();
+        b->collider.lockRotation = true;
+
+        pm.bind(new DistanceRestraint(default_dynamic_radius * 2.f, a, b));
+        a = b;
+    }
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
@@ -177,6 +189,11 @@ void Sim::update(float delT) {
         hovered_now = found;
         if(found) {
             hovered_last = found;
+        }
+    }else {
+        if(hovered_now) {
+            hovered_now->setPos((vec2f)sf::Mouse::getPosition(window));
+            hovered_now->velocity = {0, 0};
         }
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace) && hovered_now) {

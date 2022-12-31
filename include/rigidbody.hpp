@@ -56,7 +56,12 @@ public:
     //get inertia of custom shape
     virtual float inertia() const = 0;
     //update pos with valocity
-    virtual void updateMovement(float delT = 1.f) = 0;
+    //virtual void updateMovement(float delT = 1.f) = 0;
+    virtual vec2f getPos() const = 0;
+    virtual void setPos(vec2f) = 0;
+    virtual float getRot() const = 0;
+    virtual void setRot(float) = 0;
+
     //get type identificator
     virtual eRigidShape getType() const = 0;
     
@@ -85,13 +90,28 @@ private:
 public:
     void addForce(vec2f dir, vec2f cp);
     inline float inertia() const override { 
-        return m_inertia; 
+        return getInertia(vec2f(0, 0), getModelVertecies(), mass); 
     }
+    /*
     inline void updateMovement(float delT) override {
-        setPos(getPos() + this->velocity * delT);
+        Polygon::setPos(Polygon::getPos() + this->velocity * delT);
         if(!collider.lockRotation)
             setRot(getRot() + this->angular_velocity * delT);
     }
+    */
+    virtual vec2f getPos() const override {
+        return Polygon::getPos();
+    }
+    void setPos(vec2f p) override {
+        Polygon::setPos(p);
+    }
+    float getRot() const override {
+        return Polygon::getRot();
+    }
+    void setRot(float r) override {
+        Polygon::setRot(r);
+    }
+
     inline eRigidShape getType() const  override  {
         return eRigidShape::Polygon;
     }
@@ -113,12 +133,20 @@ struct RigidCircle : public Rigidbody, public Circle {
     inline float inertia() const override {
         return 0.25f * mass * radius * radius;
     }
-    inline void updateMovement(float delT) override {
-        this->pos += velocity * delT;
-        if(!collider.lockRotation)
-            this->rot += angular_velocity * delT;
-        m_aabb = AABBfromCircle(*this);
+    virtual vec2f getPos() const override {
+        return pos;
     }
+    void setPos(vec2f p) override {
+        pos = p;
+        m_aabb = {pos - vec2f(radius, radius), pos + vec2f(radius, radius) };
+    }
+    float getRot() const override {
+        return rot;
+    }
+    void setRot(float r) override {
+        rot = r;
+    }
+
     inline eRigidShape getType() const  override  {
         return eRigidShape::Circle;
     }

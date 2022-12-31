@@ -1,5 +1,5 @@
 #include "rigidbody.hpp"
-#include "collision.h"
+#include "solver.hpp"
 
 namespace EPI_NAMESPACE {
 //only dynamic objects should be placed as the r1 argument

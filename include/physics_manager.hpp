@@ -1,4 +1,5 @@
-#include "collision.h"
+#include "restraint.hpp"
+#include "solver.hpp"
 #include "rigidbody.hpp"
 #include <algorithm>
 #include <functional>
@@ -38,9 +39,11 @@ class PhysicsManager {
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
     void m_updatePhysics(float delT);
+    void m_updateRestraints(float delT);
     void m_processDormant(float delT);
 
     std::vector<Rigidbody*> m_rigidbodies;
+    std::vector<RestraintInterface*> m_restraints;
     InterfaceSolver* m_solver = new DefaultSolver();
 public:
     float grav = 0.5f;
@@ -52,11 +55,14 @@ public:
     eSelectMode bounciness_select = eSelectMode::Min;
     eSelectMode friction_select = eSelectMode::Min;
 
-    inline void bind(Rigidbody* rb, std::function<void(Rigidbody*, Rigidbody*)> onHit = nullptr) {
+    inline void bind(Rigidbody* rb) {
         m_rigidbodies.push_back(rb);
     }
     inline void bind(InterfaceSolver* solver) {
         m_solver = solver;
+    }
+    inline void bind(RestraintInterface* restraint) {
+        m_restraints.push_back(restraint);
     }
     void unbind(Rigidbody* rb) {
         auto itr = m_rigidbodies.begin();
@@ -66,6 +72,15 @@ public:
         }
         if(itr != m_rigidbodies.end())
             m_rigidbodies.erase(itr);
+    }
+    void unbind(RestraintInterface* rb) {
+        auto itr = m_restraints.begin();
+        for(; itr != m_restraints.end(); itr++) {
+            if(*itr == rb)
+                break;
+        }
+        if(itr != m_restraints.end())
+            m_restraints.erase(itr);
     }
     void update(float delT);
 

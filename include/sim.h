@@ -1,6 +1,6 @@
 #pragma once
 #include "SFML/Window/Event.hpp"
-#include "collision.h"
+#include "solver.hpp"
 #include "imgui.h"
 
 #include "types.hpp"
