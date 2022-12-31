@@ -282,7 +282,7 @@ void Sim::update(float delT) {
         } else {
             if(!p->isStatic) {
                 color = PastelColor::Aqua;
-                if(p->collider.isDormant())
+                if(p->collider.isDormant)
                     color = PastelColor::Orange;
                 color.a = 255;
             }
@@ -296,7 +296,7 @@ void Sim::update(float delT) {
         } else {
             if(!c->isStatic) {
                 color = PastelColor::Aqua;
-                if(c->collider.isDormant())
+                if(c->collider.isDormant)
                     color = PastelColor::Orange;
                 color.a = 255;
             }

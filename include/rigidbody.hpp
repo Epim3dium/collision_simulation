@@ -19,9 +19,11 @@ private:
         return ++id;
     }
 public:
-#define MIN_DORMANT_TIME 1.f
-    bool isDormant() const {return dormant_time > MIN_DORMANT_TIME;}
+#define MIN_DORMANT_TIME 5.f
+    bool isDormant = false;
+    bool isDormantCapable() const {return dormant_time > MIN_DORMANT_TIME;}
     float dormant_time = 0;
+    vec2f last_pos = vec2f(0, 0);
 
     size_t layer;
     bool lockRotation = false;

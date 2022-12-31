@@ -7,6 +7,7 @@
 #include <vector>
 
 #define SQR(x) ((x) * (x))
+#define MAX_VELOCITY 50.0f
 
 namespace EPI_NAMESPACE {
 
@@ -66,7 +67,7 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
             for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
                 auto& vec = open[j];
                 for(auto& o : vec) {
-                    if( AABBvAABB(i.id->aabb(), o->aabb()) ) {
+                    if(!areIncompatible(*i.id, *o) && AABBvAABB(i.id->aabb(), o->aabb()) ) {
                         col_list.push_back({i.id, o});
                     }
                 }
@@ -82,6 +83,8 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         float sfriction = m_selectFrom(ci.r1->material.sfriction, ci.r2->material.sfriction, friction_select);
         float dfriction = m_selectFrom(ci.r1->material.dfriction, ci.r2->material.dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
+        auto pos1 = ci.r1->aabb().center();
+        auto pos2 = ci.r2->aabb().center();
         auto result = m_solver->solve(ci.r1, ci.r2, restitution, sfriction, dfriction);
         if(!result)
             continue;
@@ -94,12 +97,47 @@ void PhysicsManager::m_processCollisions(float delT) {
     auto col_list = processBroadPhase();
     processNarrowPhase(col_list);
 }
+static void devideToSegments(std::vector<Rigidbody*> rigidbodies, float segment_size, std::map<int, std::set<Rigidbody*>>& result) {
+    vec2f padding(segment_size, segment_size);
+    for(auto& r : rigidbodies) {
+        auto aabb = r->aabb();
+        aabb.min -= padding;
+        aabb.max += padding;
+        auto hashed = hash(aabb, segment_size);
+        for(auto h : hashed)
+            result[h].emplace(r);
+    }
+}
+void PhysicsManager::m_processDormant(float delT) {
+    std::map<int, std::set<Rigidbody*> > devided;
+    devideToSegments(m_rigidbodies, segment_size, devided);
+    for(auto& seg : devided) {
+        auto& vec = seg.second;
+        bool all_dormant = true;
+        for(auto& r : vec) {
+            if(r->isStatic)
+                continue;
+            if(qlen(r->velocity) < MAX_VELOCITY) {
+                r->collider.dormant_time += delT;
+            } else {
+                r->collider.dormant_time = 0;
+            }
+            if(!r->collider.isDormantCapable())
+                all_dormant = false;
+        }
+        for(auto& r : vec) {
+            r->collider.isDormant = all_dormant;
+            if(all_dormant)
+                r->velocity = {0, 0};
+        }
+    }
+}
 
 void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     //updating velocity and physics
-    if(rb.isStatic)
+    if(rb.collider.isDormant)
         return;
-    if(rb.collider.isDormant())
+    if(rb.isStatic)
         return;
     rb.velocity.y += grav * delT;
     if(qlen(rb.velocity) > 0.001f)
@@ -119,6 +157,7 @@ void PhysicsManager::update(float delT ) {
         m_updatePhysics(deltaStep);
         m_processCollisions(deltaStep);
     }
+    m_processDormant(delT);
 }
 
 }

@@ -38,6 +38,7 @@ class PhysicsManager {
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
     void m_updatePhysics(float delT);
+    void m_processDormant(float delT);
 
     std::vector<Rigidbody*> m_rigidbodies;
     InterfaceSolver* m_solver = new DefaultSolver();
