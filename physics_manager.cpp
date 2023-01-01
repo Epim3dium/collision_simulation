@@ -131,8 +131,6 @@ void PhysicsManager::m_processDormant(float delT) {
         }
         for(auto& r : vec) {
             r->collider.isDormant = all_dormant;
-            if(all_dormant)
-                r->velocity = {0, 0};
         }
     }
 }

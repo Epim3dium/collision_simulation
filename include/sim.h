@@ -24,7 +24,6 @@ namespace EPI_NAMESPACE {
         AABB aabb_inner = aabb_outer;
 
         std::vector<vec2f> polygon_creation_vec;
-        vec2f last_mpos;
 
         bool isThrowing = false;
         Rigidbody* hovered_last = nullptr;

@@ -48,19 +48,25 @@ void Sim::setup() {
     pm.bounciness_select = eSelectMode::Max;
     pm.friction_select = eSelectMode::Max;
     //pm.bind(new BasicSolver());
-    default_dynamic_radius = 10.f;
-    circs.push_back(std::make_unique<RigidCircle>( RigidCircle(vec2f(500.f, 100.f), default_dynamic_radius)) );
-    pm.bind(circs.back().get());
-    auto a = circs.back().get();
-    for(int i = 0; i < 15; i++) {
-        circs.push_back(std::make_unique<RigidCircle>( RigidCircle(a->pos + vec2f(0.f, default_dynamic_radius * 2.f), default_dynamic_radius)) );
-        pm.bind(circs.back().get());
-        auto b = circs.back().get();
-        b->collider.lockRotation = true;
+    /*
+    std::vector<vec2f> m = {vec2f(0.f, 50.f), vec2f(25.f, 0.f), vec2f(0.f, -50.f), vec2f(-25.f, 0.f)};
+    auto tmp = RigidPolygon(vec2f(500.f, 100.f), 0.f, m);
 
-        pm.bind(new DistanceRestraint(default_dynamic_radius * 2.f, a, b));
+    polys.push_back(std::make_unique<RigidPolygon>( tmp ) );
+    pm.bind(polys.back().get());
+    auto a = polys.back().get();
+    auto layer = a->collider.layer;
+    for(int i = 0; i < 10; i++) {
+        tmp.collider.layer += 1000;
+        tmp.setPos(tmp.getPos() + vec2f(0.f, 50.f));
+        polys.push_back(std::make_unique<RigidPolygon>( tmp ) );
+        pm.bind(polys.back().get());
+        auto b = polys.back().get();
+
+        pm.bind(new RestraintPoint(2.f, a, 0U, b, 2U));
         a = b;
     }
+    */
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
@@ -115,20 +121,11 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         }else {
             if(hovered_now) {
                 isThrowing = true;
-                last_mpos = mpos;
             }
         }
     }
     else if(event.type == sf::Event::MouseButtonReleased) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
-            if(isThrowing) {
-                auto mpos = (vec2f)sf::Mouse::getPosition(window);
-                auto dif = mpos - last_mpos;
-                if(hovered_last)
-                    hovered_last->velocity += dif * delT * 1000.f;
-                    //hovered_last->vel += dif / 10.f;
-                isThrowing = false;
-            }
             isThrowing = false;
         }
     }
@@ -192,8 +189,10 @@ void Sim::update(float delT) {
         }
     }else {
         if(hovered_now) {
-            hovered_now->setPos((vec2f)sf::Mouse::getPosition(window));
-            hovered_now->velocity = {0, 0};
+            auto d = (vec2f)sf::Mouse::getPosition(window) - (hovered_now->getPos() + hovered_now->velocity);
+
+            hovered_now->velocity += d;
+            hovered_now->collider.dormant_time = 0;
         }
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace) && hovered_now) {

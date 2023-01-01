@@ -44,6 +44,7 @@ private:
 public:
 
     virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
+    bool do_sth();
 };
 
 }

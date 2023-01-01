@@ -1,5 +1,6 @@
 #include "rigidbody.hpp"
 #include "solver.hpp"
+#include "types.hpp"
 
 namespace EPI_NAMESPACE {
 //only dynamic objects should be placed as the r1 argument
@@ -33,24 +34,15 @@ float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
     return abs(mmoi);
 }
 void RigidPolygon::addForce(vec2f force, vec2f cp) {
-    cp = findPointOnEdge(cp, *this);
     if(isStatic)
         return;
     force /= mass;
     vec2f cn = norm(force);
     //convert angluar vel to linear
     vec2f rad = cp - getPos();
-    vec2f radperp(-rad.y, rad.x);
 
-    vec2f pang_vel_lin = radperp * angular_velocity;
-
-    float rperp_dotN = dot(radperp, cn);
-    //calculate relative velocity
-    vec2f rel_vel = force -
-        (velocity + pang_vel_lin);
-
-    velocity += force;
-    angular_velocity -= cross(force, rad)/ inertia();
+    velocity += cn * dot(force, norm(force));
+    angular_velocity -= cross(force, rad) / inertia(); 
 }
 
 }
