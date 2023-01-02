@@ -36,12 +36,25 @@ struct Material {
     float dfriction = 0.4f;
     float air_drag = 0.0001f;
 };
-class Rigidbody {
+
+//struct made only to prevent ids from copying
+struct RigidbodyIdentificators {
+private:
     inline static size_t getNextID()  {
         static size_t s_id = 1;
         return s_id++;
     }
     size_t m_id;
+public:
+    inline size_t getID() const {
+        return m_id;
+    }
+    void operator=(const RigidbodyIdentificators&) {}
+    RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()) {}
+    RigidbodyIdentificators() : m_id(getNextID()) {}
+};
+
+class Rigidbody : public RigidbodyIdentificators {
 public:
     bool isStatic = false;
 
@@ -72,10 +85,6 @@ public:
     inline void addForce(vec2f force) {
         velocity += force / mass;
     }
-    inline size_t getID() const {
-        return m_id;
-    }
-    Rigidbody() : m_id(getNextID()) {}
 };
 
 //calculating inertia of polygon shape
@@ -88,6 +97,7 @@ private:
         m_inertia = getInertia(vec2f(0, 0), getModelVertecies(), mass);
     }
 public:
+    void addVelocity(vec2f dir, vec2f cp);
     void addForce(vec2f dir, vec2f cp);
     inline float inertia() const override { 
         return getInertia(vec2f(0, 0), getModelVertecies(), mass); 

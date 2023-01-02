@@ -134,6 +134,16 @@ void PhysicsManager::m_processDormant(float delT) {
         }
     }
 }
+void PhysicsManager::m_processTriggers() {
+    for(auto& t : m_triggers) {
+        for(auto& r : m_rigidbodies) {
+            auto man = m_solver->detect(r, t);
+            if(man.detected) {
+                t->onActivation(r, man.contact_normal);
+            }
+        }
+    }
+}
 
 void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     //updating velocity and physics
@@ -146,7 +156,8 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
     rb.setPos(rb.getPos() + rb.velocity * delT);
-    rb.setRot(rb.getRot() + rb.angular_velocity * delT);
+    if(!rb.collider.lockRotation)
+        rb.setRot(rb.getRot() + rb.angular_velocity * delT);
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto& r : m_rigidbodies)
@@ -160,6 +171,26 @@ void PhysicsManager::update(float delT ) {
         m_processCollisions(deltaStep);
     }
     m_processDormant(delT);
+    m_processTriggers();
+}
+template<class T>
+static void unbind_any(T obj, std::vector<T>& obj_vec) {
+    auto itr = obj_vec.begin();
+    for(; itr != obj_vec.end(); itr++) {
+        if(*itr == obj)
+            break;
+    }
+    if(itr != obj_vec.end())
+        obj_vec.erase(itr);
+}
+void PhysicsManager::unbind(Rigidbody* rb) {
+    unbind_any(rb, m_rigidbodies);
+}
+void PhysicsManager::unbind(RestraintInterface* res) {
+    unbind_any(res, m_restraints);
+}
+void PhysicsManager::unbind(TriggerInterface* trigger) {
+    unbind_any(trigger, m_triggers);
 }
 
 }

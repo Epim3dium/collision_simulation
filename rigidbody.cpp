@@ -34,15 +34,18 @@ float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
     return abs(mmoi);
 }
 void RigidPolygon::addForce(vec2f force, vec2f cp) {
+    force /= mass;
+    addVelocity(force, cp);
+}
+void RigidPolygon::addVelocity(vec2f vel, vec2f cp) {
     if(isStatic)
         return;
-    force /= mass;
-    vec2f cn = norm(force);
+    vec2f cn = norm(vel);
     //convert angluar vel to linear
     vec2f rad = cp - getPos();
 
-    velocity += cn * dot(force, norm(force));
-    angular_velocity -= cross(force, rad) / inertia(); 
+    velocity += cn * dot(vel, norm(vel));
+    angular_velocity -= cross(vel, rad) / inertia(); 
 }
 
 }

@@ -1,6 +1,7 @@
 #include "restraint.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
+#include "trigger.hpp"
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -38,12 +39,17 @@ class PhysicsManager {
     void m_processCollisions(float delT);
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
+
     void m_updatePhysics(float delT);
     void m_updateRestraints(float delT);
+
     void m_processDormant(float delT);
+    void m_processTriggers();
 
     std::vector<Rigidbody*> m_rigidbodies;
     std::vector<RestraintInterface*> m_restraints;
+    std::vector<TriggerInterface*> m_triggers;
+
     InterfaceSolver* m_solver = new DefaultSolver();
 public:
     float grav = 0.5f;
@@ -64,24 +70,12 @@ public:
     inline void bind(RestraintInterface* restraint) {
         m_restraints.push_back(restraint);
     }
-    void unbind(Rigidbody* rb) {
-        auto itr = m_rigidbodies.begin();
-        for(; itr != m_rigidbodies.end(); itr++) {
-            if(*itr == rb)
-                break;
-        }
-        if(itr != m_rigidbodies.end())
-            m_rigidbodies.erase(itr);
+    inline void bind(TriggerInterface* trigger) {
+        m_triggers.push_back(trigger);
     }
-    void unbind(RestraintInterface* rb) {
-        auto itr = m_restraints.begin();
-        for(; itr != m_restraints.end(); itr++) {
-            if(*itr == rb)
-                break;
-        }
-        if(itr != m_restraints.end())
-            m_restraints.erase(itr);
-    }
+    void unbind(Rigidbody* rb);
+    void unbind(RestraintInterface* restriant);
+    void unbind(TriggerInterface* trigger);
     void update(float delT);
 
     friend RigidPolygon;

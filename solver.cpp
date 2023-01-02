@@ -1,5 +1,6 @@
 #include "solver.hpp"
 #include "rigidbody.hpp"
+#include "trigger.hpp"
 
 #include <algorithm>
 #include <exception>
@@ -184,6 +185,36 @@ CollisionManifold handleOverlap(RigidCircle& r1, RigidCircle& r2) {
     }
     return {false};
 }
+static InterfaceSolver::DetectionResult common_detect(Rigidbody* rb1, TriggerInterface* rb2) {
+    vec2f cn;
+    bool result;
+    switch(rb1->getType()) {
+        case eRigidShape::Polygon:
+            switch(rb2->getType()) {
+                case eRigidShape::Polygon:
+                    result = detect(*(RigidPolygon*)rb1, *(TriggerPolygonInterface*)rb2, &cn, nullptr);
+                break;
+                case eRigidShape::Circle:
+                    result = detect(*(TriggerCircleInterface*)rb2, *(RigidPolygon*)rb1, &cn, nullptr, nullptr);
+                break;
+            };
+        break;
+        case eRigidShape::Circle:
+            switch(rb2->getType()) {
+                case eRigidShape::Polygon:
+                    result = detect(*(RigidCircle*)rb1, *(TriggerPolygonInterface*)rb2, &cn, nullptr, nullptr);
+                break;
+                case eRigidShape::Circle:
+                    result = detect(*(RigidCircle*)rb1, *(TriggerCircleInterface*)rb2, &cn, nullptr, nullptr);
+                break;
+            };
+        break;
+        default:
+            throw std::exception();
+        break;
+    };
+    return {result, cn};
+}
 void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
        vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps)
 {
@@ -295,6 +326,9 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
                     *manifold.r2, manifold.r2->material, restitution, sfriction, dfriction, manifold.cn, manifold.cps);
     return true;
 }
+DefaultSolver::DetectionResult DefaultSolver::detect(Rigidbody* rb1, TriggerInterface* rb2) {
+    return common_detect(rb1, rb2);
+}
 bool DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
     if(rb1->getType() == eRigidShape::Polygon && rb2->getType() == eRigidShape::Polygon) {
@@ -314,6 +348,9 @@ bool DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, flo
     }
     handle(man, restitution, sfriction, dfriction);
     return man.detected;
+}
+BasicSolver::DetectionResult BasicSolver::detect(Rigidbody* rb1, TriggerInterface* rb2) {
+    return common_detect(rb1, rb2);
 }
 bool BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;

@@ -4,6 +4,7 @@
 #include <math.h>
 #include <vector>
 
+#include "SFML/Graphics/RenderWindow.hpp"
 #include "imgui.h"
 #include "imgui-SFML.h"
 
@@ -14,22 +15,23 @@
 namespace EPI_NAMESPACE {
     typedef sf::Vector2f vec2f;
     typedef sf::Vector2i vec2i;
-    typedef sf::Color clr_t;
+    typedef sf::Color Color;
+    typedef sf::RenderWindow Window;
 
     namespace PastelColor {
-        const clr_t bg =     clr_t(0xa89984ff);
-        const clr_t bg1 =    clr_t(0xa89984ff);
-        const clr_t bg2 =    clr_t(0xbdae93ff);
-        const clr_t bg3 =    clr_t(0xebdbb2ff);
-        const clr_t bg4 =    clr_t(0x1E3A4CFF);
-        const clr_t Red =    clr_t(0x9d0006ff);
-        const clr_t Green =  clr_t(0x79740eff);
-        const clr_t Yellow = clr_t(0xb57614ff);
-        const clr_t Blue =   clr_t(0x076678ff);
-        const clr_t Purple = clr_t(0x8f3f71ff);
-        const clr_t Aqua =   clr_t(0x427b58ff);
-        const clr_t Orange = clr_t(0xaf3a03ff);
-        const clr_t Gray =   clr_t(0x928374ff);
+        const Color bg =     Color(0xa89984ff);
+        const Color bg1 =    Color(0xa89984ff);
+        const Color bg2 =    Color(0xbdae93ff);
+        const Color bg3 =    Color(0xebdbb2ff);
+        const Color bg4 =    Color(0x1E3A4CFF);
+        const Color Red =    Color(0x9d0006ff);
+        const Color Green =  Color(0x79740eff);
+        const Color Yellow = Color(0xb57614ff);
+        const Color Blue =   Color(0x076678ff);
+        const Color Purple = Color(0x8f3f71ff);
+        const Color Aqua =   Color(0x427b58ff);
+        const Color Orange = Color(0xaf3a03ff);
+        const Color Gray =   Color(0x928374ff);
     };
 
     float len(vec2f);
@@ -133,13 +135,14 @@ namespace EPI_NAMESPACE {
         const std::vector<vec2f>& getModelVertecies() const {
             return model;
         }
+        Polygon() {}
         Polygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : pos(pos_), rotation(rot_), model(model_), points(model_.size(), vec2f(0, 0)) {
             std::sort(model.begin(), model.end(), [](vec2f a, vec2f b) {return std::atan2(a.x, -a.y) > std::atan2(b.x, -b.y);});
             m_updatePoints();
             m_avgPoints();
         }
-        friend void draw(sf::RenderWindow& rw, const Polygon& poly, clr_t clr);
-        friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, clr_t clr);
+        friend void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr);
+        friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr);
     };
     AABB AABBfromCircle(const Circle& c);
 
@@ -150,7 +153,8 @@ namespace EPI_NAMESPACE {
     Ray Raypd(vec2f p, vec2f d);
 
     Polygon PolygonReg(vec2f pos, float rot, size_t count, float dist);
-    Polygon PolygonPoints(std::vector<vec2f> verticies);
+    Polygon PolygonfromPoints(std::vector<vec2f> verticies);
+    Polygon PolygonfromAABB(const AABB& aabb);
     // hue: 0-360°; sat: 0.f-1.f; val: 0.f-1.f
 
     vec2f operator* (vec2f a, vec2f b);

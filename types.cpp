@@ -4,6 +4,7 @@
 #include <cmath>
 #include <math.h>
 #include <numeric>
+#include <vector>
 namespace EPI_NAMESPACE {
 vec2f norm(vec2f v) {
     float l = len(v);
@@ -54,7 +55,7 @@ Ray Raypd(vec2f p, vec2f d) {
     r.dir = d;
     return r;
 }
-void draw(sf::RenderWindow& rw, const Polygon& poly, clr_t clr) {
+void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
     struct VertPair {
         sf::Vertex a;
         sf::Vertex b;
@@ -72,7 +73,7 @@ void draw(sf::RenderWindow& rw, const Polygon& poly, clr_t clr) {
         rw.draw(t, 2, sf::Lines);
     }
 }
-void drawFill(sf::RenderWindow& rw, const Polygon& poly, clr_t clr) {
+void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
     struct VertPair {
         sf::Vertex a;
         sf::Vertex b;
@@ -99,11 +100,15 @@ Polygon PolygonReg(vec2f pos, float rot, size_t count, float dist) {
     }
     return Polygon(pos, rot, model);
 }
-Polygon PolygonPoints(std::vector<vec2f> verticies) {
+Polygon PolygonfromPoints(std::vector<vec2f> verticies) {
     vec2f avg = std::reduce(verticies.begin(), verticies.end()) / (float)verticies.size();
     for(auto& v : verticies)
         v -= avg;
     return Polygon(avg, 0.f, verticies);
+}
+Polygon PolygonfromAABB(const AABB& aabb) {
+    std::vector<vec2f> points = {aabb.min, vec2f(aabb.min.x, aabb.max.y), aabb.max, vec2f(aabb.max.x, aabb.min.y)};
+    return PolygonfromPoints(points);
 }
 
 

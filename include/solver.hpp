@@ -1,6 +1,9 @@
 #pragma once
 #include "col_utils.h"
+
 #include "rigidbody.hpp"
+#include "trigger.hpp"
+
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -23,10 +26,16 @@ struct CollisionManifold {
 class InterfaceSolver {
 public:
     virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
+    struct DetectionResult {
+        bool detected = false;
+        vec2f contact_normal;
+    };
+    virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) = 0;
 };
 class BasicSolver : public InterfaceSolver {
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
+    virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
     virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
 class DefaultSolver : public InterfaceSolver {
@@ -43,8 +52,8 @@ private:
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
 
+    virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
     virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
-    bool do_sth();
 };
 
 }
