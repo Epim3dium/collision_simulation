@@ -1,5 +1,4 @@
 #include "sim.h"
-#include <ostream>
 
 using namespace epi;
 int main() {

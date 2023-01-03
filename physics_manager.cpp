@@ -2,9 +2,15 @@
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include <cmath>
+#include <cstddef>
+#include <iterator>
 #include <map>
+#include <mutex>
 #include <set>
+#include <sys/_types/_size_t.h>
 #include <vector>
+#include <thread>
+#include <mutex>
 
 #define SQR(x) ((x) * (x))
 #define MAX_VELOCITY 50.0f
@@ -83,11 +89,7 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         float sfriction = m_selectFrom(ci.r1->material.sfriction, ci.r2->material.sfriction, friction_select);
         float dfriction = m_selectFrom(ci.r1->material.dfriction, ci.r2->material.dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
-        auto pos1 = ci.r1->aabb().center();
-        auto pos2 = ci.r2->aabb().center();
         auto result = m_solver->solve(ci.r1, ci.r2, restitution, sfriction, dfriction);
-        if(!result)
-            continue;
     }
 }
 void PhysicsManager::m_processCollisions(float delT) {
@@ -170,7 +172,7 @@ void PhysicsManager::update(float delT ) {
         m_updateRestraints(deltaStep);
         m_processCollisions(deltaStep);
     }
-    m_processDormant(delT);
+    //m_processDormant(delT);
     m_processTriggers();
 }
 template<class T>

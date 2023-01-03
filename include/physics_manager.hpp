@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <functional>
 #include <vector>
+#include <set>
+
 namespace EPI_NAMESPACE {
 enum class eSelectMode {
     Min,
@@ -49,6 +51,7 @@ class PhysicsManager {
     std::vector<Rigidbody*> m_rigidbodies;
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
+    std::mutex m_mutex;
 
     InterfaceSolver* m_solver = new DefaultSolver();
 public:

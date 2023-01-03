@@ -1,7 +1,10 @@
 #include "sim.h"
 #include "SFML/Graphics/CircleShape.hpp"
 #include "SFML/Graphics/Color.hpp"
+#include "SFML/Graphics/Drawable.hpp"
+#include "SFML/Graphics/RectangleShape.hpp"
 #include "SFML/Graphics/RenderWindow.hpp"
+#include "SFML/Graphics/Shape.hpp"
 #include "SFML/Graphics/Vertex.hpp"
 #include "SFML/Window/Keyboard.hpp"
 #include "SFML/Window/Mouse.hpp"
@@ -11,6 +14,7 @@
 #include "restraint.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
+#include "particle.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -84,11 +88,11 @@ static void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 void Sim::setup() {
-    pm.segment_size = 50.f;
-    pm.steps = 10;
-    pm.grav = 1000.f;
-    pm.bounciness_select = eSelectMode::Max;
-    pm.friction_select = eSelectMode::Max;
+    physics_manager.segment_size = 50.f;
+    physics_manager.steps = 10;
+    physics_manager.grav = 1000.f;
+    physics_manager.bounciness_select = eSelectMode::Max;
+    physics_manager.friction_select = eSelectMode::Max;
     //pm.bind(new BasicSolver());
     /*
     std::vector<vec2f> m = {vec2f(0.f, 50.f), vec2f(25.f, 0.f), vec2f(0.f, -50.f), vec2f(-25.f, 0.f)};
@@ -115,7 +119,7 @@ void Sim::setup() {
         AABB trigger = aabb_inner;
         trigger.setCenter({10000.f, 10000.f});
         selection.trigger = std::make_unique<SelectingTrigger>(SelectingTrigger(PolygonfromAABB(trigger)));
-        pm.bind(selection.trigger.get());
+        physics_manager.bind(selection.trigger.get());
     }
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
 
@@ -143,8 +147,8 @@ void Sim::setup() {
 
     //RigidPoly p0 = Polygon(vec2f(), 0.f, mini_model);
     for(const auto& d : polys)
-        pm.bind(d.get());
-    pm.steps = 3U;
+        physics_manager.bind(d.get());
+    physics_manager.steps = 3U;
 }
 void Sim::onEvent(const sf::Event &event, float delT) {
     if (event.type == sf::Event::Closed)
@@ -193,7 +197,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
             polys.push_back(std::make_unique<RigidPolygon>(t));
             rigidbodies.emplace(polys.back().get());
-            pm.bind(polys.back().get());
+            physics_manager.bind(polys.back().get());
             polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::R) {
             selection.selected.clear();
@@ -210,21 +214,38 @@ void Sim::update(float delT) {
         RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
         circs.push_back(std::make_unique<RigidCircle>(t));
         rigidbodies.emplace(circs.back().get());
-        pm.bind(circs.back().get());
+        physics_manager.bind(circs.back().get());
     }
-    /*
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
-        copyToPrevious(t, hovered_last);
         polys.push_back(std::make_unique<RigidPolygon>(t));
-        pm.bind(polys.back().get());
+        rigidbodies.emplace(polys.back().get());
+        physics_manager.bind(polys.back().get());
     }
-    */
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
+        vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
+        particle_manager.emit(50U, 
+            Particle::PosInit(mpos),
+            Particle::LifetimeInit(0.1f, 0.5f),
+            Particle::ColorVecInit({PastelColor::Red}),
+            Particle::ShapeInit(5.f),
+            Particle::VelMagInit(250.f, 1000.f),
+            Particle::VelAngleInit(-2.0f, -1.2f),
+            Particle::ColorFuncInit(
+                [](Color clr, float time)->Color {
+                    Color result;
+                    result.r = clr.r * time + PastelColor::Yellow.r * (1.f - time);
+                    result.g = clr.g * time + PastelColor::Yellow.g * (1.f - time);
+                    result.b = clr.b * time + PastelColor::Yellow.b * (1.f - time);
+                    return result;
+                })
+        );
+    }
     if(selection.isHolding) {
         for(auto s : selection.selected) {
             auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getPos();
-            d /= delT * 2.f;
+            d /= sqrt(delT);
             s->velocity = d;
             s->setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
         }
@@ -271,22 +292,22 @@ void Sim::update(float delT) {
             static bool open_global = true;
             if(ImGui::BeginTabItem("global settings", &open_global))
             {
-                ImGui::SliderFloat("change seg size" , &pm.segment_size, 5.0f, 300.0f, "%.0f");
+                ImGui::SliderFloat("change seg size" , &physics_manager.segment_size, 5.0f, 300.0f, "%.0f");
                 static int tsteps = 10;
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
-                pm.steps = tsteps;
-                ImGui::SliderFloat("change gravity" , &pm.grav, -3000.f, 3000.f, "%.1f");
+                physics_manager.steps = tsteps;
+                ImGui::SliderFloat("change gravity" , &physics_manager.grav, -3000.f, 3000.f, "%.1f");
                 ImGui::SliderFloat("radius" , &default_dynamic_radius, 5.f, 50.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {
                     static int cur_choice_friction = 0;
                     ImGui::ListBox("choose mode friction", &cur_choice_friction, select_modes, 3);
-                    pm.friction_select = (eSelectMode)cur_choice_friction;
+                    physics_manager.friction_select = (eSelectMode)cur_choice_friction;
                 }
                 {
                     static int cur_choice_bounce = 0;
                     ImGui::ListBox("choose mode bounce", &cur_choice_bounce, select_modes, 3);
-                    pm.bounciness_select = (eSelectMode)cur_choice_bounce;
+                    physics_manager.bounciness_select = (eSelectMode)cur_choice_bounce;
                 }ImGui::EndTabItem();
             } 
             static bool open_object = true;
@@ -322,14 +343,14 @@ void Sim::update(float delT) {
     }
     ImGui::End();
 
-    pm.update(delT);
-    window.clear(PastelColor::bg4);
+    physics_manager.update(delT);
+    particle_manager.update(delT);
     //delete when out of frame
     for(auto& r : rigidbodies) {
         if(!AABBvAABB(aabb_outer, r->aabb())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);
-            pm.unbind(r);
+            physics_manager.unbind(r);
             delFromCircs(r);
             delFromPolys(r);
             rigidbodies.erase(r);
@@ -338,11 +359,13 @@ void Sim::update(float delT) {
     }
 
     //drawing
+    window.clear(PastelColor::bg4);
     drawFill(window, *selection.trigger, PastelColor::Purple);
 
     for(auto& r : rigidbodies) {
         DrawRigidbody(r, selection.selected, window);
     }
+    particle_manager.draw(window);
     for(auto p : polygon_creation_vec) {
         float r = 5.f;
         sf::CircleShape c(r);
@@ -373,7 +396,7 @@ void Sim::Run() {
 
 }
 Sim::Sim(float w, float h) : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions") {
-    //window.setFramerateLimit(60);
+    window.setFramerateLimit(60);
     ImGui::SFML::Init(window);
 
     setupImGuiFont();
