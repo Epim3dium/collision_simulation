@@ -3,16 +3,21 @@ DEPS=$(wildcard include/*.h) $(wildcard include/*.hpp)
 
 CFLAGS=@compile_flags.txt
 
-OBJ=sim.o types.o col_utils.o solver.o physics_manager.o rigidbody.o restraint.o particle.o particle_manager.o
-EXECUTABLE=main.o 
+OBJ=sim.o types.o col_utils.o solver.o physics_manager.o rigidbody.o restraint.o particle.o particle_manager.o quad_tree.o
+DEMO=main.o
+PERF=perf_main.o
 
 %.o: %.cpp $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS) -framework openGL
 
 SFML_OBJ=vendor/imgui/imguilib.a
 
-main.exe: $(OBJ) $(EXECUTABLE) $(SFML_OBJ)
+main.exe: $(OBJ) $(DEMO) $(SFML_OBJ)
 	$(CC) -o $@ $^ $(CFLAGS) -framework openGL
+
+perf.exe: $(OBJ) $(PERF) $(SFML_OBJ)
+	$(CC) -o $@ $^ $(CFLAGS) -framework openGL
+
 collision.a: $(OBJ) $(SFML_OBJ)
 	ar -rcs collision.a *.o
 

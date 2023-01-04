@@ -10,17 +10,20 @@
 #include "SFML/Window/Mouse.hpp"
 
 #include "col_utils.h"
+#include "imgui-SFML.h"
 #include "imgui.h"
 #include "restraint.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
 #include "particle.hpp"
+#include "quad_tree.hpp"
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <memory>
 #include <numeric>
+#include <sys/_types/_size_t.h>
 #include <vector>
 
 namespace EPI_NAMESPACE {
@@ -225,13 +228,13 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-        particle_manager.emit(50U, 
+        particle_manager.emit(30000U * delT, 
             Particle::PosInit(mpos),
             Particle::LifetimeInit(0.1f, 0.5f),
             Particle::ColorVecInit({PastelColor::Red}),
             Particle::ShapeInit(5.f),
             Particle::VelMagInit(250.f, 1000.f),
-            Particle::VelAngleInit(-2.0f, -1.2f),
+            Particle::VelAngleInit(0.f, 3.141f),
             Particle::ColorFuncInit(
                 [](Color clr, float time)->Color {
                     Color result;
@@ -357,7 +360,8 @@ void Sim::update(float delT) {
             break;
         }
     }
-
+}
+void Sim::draw() {
     //drawing
     window.clear(PastelColor::bg4);
     drawFill(window, *selection.trigger, PastelColor::Purple);
@@ -373,6 +377,7 @@ void Sim::update(float delT) {
         c.setFillColor(Color::Magenta);
         window.draw(c);
     }
+
 }
 void Sim::Run() {
     sf::Clock DeltaClock;
@@ -381,6 +386,12 @@ void Sim::Run() {
     {
         sf::Event event;
         auto delT = DeltaClock.restart();
+        FPS.push_back(1.f / delT.asSeconds());
+        total_sim_time += delT.asSeconds();
+
+        if(max_sim_time < total_sim_time)
+            return;
+
         while (window.pollEvent(event))
         {
             ImGui::SFML::ProcessEvent(event);
@@ -389,14 +400,39 @@ void Sim::Run() {
         ImGui::SFML::Update(window, delT);
 
         update(delT.asSeconds());
-
+        draw();
         ImGui::SFML::Render(window);
         window.display();
     }
 
 }
-Sim::Sim(float w, float h) : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions") {
-    window.setFramerateLimit(60);
+Sim::~Sim() {
+    std::cout << "total simulation time: " << total_sim_time << "\n";
+    auto avg = 0.f;
+    FPS.erase(FPS.begin(), FPS.begin() + 5);
+    for(auto f : FPS) {
+        avg += f / (float)FPS.size();
+    }
+    std::cout << "average fps during simulation: " << avg << "\n";
+    ImGui::SFML::Shutdown(window);
+}
+Sim::Sim(float w, float h, Circle c, size_t c_count, Polygon p, size_t p_count, float sim_time)
+      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"),
+        max_sim_time(sim_time), physics_manager(AABB(vec2f(0, 0), vec2f(w, h)) )
+{
+    for(size_t i = 0; i < c_count; i++) {
+        c.pos -= vec2f(1.f, 1.f);
+        circs.emplace_back(std::make_unique<RigidCircle>(RigidCircle(c)));
+        rigidbodies.emplace(circs.back().get());
+        physics_manager.bind(circs.back().get());
+    }
+    for(size_t i = 0; i < p_count; i++) {
+        p.setPos(p.getPos() - vec2f(1.f, 1.f));
+        polys.emplace_back(std::make_unique<RigidPolygon>(RigidPolygon(p)));
+        rigidbodies.emplace(polys.back().get());
+        physics_manager.bind(polys.back().get());
+    }
+
     ImGui::SFML::Init(window);
 
     setupImGuiFont();

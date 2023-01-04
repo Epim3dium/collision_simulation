@@ -29,10 +29,14 @@ struct SelectingTrigger : public TriggerPolygonInterface {
 };
 class Sim {
     sf::RenderWindow window;
+    float m_width, m_height;
 public:
+    std::vector<float> FPS;
+    float total_sim_time = 0.f;
+    float max_sim_time = INFINITY;
+
     sf::Clock deltaClock;
 
-    float m_width, m_height;
     PhysicsManager physics_manager;
     ParticleManager particle_manager = ParticleManager(8192U);
     
@@ -84,10 +88,12 @@ public:
 
     void Run();
     virtual void update(float delT);
+    virtual void draw();
     virtual void setup();
     virtual void onEvent(const sf::Event& event, float delT);
 
-    Sim(float w, float h);
+    Sim(float w, float h, Circle c = {}, size_t c_count = 0, Polygon p = {}, size_t p_count = 0, float sim_time = INFINITY);
+    ~Sim();
 };
 
 }

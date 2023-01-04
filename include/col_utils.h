@@ -5,6 +5,7 @@ namespace EPI_NAMESPACE {
     bool PointVCircle(const vec2f& p, const Circle& c);
     bool PointVPoly(const vec2f& p, const Polygon& poly);
     bool AABBvAABB(const AABB& r1, const AABB& r2);
+    bool AABBcontainsAABB(const AABB& r1, const AABB& r2);
     bool RayVAABB(vec2f ray_origin, vec2f ray_dir,
         const AABB& target, float* t_hit_near,
         vec2f* contact_normal, vec2f* contact_point);

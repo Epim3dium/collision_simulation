@@ -1,3 +1,4 @@
+#include "quad_tree.hpp"
 #include "restraint.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
@@ -48,7 +49,7 @@ class PhysicsManager {
     void m_processDormant(float delT);
     void m_processTriggers();
 
-    std::vector<Rigidbody*> m_rigidbodies;
+    QuadTreeContainer<Rigidbody*> m_rigidbodiesQT;
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
     std::mutex m_mutex;
@@ -65,7 +66,7 @@ public:
     eSelectMode friction_select = eSelectMode::Min;
 
     inline void bind(Rigidbody* rb) {
-        m_rigidbodies.push_back(rb);
+        m_rigidbodiesQT.insert(rb, rb->aabb());
     }
     inline void bind(InterfaceSolver* solver) {
         m_solver = solver;
@@ -81,6 +82,6 @@ public:
     void unbind(TriggerInterface* trigger);
     void update(float delT);
 
-    friend RigidPolygon;
+    PhysicsManager(AABB size) : m_rigidbodiesQT(size, 0) {}
 };
 }
