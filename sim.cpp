@@ -418,7 +418,7 @@ Sim::~Sim() {
 }
 Sim::Sim(float w, float h, Circle c, size_t c_count, Polygon p, size_t p_count, float sim_time)
       : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"),
-        max_sim_time(sim_time), physics_manager(AABB(vec2f(0, 0), vec2f(w, h)) )
+        max_sim_time(sim_time), physics_manager({{0, 0}, {w, h}})
 {
     for(size_t i = 0; i < c_count; i++) {
         c.pos -= vec2f(1.f, 1.f);

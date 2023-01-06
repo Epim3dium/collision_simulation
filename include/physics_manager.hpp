@@ -1,8 +1,8 @@
-#include "quad_tree.hpp"
 #include "restraint.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"
+#include "quad_tree.hpp"
 #include <algorithm>
 #include <functional>
 #include <vector>
@@ -52,7 +52,6 @@ class PhysicsManager {
     QuadTreeContainer<Rigidbody*> m_rigidbodiesQT;
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
-    std::mutex m_mutex;
 
     InterfaceSolver* m_solver = new DefaultSolver();
 public:

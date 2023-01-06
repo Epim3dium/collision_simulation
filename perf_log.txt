@@ -1,9 +1,0 @@
-+====Poly Simulation====+
-total simulation time: 3.00413
-average fps during simulation: 172.317
-+====Circle Simulation====+
-total simulation time: 3.00434
-average fps during simulation: 182.364
-+====Mixed Simulation====+
-total simulation time: 3.00352
-average fps during simulation: 193.674

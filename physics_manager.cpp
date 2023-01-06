@@ -1,8 +1,6 @@
 #include "physics_manager.hpp"
-#include "col_utils.h"
 #include "solver.hpp"
 #include "rigidbody.hpp"
-
 #include <cmath>
 #include <cstddef>
 #include <iterator>
@@ -43,8 +41,7 @@ static bool areIncompatible(Rigidbody& rb1, Rigidbody& rb2) {
         (rb1.collider.layer == rb2.collider.layer);
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
-    std::vector<PhysicsManager::ColInfo> col_list;
-
+    std::vector<ColInfo> col_list;
     for(auto& r1 : m_rigidbodiesQT) {
         auto found = m_rigidbodiesQT.search(r1.item->aabb());
         for(auto& r2 : found) {
@@ -70,6 +67,17 @@ void PhysicsManager::m_processCollisions(float delT) {
     }
     auto col_list = processBroadPhase();
     processNarrowPhase(col_list);
+}
+static void devideToSegments(std::vector<Rigidbody*> rigidbodies, float segment_size, std::map<int, std::set<Rigidbody*>>& result) {
+    vec2f padding(segment_size, segment_size);
+    for(auto& r : rigidbodies) {
+        auto aabb = r->aabb();
+        aabb.min -= padding;
+        aabb.max += padding;
+        auto hashed = hash(aabb, segment_size);
+        for(auto h : hashed)
+            result[h].emplace(r);
+    }
 }
 void PhysicsManager::m_updateRestraints(float delT) {
     for(auto& r : m_restraints)
@@ -101,13 +109,14 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     rb.setPos(rb.getPos() + rb.velocity * delT);
     if(!rb.collider.lockRotation)
         rb.setRot(rb.getRot() + rb.angular_velocity * delT);
-
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto it = m_rigidbodiesQT.begin(); it != m_rigidbodiesQT.end(); it++) {
         m_updateRigidbody(*it->item, delT);
-        if(qlen(it->item->velocity) > 0.1f)
+        if(qlen(it->item->velocity) > 1.f)
             m_rigidbodiesQT.relocate(it, it->item->aabb());
+        else
+            it->pItem.iterator->first = it->item->aabb();
     }
 }
 void PhysicsManager::update(float delT ) {
@@ -147,50 +156,3 @@ void PhysicsManager::unbind(TriggerInterface* trigger) {
 }
 
 }
-/*
-std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
-    std::vector<PhysicsManager::ColInfo> col_list;
-    struct BoundInfo {
-        Rigidbody* id;
-        float val;
-        bool isEnding = false;
-    };
-    std::vector<BoundInfo> infos;
-    for(auto& r : m_rigidbodies) {
-        infos.push_back({r, r->aabb().min.x});
-        infos.push_back({r, r->aabb().max.x, true});
-    }
-    std::sort(infos.begin(), infos.end(), 
-          [](const BoundInfo& bi1, const BoundInfo& bi2) {
-              return bi1.val < bi2.val;
-          });
-    std::map<int, std::vector<Rigidbody*>> open;
-    for(auto& i : infos) {
-        auto minval = i.id->aabb().min.y;
-        auto maxval = i.id->aabb().max.y;
-        if(i.isEnding) {
-            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
-                if(open.find(j) == open.end())
-                    continue;
-                auto& vec = open.at(j);
-                auto itr = std::find(vec.begin(), vec.end(), i.id);
-                if(itr != vec.end())
-                    vec.erase(itr);
-            }
-        } else {
-            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
-                auto& vec = open[j];
-                for(auto& o : vec) {
-                    if(!areIncompatible(*i.id, *o) && AABBvAABB(i.id->aabb(), o->aabb()) ) {
-                        col_list.push_back({i.id, o});
-                    }
-                }
-                vec.push_back(i.id);
-            }
-        }
-    }
-    return col_list;
-}
-
-
-*/
