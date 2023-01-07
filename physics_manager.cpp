@@ -41,12 +41,43 @@ static bool areIncompatible(Rigidbody& rb1, Rigidbody& rb2) {
         (rb1.collider.layer == rb2.collider.layer);
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
-    std::vector<ColInfo> col_list;
-    for(auto& r1 : m_rigidbodiesQT) {
-        auto found = m_rigidbodiesQT.search(r1.item->aabb());
-        for(auto& r2 : found) {
-            if(r1.item != r2->item && !areIncompatible(*r1.item, *r2->item) && AABBvAABB(r1.item->aabb(), r2->item->aabb()) ) {
-                col_list.push_back({r1.item, r2->item});
+    std::vector<PhysicsManager::ColInfo> col_list;
+    struct BoundInfo {
+        Rigidbody* id;
+        float val;
+        bool isEnding = false;
+    };
+    std::vector<BoundInfo> infos;
+    for(auto& r : m_rigidbodiesQT) {
+        infos.push_back({r.item, r.item->aabb().min.x});
+        infos.push_back({r.item, r.item->aabb().max.x, true});
+    }
+    std::sort(infos.begin(), infos.end(), 
+          [](const BoundInfo& bi1, const BoundInfo& bi2) {
+              return bi1.val < bi2.val;
+          });
+    std::map<int, std::vector<Rigidbody*>> open;
+    for(auto& i : infos) {
+        auto minval = i.id->aabb().min.y;
+        auto maxval = i.id->aabb().max.y;
+        if(i.isEnding) {
+            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
+                if(open.find(j) == open.end())
+                    continue;
+                auto& vec = open.at(j);
+                auto itr = std::find(vec.begin(), vec.end(), i.id);
+                if(itr != vec.end())
+                    vec.erase(itr);
+            }
+        } else {
+            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
+                auto& vec = open[j];
+                for(auto& o : vec) {
+                    if(!areIncompatible(*i.id, *o) && AABBvAABB(i.id->aabb(), o->aabb()) ) {
+                        col_list.push_back({i.id, o});
+                    }
+                }
+                vec.push_back(i.id);
             }
         }
     }
