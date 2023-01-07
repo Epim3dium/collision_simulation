@@ -109,14 +109,15 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     rb.setPos(rb.getPos() + rb.velocity * delT);
     if(!rb.collider.lockRotation)
         rb.setRot(rb.getRot() + rb.angular_velocity * delT);
+    rb.collider.last_pos = rb.getPos();
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto it = m_rigidbodiesQT.begin(); it != m_rigidbodiesQT.end(); it++) {
-        m_updateRigidbody(*it->item, delT);
         if(qlen(it->item->velocity) > 1.f)
             m_rigidbodiesQT.relocate(it, it->item->aabb());
         else
             it->pItem.iterator->first = it->item->aabb();
+        m_updateRigidbody(*it->item, delT);
     }
 }
 void PhysicsManager::update(float delT ) {

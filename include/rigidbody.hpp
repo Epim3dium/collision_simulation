@@ -102,13 +102,6 @@ public:
     inline float inertia() const override { 
         return getInertia(vec2f(0, 0), getModelVertecies(), mass); 
     }
-    /*
-    inline void updateMovement(float delT) override {
-        Polygon::setPos(Polygon::getPos() + this->velocity * delT);
-        if(!collider.lockRotation)
-            setRot(getRot() + this->angular_velocity * delT);
-    }
-    */
     virtual vec2f getPos() const override {
         return Polygon::getPos();
     }

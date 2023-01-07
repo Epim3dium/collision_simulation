@@ -18,16 +18,12 @@ static bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
 
     float overlap = INFINITY;
     
-    for (int shape = 0; shape < 2; shape++)
-    {
-        if (shape == 1)
-        {
+    for (int shape = 0; shape < 2; shape++) {
+        if (shape == 1) {
             poly1 = &r2;
             poly2 = &r1;
         }
-
-        for (int a = 0; a < poly1->getVertecies().size(); a++)
-        {
+        for (int a = 0; a < poly1->getVertecies().size(); a++) {
             int b = (a + 1) % poly1->getVertecies().size();
             vec2f axisProj = { -(poly1->getVertecies()[b].y - poly1->getVertecies()[a].y), poly1->getVertecies()[b].x - poly1->getVertecies()[a].x };
             
@@ -37,8 +33,7 @@ static bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
 
             // Work out min and max 1D points for r1
             float min_r1 = INFINITY, max_r1 = -INFINITY;
-            for (int p = 0; p < poly1->getVertecies().size(); p++)
-            {
+            for (int p = 0; p < poly1->getVertecies().size(); p++) {
                 float q = (poly1->getVertecies()[p].x * axisProj.x + poly1->getVertecies()[p].y * axisProj.y);
                 min_r1 = std::min(min_r1, q);
                 max_r1 = std::max(max_r1, q);
@@ -46,8 +41,7 @@ static bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
 
             // Work out min and max 1D points for r2
             float min_r2 = INFINITY, max_r2 = -INFINITY;
-            for (int p = 0; p < poly2->getVertecies().size(); p++)
-            {
+            for (int p = 0; p < poly2->getVertecies().size(); p++) {
                 float q = (poly2->getVertecies()[p].x * axisProj.x + poly2->getVertecies()[p].y * axisProj.y);
                 min_r2 = std::min(min_r2, q);
                 max_r2 = std::max(max_r2, q);
@@ -72,8 +66,6 @@ static bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
             *cn *= -1.f;
     }
 
-    // If we got here, the objects have collided, we will displace r1
-    // by overlap along the vector between the two object centers
     if(t)
         *t = overlap;
     return true;
@@ -150,9 +142,11 @@ CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2) {
     }
     vec2f cn;
     float overlap;
-    auto cps = getContactPoints(r1, r2);
 
     if(detect(r1, r2, &cn, &overlap)) {
+        std::vector<vec2f> cps;
+        getContactPoints(r1, r2, cps);
+
         if(r2.isStatic) {
             r1.setPos(r1.getPos() + cn * overlap);
         } else if(r1.isStatic) {
@@ -161,7 +155,7 @@ CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2) {
             r1.setPos(r1.getPos() + cn * overlap / 2.f);
             r2.setPos(r2.getPos() + -cn * overlap / 2.f);
         }
-        return {true, &r1, &r2, r1.getPos(), r2.getPos(), cn, cps, overlap};
+        return {true, &r1, &r2, r1.getPos(), r2.getPos(), cn, std::move(cps), overlap};
     }
     return {false};
 }
@@ -185,7 +179,7 @@ CollisionManifold handleOverlap(RigidCircle& r1, RigidCircle& r2) {
     }
     return {false};
 }
-static InterfaceSolver::DetectionResult common_detect(Rigidbody* rb1, TriggerInterface* rb2) {
+static SolverInterface::DetectionResult common_detect(Rigidbody* rb1, TriggerInterface* rb2) {
     vec2f cn;
     bool result;
     switch(rb1->getType()) {

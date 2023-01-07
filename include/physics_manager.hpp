@@ -53,7 +53,7 @@ class PhysicsManager {
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
 
-    InterfaceSolver* m_solver = new DefaultSolver();
+    SolverInterface* m_solver = new DefaultSolver();
 public:
     float grav = 0.5f;
     size_t steps = 2;
@@ -67,7 +67,7 @@ public:
     inline void bind(Rigidbody* rb) {
         m_rigidbodiesQT.insert(rb, rb->aabb());
     }
-    inline void bind(InterfaceSolver* solver) {
+    inline void bind(SolverInterface* solver) {
         m_solver = solver;
     }
     inline void bind(RestraintInterface* restraint) {

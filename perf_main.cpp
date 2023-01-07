@@ -13,7 +13,7 @@ int main() {
     }
     {
         std::cout << "+====Circle Simulation====+\n";
-        Sim s(2000.f, 2000.f, Circle(vec2f(1000.f, 1000.f), 7.f), 600U, {}, 0, 3.f);
+        Sim s(2000.f, 2000.f, Circle(vec2f(500.f, 500.f), 7.f), 800U, {}, 0, 3.f);
         s.Run();
     }
     {

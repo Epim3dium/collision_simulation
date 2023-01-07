@@ -41,12 +41,12 @@ public:
     ParticleManager particle_manager = ParticleManager(8192U);
     
     
-    std::vector<std::unique_ptr<RigidPolygon>> polys;
-    std::vector<std::unique_ptr<RigidCircle>> circs;
+    std::list<RigidPolygon> polys;
+    std::list<RigidCircle> circs;
     std::set<Rigidbody*> rigidbodies;
     void delFromPolys(Rigidbody* rb) {
         for(auto p = polys.begin(); p != polys.end(); p++) {
-            if((void*)p->get() == (void*)rb) {
+            if((void*)&p == (void*)&rb) {
                 polys.erase(p);
                 physics_manager.unbind((RigidPolygon*)rb);
                 break;
@@ -55,7 +55,7 @@ public:
     }
     void delFromCircs(Rigidbody* rb) {
         for(auto p = circs.begin(); p != circs.end(); p++) {
-            if((void*)p->get() == (void*)rb) {
+            if((void*)&p == (void*)&rb) {
                 circs.erase(p);
                 physics_manager.unbind((RigidCircle*)rb);
                 break;

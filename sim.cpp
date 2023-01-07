@@ -97,25 +97,6 @@ void Sim::setup() {
     physics_manager.bounciness_select = eSelectMode::Max;
     physics_manager.friction_select = eSelectMode::Max;
     //pm.bind(new BasicSolver());
-    /*
-    std::vector<vec2f> m = {vec2f(0.f, 50.f), vec2f(25.f, 0.f), vec2f(0.f, -50.f), vec2f(-25.f, 0.f)};
-    auto tmp = RigidPolygon(vec2f(500.f, 100.f), 0.f, m);
-
-    polys.push_back(std::make_unique<RigidPolygon>( tmp ) );
-    pm.bind(polys.back().get());
-    auto a = polys.back().get();
-    auto layer = a->collider.layer;
-    for(int i = 0; i < 10; i++) {
-        tmp.collider.layer += 1000;
-        tmp.setPos(tmp.getPos() + vec2f(0.f, 50.f));
-        polys.push_back(std::make_unique<RigidPolygon>( tmp ) );
-        pm.bind(polys.back().get());
-        auto b = polys.back().get();
-
-        pm.bind(new RestraintPoint(2.f, a, 0U, b, 2U));
-        a = b;
-    }
-    */
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
     {
@@ -139,8 +120,8 @@ void Sim::setup() {
             m -= avg;\
         auto t = RigidPolygon(avg, 0.f, model);\
         t.isStatic = true;\
-        polys.push_back(std::make_unique<RigidPolygon>(t));\
-        rigidbodies.emplace(polys.back().get());\
+        polys.push_back(t);\
+        rigidbodies.emplace(&polys.back());\
     }
 
     ADD_SIDE(min.x, min.y, min.x, max.y);
@@ -149,8 +130,8 @@ void Sim::setup() {
     ADD_SIDE(max.x, max.y, max.x, min.y);
 
     //RigidPoly p0 = Polygon(vec2f(), 0.f, mini_model);
-    for(const auto& d : polys)
-        physics_manager.bind(d.get());
+    for(auto& d : polys)
+        physics_manager.bind(&d);
     physics_manager.steps = 3U;
 }
 void Sim::onEvent(const sf::Event &event, float delT) {
@@ -198,9 +179,9 @@ void Sim::onEvent(const sf::Event &event, float delT) {
     else if(event.type == sf::Event::KeyPressed) {
         if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
             RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
-            polys.push_back(std::make_unique<RigidPolygon>(t));
-            rigidbodies.emplace(polys.back().get());
-            physics_manager.bind(polys.back().get());
+            polys.push_back(t);
+            rigidbodies.emplace(&polys.back());
+            physics_manager.bind(&polys.back());
             polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::R) {
             selection.selected.clear();
@@ -215,16 +196,17 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
         RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
-        circs.push_back(std::make_unique<RigidCircle>(t));
-        rigidbodies.emplace(circs.back().get());
-        physics_manager.bind(circs.back().get());
+        circs.push_back(t);
+
+        rigidbodies.emplace(&circs.back());
+        physics_manager.bind(&circs.back());
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
-        polys.push_back(std::make_unique<RigidPolygon>(t));
-        rigidbodies.emplace(polys.back().get());
-        physics_manager.bind(polys.back().get());
+        polys.push_back(t);
+        rigidbodies.emplace( &polys.back());
+        physics_manager.bind(&polys.back());
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
@@ -267,14 +249,14 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(PointVPoly(mpos, *p)) {
-            found = p.get();
+        if(PointVPoly(mpos, p)) {
+            found = &p;
             break;
         }
     }
     for(auto& c : circs) {
-        if(PointVCircle(mpos, *c)) {
-            found = c.get();
+        if(PointVCircle(mpos, c)) {
+            found = &c;
             break;
         }
     }
@@ -300,7 +282,7 @@ void Sim::update(float delT) {
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 physics_manager.steps = tsteps;
                 ImGui::SliderFloat("change gravity" , &physics_manager.grav, -3000.f, 3000.f, "%.1f");
-                ImGui::SliderFloat("radius" , &default_dynamic_radius, 5.f, 50.f);
+                ImGui::SliderFloat("radius" , &default_dynamic_radius, 1.f, 50.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {
                     static int cur_choice_friction = 0;
@@ -421,16 +403,16 @@ Sim::Sim(float w, float h, Circle c, size_t c_count, Polygon p, size_t p_count, 
         max_sim_time(sim_time), physics_manager({{0, 0}, {w, h}})
 {
     for(size_t i = 0; i < c_count; i++) {
-        c.pos -= vec2f(1.f, 1.f);
-        circs.emplace_back(std::make_unique<RigidCircle>(RigidCircle(c)));
-        rigidbodies.emplace(circs.back().get());
-        physics_manager.bind(circs.back().get());
+        c.pos -= vec2f(c.radius, c.radius);
+        circs.emplace_back(RigidCircle(c));
+        rigidbodies.emplace(&circs.back());
+        physics_manager.bind(&circs.back());
     }
     for(size_t i = 0; i < p_count; i++) {
         p.setPos(p.getPos() - vec2f(1.f, 1.f));
-        polys.emplace_back(std::make_unique<RigidPolygon>(RigidPolygon(p)));
-        rigidbodies.emplace(polys.back().get());
-        physics_manager.bind(polys.back().get());
+        polys.emplace_back(RigidPolygon(p));
+        rigidbodies.emplace(&polys.back());
+        physics_manager.bind(&polys.back());
     }
 
     ImGui::SFML::Init(window);

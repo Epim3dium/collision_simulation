@@ -131,8 +131,7 @@ bool nearlyEqual(float a, float b) {
 bool nearlyEqual(vec2f a, vec2f b) {
     return nearlyEqual(a.x, b.x) && nearlyEqual(a.y, b.y);
 }
-std::vector<vec2f> getContactPoints(Polygon& p1, Polygon& p2) {
-    std::vector<vec2f> cps;
+void getContactPoints(Polygon& p1, Polygon& p2, std::vector<vec2f>& cps) {
     Polygon* poly1 = &p1;
     Polygon* poly2 = &p2;
     float closest_dist = INFINITY;
@@ -147,17 +146,17 @@ std::vector<vec2f> getContactPoints(Polygon& p1, Polygon& p2) {
             for(size_t ii = 0; ii < poly2->getVertecies().size(); ii++) {
                 vec2f t = poly2->getVertecies()[ii];
                 vec2f closest = ClosestPointOnRay(a1, b1 - a1, t);
-                if(nearlyEqual(qlen(t - closest), closest_dist)) {
+                float dist = qlen(t - closest);
+                if(dist == closest_dist) {
                     if(!nearlyEqual(cps.front(), a1) && !nearlyEqual(cps.front(), b1))
                         cps.push_back(t);
-                }else if(qlen(t - closest) < closest_dist) {
-                    closest_dist = qlen(t - closest);
+                }else if(dist < closest_dist) {
+                    closest_dist = dist;
                     cps = {t};
                 }
             }
         }
     }
-    return cps;
 }
 float calcArea(const std::vector<vec2f>& model) {
     double area = 0.0;

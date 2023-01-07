@@ -23,7 +23,7 @@ struct CollisionManifold {
     std::vector<vec2f> cps;
     float overlap;
 };
-class InterfaceSolver {
+class SolverInterface {
 public:
     virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
     struct DetectionResult {
@@ -32,13 +32,13 @@ public:
     };
     virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) = 0;
 };
-class BasicSolver : public InterfaceSolver {
+class BasicSolver : public SolverInterface {
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
     virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
     virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
-class DefaultSolver : public InterfaceSolver {
+class DefaultSolver : public SolverInterface {
 private:
     static vec2f getFricImpulse(float p1inertia, float mass1, vec2f rad1perp, float p2inertia, float mass2, const vec2f& rad2perp, 
             float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn);

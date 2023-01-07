@@ -14,6 +14,6 @@ namespace EPI_NAMESPACE {
         vec2f & contact_point, float* t0_near, float* t1_near);
     vec2f ClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point);
     vec2f findPointOnEdge(vec2f point, const Polygon& poly);
-    std::vector<vec2f>getContactPoints(Polygon& r1, Polygon& r2);
+    void getContactPoints(Polygon& r1, Polygon& r2, std::vector<vec2f>& result);
     float calcArea(const std::vector<vec2f>& model);
 }
