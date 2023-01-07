@@ -1,6 +1,5 @@
 #pragma once
 #include "SFML/Graphics/PrimitiveType.hpp"
-#include "col_utils.h"
 #include "rigidbody.hpp"
 #include "types.hpp"
 
@@ -45,15 +44,13 @@ public:
             rw.draw(v, 2U, sf::Lines);
         }
     }
-	QuadTree(const AABB shape, const size_t nDepth = 0)
-	{
+	QuadTree(const AABB shape, const size_t nDepth = 0) {
 		m_depth = nDepth;
 		resize(shape);
 	}
 
 	// Force area change on Tree, invalidates this and all child layers
-	void resize(const AABB& rArea)
-	{
+	void resize(const AABB& rArea) {
 		// Erase this layer
 		clear();
 
@@ -74,8 +71,7 @@ public:
 	}
 
 	// Clears the contents of this layer, and all child layers
-	void clear()
-	{
+	void clear() {
 		// Erase any items stored in this layer
 		m_locations.clear();
 
@@ -89,8 +85,7 @@ public:
 	}
 
 	// Returns a count of how many items are stored in this layer, and all children of this layer
-	size_t size() const
-	{
+	size_t size() const {
 		size_t nCount = m_locations.size();
 		for (int i = 0; i < 4; i++)
 			if (m_Children[i]) nCount += m_Children[i]->size();
@@ -98,8 +93,7 @@ public:
 	}
 
 	// Inserts an object into this layer (or appropriate child layer), given the area the item occupies
-	QuadTreeItemLocation <OBJECT_TYPE> insert(const OBJECT_TYPE& item, const AABB& itemsize)
-	{
+	QuadTreeItemLocation <OBJECT_TYPE> insert(const OBJECT_TYPE& item, const AABB& itemsize) {
 		// Check each child
 		for (int i = 0; i < 4; i++)
 		{
@@ -128,16 +122,14 @@ public:
 	}
 
 	// Returns a list of objects in the given search area
-	std::list<OBJECT_TYPE> search(const AABB& rArea) const
-	{
+	std::list<OBJECT_TYPE> search(const AABB& rArea) const {
 		std::list<OBJECT_TYPE> listItems;
 		search(rArea, listItems);
 		return listItems;
 	}
 
 	// Returns the objects in the given search area, by adding to supplied list
-	void search(const AABB& rArea, std::list<OBJECT_TYPE>& listItems) const
-	{
+	void search(const AABB& rArea, std::list<OBJECT_TYPE>& listItems) const {
 		// First, check for items belonging to this area, add them to the list
 		// if there is overlap
 		for (const auto& p : m_locations)
@@ -165,8 +157,7 @@ public:
 		}
 	}
 
-	void items(std::list<OBJECT_TYPE>& listItems) const
-	{
+	void items(std::list<OBJECT_TYPE>& listItems) const {
 		// No questions asked, just return child items
 		for (const auto& p : m_locations)
 			listItems.push_back(p.second);
@@ -210,8 +201,7 @@ public:
 
     }
 
-	std::list<OBJECT_TYPE> items() const
-	{
+	std::list<OBJECT_TYPE> items() const {
 		// No questions asked, just return child items
 		std::list<OBJECT_TYPE> listItems;
 		items(listItems);
@@ -219,8 +209,7 @@ public:
 	}
 
 	// Returns area of this layer
-	const AABB& area()
-	{
+	const AABB& area() {
 		return m_rect;
 	}
     void draw(Window& rw, Color clr) {
@@ -273,56 +262,47 @@ public:
 
 	// Sets the spatial coverage area of the quadtree
 	// Invalidates tree
-	void resize(const AABB& rArea)
-	{
+	void resize(const AABB& rArea) {
 		root.resize(rArea);
 	}
 
 	// Returns number of items within tree
-	size_t size() const
-	{
+	size_t size() const {
 		return m_allItems.size();
 	}
 
 	// Returns true if tree is empty
-	bool empty() const
-	{
+	bool empty() const {
 		return m_allItems.empty();
 	}
 
 	// Removes all items from tree
-	void clear()
-	{
+	void clear() {
 		root.clear();
 		m_allItems.clear();
 	}
 
 
 	// Convenience functions for ranged for loop
-	typename QuadTreeContainerType::iterator begin()
-	{
+	typename QuadTreeContainerType::iterator begin() {
 		return m_allItems.begin();
 	}
 
-	typename QuadTreeContainerType::iterator end()
-	{
+	typename QuadTreeContainerType::iterator end() {
 		return m_allItems.end();
 	}
 
-	typename QuadTreeContainerType::const_iterator cbegin()
-	{
+	typename QuadTreeContainerType::const_iterator cbegin() {
 		return m_allItems.cbegin();
 	}
 
-	typename QuadTreeContainerType::const_iterator cend()
-	{
+	typename QuadTreeContainerType::const_iterator cend() {
 		return m_allItems.cend();
 	}
 
 
 	// Insert item into tree in specified area
-	void insert(const OBJECT_TYPE& item, const AABB& itemsize)
-	{
+	void insert(const OBJECT_TYPE& item, const AABB& itemsize) {
         QuadTreeItem<OBJECT_TYPE> newItem = {item};
 
 		// Item is stored in container
@@ -331,8 +311,7 @@ public:
 	}
 
 	// Returns a std::list of pointers to items within the search area
-	std::list<typename QuadTreeContainerType::iterator> search(const AABB& rArea) const
-	{
+	std::list<typename QuadTreeContainerType::iterator> search(const AABB& rArea) const {
 		std::list<typename QuadTreeContainerType::iterator> listItemPointers;
 		root.search(rArea, listItemPointers);
 		return listItemPointers;

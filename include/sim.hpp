@@ -6,7 +6,6 @@
 
 #include "trigger.hpp"
 #include "types.hpp"
-#include "col_utils.h"
 #include "physics_manager.hpp"
 #include "particle_manager.hpp"
 
@@ -92,7 +91,7 @@ public:
     virtual void setup();
     virtual void onEvent(const sf::Event& event, float delT);
 
-    Sim(float w, float h, Circle c = {}, size_t c_count = 0, Polygon p = {}, size_t p_count = 0, float sim_time = INFINITY);
+    Sim(float w, float h);
     ~Sim();
 };
 

@@ -323,7 +323,7 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
 DefaultSolver::DetectionResult DefaultSolver::detect(Rigidbody* rb1, TriggerInterface* rb2) {
     return common_detect(rb1, rb2);
 }
-bool DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
+CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
     if(rb1->getType() == eRigidShape::Polygon && rb2->getType() == eRigidShape::Polygon) {
         man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
@@ -341,12 +341,12 @@ bool DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, flo
         }
     }
     handle(man, restitution, sfriction, dfriction);
-    return man.detected;
+    return man;
 }
 BasicSolver::DetectionResult BasicSolver::detect(Rigidbody* rb1, TriggerInterface* rb2) {
     return common_detect(rb1, rb2);
 }
-bool BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
+CollisionManifold BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
     switch(rb1->getType()) {
         case eRigidShape::Polygon:
@@ -374,7 +374,7 @@ bool BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float
         break;
     };
     handle(man, restitution, sfriction, dfriction);
-    return man.detected;
+    return man;
 }
 bool BasicSolver::handle(const CollisionManifold& man, float restitution, float sfriction, float dfriction) {
     if(!man.detected)

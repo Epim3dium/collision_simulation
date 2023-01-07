@@ -1,5 +1,5 @@
 #pragma once
-#include "col_utils.h"
+#include "col_utils.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
 

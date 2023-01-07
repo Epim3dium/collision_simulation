@@ -1,5 +1,5 @@
 #pragma once
-#include "col_utils.h"
+#include "col_utils.hpp"
 
 #include "rigidbody.hpp"
 #include "trigger.hpp"
@@ -25,7 +25,7 @@ struct CollisionManifold {
 };
 class SolverInterface {
 public:
-    virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
+    virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
     struct DetectionResult {
         bool detected = false;
         vec2f contact_normal;
@@ -36,7 +36,7 @@ class BasicSolver : public SolverInterface {
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
     virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
-    virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
+    virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
 class DefaultSolver : public SolverInterface {
 private:
@@ -53,7 +53,7 @@ private:
 public:
 
     virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
-    virtual bool solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
+    virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
 
 }

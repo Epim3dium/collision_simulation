@@ -59,11 +59,17 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         float dfriction = m_selectFrom(ci.r1->material.dfriction, ci.r2->material.dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
         auto result = m_solver->solve(ci.r1, ci.r2, restitution, sfriction, dfriction);
+        if(result.detected) {
+            ci.r1->collider.pressure += result.overlap;
+            ci.r2->collider.pressure += result.overlap;
+        }
+
     }
 }
 void PhysicsManager::m_processCollisions(float delT) {
     for(auto& r : m_rigidbodiesQT) {
         r.item->collider.now_colliding = nullptr;
+        r.item->collider.pressure = 0.f;
     }
     auto col_list = processBroadPhase();
     processNarrowPhase(col_list);

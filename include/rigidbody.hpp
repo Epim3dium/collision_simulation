@@ -1,5 +1,5 @@
 #pragma once
-#include "col_utils.h"
+#include "col_utils.hpp"
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -24,6 +24,7 @@ public:
     bool isDormantCapable() const {return dormant_time > MIN_DORMANT_TIME;}
     float dormant_time = 0;
     vec2f last_pos = vec2f(0, 0);
+    float pressure = 0.f;
 
     size_t layer;
     bool lockRotation = false;

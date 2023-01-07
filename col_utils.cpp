@@ -1,4 +1,4 @@
-#include "col_utils.h"
+#include "col_utils.hpp"
 #include "types.hpp"
 #include <cmath>
 namespace EPI_NAMESPACE {

@@ -1,17 +1,11 @@
-#include "sim.h"
-#include "SFML/Graphics/CircleShape.hpp"
-#include "SFML/Graphics/Color.hpp"
-#include "SFML/Graphics/Drawable.hpp"
-#include "SFML/Graphics/RectangleShape.hpp"
-#include "SFML/Graphics/RenderWindow.hpp"
-#include "SFML/Graphics/Shape.hpp"
-#include "SFML/Graphics/Vertex.hpp"
-#include "SFML/Window/Keyboard.hpp"
-#include "SFML/Window/Mouse.hpp"
+#include "sim.hpp"
+#include "SFML/Graphics.hpp"
+#include "SFML/Window.hpp"
 
-#include "col_utils.h"
 #include "imgui-SFML.h"
 #include "imgui.h"
+
+#include "col_utils.hpp"
 #include "restraint.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
@@ -42,6 +36,21 @@ static bool PointVRigidbody(vec2f p, Rigidbody* rb) {
         break;
     }
 }
+Color blend(Color c1, Color c2, float t) {
+    t = std::clamp(t, 0.f, 1.f);
+    c1.r *= (1.f - t);
+    c1.g *= (1.f - t);
+    c1.b *= (1.f - t);
+
+    c2.r *= t;
+    c2.g *= t;
+    c2.b *= t;
+
+    c1.r += c2.r;
+    c1.g += c2.g;
+    c1.b += c2.b;
+    return c1;
+}
 static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::RenderWindow& rw) {
     Color color = PastelColor::bg1;
     if(!rb->isStatic) {
@@ -49,6 +58,8 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
         if(rb->collider.isDormant)
             color = PastelColor::Green;
     }
+    if(rb->collider.pressure != 0.f)
+        color = blend(color, Color::Cyan, rb->collider.pressure / 5.f);
     if(t.contains(rb))
         color = PastelColor::Red;
     switch(rb->getType()) {
@@ -61,9 +72,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
             float r = c.radius / 2.f;
             cs.setRadius(r);
             cs.setPosition(c.pos + vec2f(cos(c.rot), sin(c.rot)) * c.radius / 2.f - vec2f(r, r));
-            color.r /= 1.2f;
-            color.g /= 1.2f;
-            color.b /= 1.2f;
+            color = blend(color, Color::Black, 0.2f);
             cs.setFillColor(color);
             rw.draw(cs);
         }break;
@@ -219,11 +228,7 @@ void Sim::update(float delT) {
             Particle::VelAngleInit(0.f, 3.141f),
             Particle::ColorFuncInit(
                 [](Color clr, float time)->Color {
-                    Color result;
-                    result.r = clr.r * time + PastelColor::Yellow.r * (1.f - time);
-                    result.g = clr.g * time + PastelColor::Yellow.g * (1.f - time);
-                    result.b = clr.b * time + PastelColor::Yellow.b * (1.f - time);
-                    return result;
+                    return blend(clr, PastelColor::Yellow, time);
                 })
         );
     }
@@ -262,6 +267,7 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace)) {
         for(auto s : selection.selected) {
+            physics_manager.unbind(s);
             delFromCircs(s);
             delFromPolys(s);
             rigidbodies.erase(s);
@@ -398,22 +404,9 @@ Sim::~Sim() {
     std::cout << "average fps during simulation: " << avg << "\n";
     ImGui::SFML::Shutdown(window);
 }
-Sim::Sim(float w, float h, Circle c, size_t c_count, Polygon p, size_t p_count, float sim_time)
-      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"),
-        max_sim_time(sim_time), physics_manager({{0, 0}, {w, h}})
+Sim::Sim(float w, float h)
+      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{0, 0}, {w, h}})
 {
-    for(size_t i = 0; i < c_count; i++) {
-        c.pos -= vec2f(c.radius, c.radius);
-        circs.emplace_back(RigidCircle(c));
-        rigidbodies.emplace(&circs.back());
-        physics_manager.bind(&circs.back());
-    }
-    for(size_t i = 0; i < p_count; i++) {
-        p.setPos(p.getPos() - vec2f(1.f, 1.f));
-        polys.emplace_back(RigidPolygon(p));
-        rigidbodies.emplace(&polys.back());
-        physics_manager.bind(&polys.back());
-    }
 
     ImGui::SFML::Init(window);
 
