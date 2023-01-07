@@ -28,7 +28,7 @@ struct QuadTreeItemLocation {
 template <class T>
 struct QuadTreeItem {
     T item;
-    QuadTreeItemLocation<typename std::list<QuadTreeItem<T>>::iterator > pItem;
+    QuadTreeItemLocation<typename std::list<QuadTreeItem<T>>::iterator > location;
 };
 template <typename OBJECT_TYPE>
 class QuadTree
@@ -62,7 +62,7 @@ public:
 		vec2f vChildSize = rArea.size() / 2.0f;
 
 		// Cache child areas local to this layer
-		m_rChild =
+		m_ChildrenSizes =
 		{
 			AABB(rArea.min, rArea.min + vChildSize),
 			AABB(rArea.min + vChildSize, rArea.max),
@@ -77,23 +77,23 @@ public:
 	void clear()
 	{
 		// Erase any items stored in this layer
-		m_pItems.clear();
+		m_locations.clear();
 
 		// Iterate through children, erase them too
 		for (int i = 0; i < 4; i++)
 		{
-			if (m_pChild[i])
-				m_pChild[i]->clear();
-			m_pChild[i].reset();
+			if (m_Children[i])
+				m_Children[i]->clear();
+			m_Children[i].reset();
 		}
 	}
 
 	// Returns a count of how many items are stored in this layer, and all children of this layer
 	size_t size() const
 	{
-		size_t nCount = m_pItems.size();
+		size_t nCount = m_locations.size();
 		for (int i = 0; i < 4; i++)
-			if (m_pChild[i]) nCount += m_pChild[i]->size();
+			if (m_Children[i]) nCount += m_Children[i]->size();
 		return nCount;
 	}
 
@@ -104,27 +104,27 @@ public:
 		for (int i = 0; i < 4; i++)
 		{
 			// If the child can wholly contain the item being inserted
-			if (AABBcontainsAABB(m_rChild[i], itemsize))
+			if (AABBcontainsAABB(m_ChildrenSizes[i], itemsize))
 			{
 				// Have we reached depth limit?
 				if (m_depth + 1 < MAX_DEPTH)
 				{
 					// No, so does child exist?
-					if (!m_pChild[i])
+					if (!m_Children[i])
 					{
 						// No, so create it
-						m_pChild[i] = std::make_shared<QuadTree<OBJECT_TYPE>>(m_rChild[i], m_depth + 1);
+						m_Children[i] = std::make_shared<QuadTree<OBJECT_TYPE>>(m_ChildrenSizes[i], m_depth + 1);
 					}
 
 					// Yes, so add item to it
-					return m_pChild[i]->insert(item, itemsize);
+					return m_Children[i]->insert(item, itemsize);
 				}
 			}
 		}
 
 		// It didnt fit, so item must belong to this quad
-		m_pItems.push_back({ itemsize, item});
-        return { &m_pItems, std::prev(m_pItems.end()), m_rect};
+		m_locations.push_back({ itemsize, item});
+        return { &m_locations, std::prev(m_locations.end()), m_rect};
 	}
 
 	// Returns a list of objects in the given search area
@@ -140,7 +140,7 @@ public:
 	{
 		// First, check for items belonging to this area, add them to the list
 		// if there is overlap
-		for (const auto& p : m_pItems)
+		for (const auto& p : m_locations)
 		{
 			if (AABBvAABB(rArea, p.first))
 				listItems.push_back(p.second);
@@ -150,17 +150,17 @@ public:
 		// add to the list
 		for (int i = 0; i < 4; i++)
 		{
-			if (m_pChild[i])
+			if (m_Children[i])
 			{
 				// If child is entirely contained within area, recursively
 				// add all of its children, no need to check boundaries
-				if (AABBcontainsAABB(rArea, m_rChild[i]))
-					m_pChild[i]->items(listItems);
+				if (AABBcontainsAABB(rArea, m_ChildrenSizes[i]))
+					m_Children[i]->items(listItems);
 
 				// If child overlaps with search area then checks need
 				// to be made
-				else if (AABBvAABB(m_rChild[i], rArea))
-					m_pChild[i]->search(rArea, listItems);
+				else if (AABBvAABB(m_ChildrenSizes[i], rArea))
+					m_Children[i]->search(rArea, listItems);
 			}
 		}
 	}
@@ -168,40 +168,40 @@ public:
 	void items(std::list<OBJECT_TYPE>& listItems) const
 	{
 		// No questions asked, just return child items
-		for (const auto& p : m_pItems)
+		for (const auto& p : m_locations)
 			listItems.push_back(p.second);
 
 		// Now add children of this layer's items
 		for (int i = 0; i < 4; i++)
-			if (m_pChild[i]) m_pChild[i]->items(listItems);
+			if (m_Children[i]) m_Children[i]->items(listItems);
 	}
 
     bool contains(OBJECT_TYPE obj) {
-        auto it = std::find_if(m_pItems.begin(), m_pItems.end(), 
+        auto it = std::find_if(m_locations.begin(), m_locations.end(), 
             [&](const std::pair<AABB, OBJECT_TYPE>& a) {
                return a.second == obj;
             });
-        if(it != m_pItems.end()) {
+        if(it != m_locations.end()) {
             return true;
         } else {
-            for(auto& c : m_pChild) {
+            for(auto& c : m_Children) {
                 if(c->contains(obj))
                     return true;
             }
         }
         return false;
     }
-    bool remove(OBJECT_TYPE pItem) {
-        auto it = std::find_if(m_pItems.begin(), m_pItems.end(), 
+    bool remove(OBJECT_TYPE location) {
+        auto it = std::find_if(m_locations.begin(), m_locations.end(), 
             [&](const std::pair<AABB, OBJECT_TYPE>& a) {
-               return a.second == pItem;
+               return a.second == location;
             });
-        if(it != m_pItems.end()) {
-            m_pItems.earse(it);
+        if(it != m_locations.end()) {
+            m_locations.earse(it);
             return true;
         } else {
-            for(auto& c : m_pChild) {
-                if(c->remove(pItem))
+            for(auto& c : m_Children) {
+                if(c->remove(location))
                     return true;
             }
 
@@ -225,10 +225,10 @@ public:
 	}
     void draw(Window& rw, Color clr) {
         drawAABB(m_rect, rw, clr);
-        for(auto& i : m_pItems) {
+        for(auto& i : m_locations) {
             drawAABB(i.first, rw, clr);
         }
-        for(auto& c : m_pChild) {
+        for(auto& c : m_Children) {
             if(c.get() != nullptr)
                 c->draw(rw, clr);
         }
@@ -243,13 +243,13 @@ protected:
 	// Area of this StaticQuadTree
 
 	// 4 child areas of this StaticQuadTree
-	std::array<AABB, 4> m_rChild{};
+	std::array<AABB, 4> m_ChildrenSizes{};
 
 	// 4 potential children of this StaticQuadTree
-	std::array<std::shared_ptr<QuadTree<OBJECT_TYPE>>, 4> m_pChild{};
+	std::array<std::shared_ptr<QuadTree<OBJECT_TYPE>>, 4> m_Children{};
 
 	// Items which belong to this StaticQuadTree
-	std::list<std::pair<AABB, OBJECT_TYPE>> m_pItems;
+	std::list<std::pair<AABB, OBJECT_TYPE>> m_locations;
 };
 
 
@@ -327,7 +327,7 @@ public:
 
 		// Item is stored in container
 		m_allItems.push_back(newItem);
-		m_allItems.back().pItem = root.insert(std::prev(m_allItems.end()), itemsize);
+		m_allItems.back().location = root.insert(std::prev(m_allItems.end()), itemsize);
 	}
 
 	// Returns a std::list of pointers to items within the search area
@@ -338,13 +338,13 @@ public:
 		return listItemPointers;
 	}
     void remove(typename QuadTreeContainerType::iterator item) {
-        item->pItem.container->erase(item->pItem.iterator);
+        item->location.container->erase(item->location.iterator);
 
         m_allItems.erase(item);
     }
     void relocate(typename QuadTreeContainerType::iterator& item, AABB new_pos) {
-        item->pItem.container->erase(item->pItem.iterator);
-        item->pItem = root.insert(item, new_pos);
+        item->location.container->erase(item->location.iterator);
+        item->location = root.insert(item, new_pos);
     }
     void draw(Window& rw, Color clr) {
         root.draw(rw, clr);

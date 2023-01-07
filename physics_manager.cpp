@@ -116,7 +116,7 @@ void PhysicsManager::m_updatePhysics(float delT) {
         if(qlen(it->item->velocity) > 1.f)
             m_rigidbodiesQT.relocate(it, it->item->aabb());
         else
-            it->pItem.iterator->first = it->item->aabb();
+            it->location.iterator->first = it->item->aabb();
         m_updateRigidbody(*it->item, delT);
     }
 }
