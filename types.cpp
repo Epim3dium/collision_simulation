@@ -42,7 +42,12 @@ AABB AABBcs(vec2f center, vec2f size) {
     a.setSize(size);
     return a;
 }
-
+AABB AABBms(vec2f min, vec2f size) {
+    AABB a;
+    a.min = min;
+    a.max = a.min + size;
+    return a;
+}
 Ray Rayab(vec2f a, vec2f b) {
     Ray r;
     r.pos = a;

@@ -28,8 +28,8 @@ bool AABBvAABB(const AABB& r1, const AABB& r2) {
         r1.max.y >= r2.min.y);
 }
 bool AABBcontainsAABB(const AABB& r1, const AABB& r2) {
-    return (r2.min.x >= r1.min.x) && (r2.max.x < r1.max.x) &&
-				(r2.min.y >= r1.min.y) && (r2.max.y < r1.max.y);
+    return (r2.min.x >= r1.min.x) && (r2.max.x <= r1.max.x) &&
+				(r2.min.y >= r1.min.y) && (r2.max.y <= r1.max.y);
 }
 bool RayVAABB(vec2f ray_origin, vec2f ray_dir,
     const AABB& target, float* t_hit_near,

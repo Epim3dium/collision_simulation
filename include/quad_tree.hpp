@@ -1,5 +1,6 @@
 #pragma once
 #include "SFML/Graphics/PrimitiveType.hpp"
+#include "col_utils.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
 
@@ -12,323 +13,305 @@
 #include <list>
 
 namespace EPI_NAMESPACE {
-constexpr size_t MAX_DEPTH = 8;
-
-template <typename OBJECT_TYPE>
-class QuadTree;
-
-template<typename T>
-struct QuadTreeItemLocation {
-    typename std::list< std::pair <AABB, T>>* container;
-    typename std::list< std::pair <AABB, T>>::iterator iterator;
-    AABB parent_size;
-};
-
-template <class T>
-struct QuadTreeItem {
-    T item;
-    QuadTreeItemLocation<typename std::list<QuadTreeItem<T>>::iterator > location;
-};
-template <typename OBJECT_TYPE>
+template<typename T, typename GetBox, typename Equal = std::equal_to<T>, typename Float = float>
 class QuadTree
 {
-public:
-    static void drawAABB(AABB aabb, Window& rw, Color clr) {
-        sf::Vertex v[2];
-        v[0].color = clr;
-        v[1].color = clr;
-        std::pair<vec2f, vec2f> lines[] = {{aabb.bl(), aabb.br()}, {aabb.bl(), aabb.tl()}, {aabb.tl(), aabb.tr()}, {aabb.br(), aabb.tr()}};
-        for(auto [a, b] : lines) {
-            v[0].position = a;
-            v[1].position = b;
-            rw.draw(v, 2U, sf::Lines);
-        }
-    }
-	QuadTree(const AABB shape, const size_t nDepth = 0) {
-		m_depth = nDepth;
-		resize(shape);
-	}
-
-	// Force area change on Tree, invalidates this and all child layers
-	void resize(const AABB& rArea) {
-		// Erase this layer
-		clear();
-
-		// Recalculate area of children
-		m_rect = rArea;
-		vec2f vChildSize = rArea.size() / 2.0f;
-
-		// Cache child areas local to this layer
-		m_ChildrenSizes =
-		{
-			AABB(rArea.min, rArea.min + vChildSize),
-			AABB(rArea.min + vChildSize, rArea.max),
-
-			AABB(rArea.min + vec2f(0, vChildSize.y), rArea.min + vec2f(0, vChildSize.y) + vChildSize),
-			AABB(rArea.min + vec2f(vChildSize.x, 0), rArea.min + vec2f(vChildSize.x, 0) + vChildSize)
-		};
-
-	}
-
-	// Clears the contents of this layer, and all child layers
-	void clear() {
-		// Erase any items stored in this layer
-		m_locations.clear();
-
-		// Iterate through children, erase them too
-		for (int i = 0; i < 4; i++)
-		{
-			if (m_Children[i])
-				m_Children[i]->clear();
-			m_Children[i].reset();
-		}
-	}
-
-	// Returns a count of how many items are stored in this layer, and all children of this layer
-	size_t size() const {
-		size_t nCount = m_locations.size();
-		for (int i = 0; i < 4; i++)
-			if (m_Children[i]) nCount += m_Children[i]->size();
-		return nCount;
-	}
-
-	// Inserts an object into this layer (or appropriate child layer), given the area the item occupies
-	QuadTreeItemLocation <OBJECT_TYPE> insert(const OBJECT_TYPE& item, const AABB& itemsize) {
-		// Check each child
-		for (int i = 0; i < 4; i++)
-		{
-			// If the child can wholly contain the item being inserted
-			if (AABBcontainsAABB(m_ChildrenSizes[i], itemsize))
-			{
-				// Have we reached depth limit?
-				if (m_depth + 1 < MAX_DEPTH)
-				{
-					// No, so does child exist?
-					if (!m_Children[i])
-					{
-						// No, so create it
-						m_Children[i] = std::make_shared<QuadTree<OBJECT_TYPE>>(m_ChildrenSizes[i], m_depth + 1);
-					}
-
-					// Yes, so add item to it
-					return m_Children[i]->insert(item, itemsize);
-				}
-			}
-		}
-
-		// It didnt fit, so item must belong to this quad
-		m_locations.push_back({ itemsize, item});
-        return { &m_locations, std::prev(m_locations.end()), m_rect};
-	}
-
-	// Returns a list of objects in the given search area
-	std::list<OBJECT_TYPE> search(const AABB& rArea) const {
-		std::list<OBJECT_TYPE> listItems;
-		search(rArea, listItems);
-		return listItems;
-	}
-
-	// Returns the objects in the given search area, by adding to supplied list
-	void search(const AABB& rArea, std::list<OBJECT_TYPE>& listItems) const {
-		// First, check for items belonging to this area, add them to the list
-		// if there is overlap
-		for (const auto& p : m_locations)
-		{
-			if (AABBvAABB(rArea, p.first))
-				listItems.push_back(p.second);
-		}
-
-		// Second, recurse through children and see if they can
-		// add to the list
-		for (int i = 0; i < 4; i++)
-		{
-			if (m_Children[i])
-			{
-				// If child is entirely contained within area, recursively
-				// add all of its children, no need to check boundaries
-				if (AABBcontainsAABB(rArea, m_ChildrenSizes[i]))
-					m_Children[i]->items(listItems);
-
-				// If child overlaps with search area then checks need
-				// to be made
-				else if (AABBvAABB(m_ChildrenSizes[i], rArea))
-					m_Children[i]->search(rArea, listItems);
-			}
-		}
-	}
-
-	void items(std::list<OBJECT_TYPE>& listItems) const {
-		// No questions asked, just return child items
-		for (const auto& p : m_locations)
-			listItems.push_back(p.second);
-
-		// Now add children of this layer's items
-		for (int i = 0; i < 4; i++)
-			if (m_Children[i]) m_Children[i]->items(listItems);
-	}
-
-    bool contains(OBJECT_TYPE obj) {
-        auto it = std::find_if(m_locations.begin(), m_locations.end(), 
-            [&](const std::pair<AABB, OBJECT_TYPE>& a) {
-               return a.second == obj;
-            });
-        if(it != m_locations.end()) {
-            return true;
-        } else {
-            for(auto& c : m_Children) {
-                if(c->contains(obj))
-                    return true;
-            }
-        }
-        return false;
-    }
-    bool remove(OBJECT_TYPE location) {
-        auto it = std::find_if(m_locations.begin(), m_locations.end(), 
-            [&](const std::pair<AABB, OBJECT_TYPE>& a) {
-               return a.second == location;
-            });
-        if(it != m_locations.end()) {
-            m_locations.earse(it);
-            return true;
-        } else {
-            for(auto& c : m_Children) {
-                if(c->remove(location))
-                    return true;
-            }
-
-        }
-        return false;
-
-    }
-
-	std::list<OBJECT_TYPE> items() const {
-		// No questions asked, just return child items
-		std::list<OBJECT_TYPE> listItems;
-		items(listItems);
-		return listItems;
-	}
-
-	// Returns area of this layer
-	const AABB& area() {
-		return m_rect;
-	}
-    void draw(Window& rw, Color clr) {
-        drawAABB(m_rect, rw, clr);
-        for(auto& i : m_locations) {
-            drawAABB(i.first, rw, clr);
-        }
-        for(auto& c : m_Children) {
-            if(c.get() != nullptr)
-                c->draw(rw, clr);
-        }
-    }
-
-
-        AABB m_rect;
-protected:
-	// Depth of this StaticQuadTree layer
-	size_t m_depth = 0;
-
-	// Area of this StaticQuadTree
-
-	// 4 child areas of this StaticQuadTree
-	std::array<AABB, 4> m_ChildrenSizes{};
-
-	// 4 potential children of this StaticQuadTree
-	std::array<std::shared_ptr<QuadTree<OBJECT_TYPE>>, 4> m_Children{};
-
-	// Items which belong to this StaticQuadTree
-	std::list<std::pair<AABB, OBJECT_TYPE>> m_locations;
-};
-
-
-template <typename OBJECT_TYPE>
-class QuadTreeContainer
-{
-	// Using a std::list as we dont want pointers to be invalidated to objects stored in the
-	// tree should the contents of the tree change
-	using QuadTreeContainerType = std::list<QuadTreeItem<OBJECT_TYPE>>;
-
-protected:
-	// The actual container
-	QuadTreeContainerType m_allItems;
-
-	// Use our StaticQuadTree to store "pointers" instead of objects - this reduces
-	// overheads when moving or copying objects 
-	QuadTree<typename QuadTreeContainerType::iterator> root;
+    typedef AABB Box;
+    static_assert(std::is_convertible_v<std::invoke_result_t<GetBox, const T&>, Box>,
+        "GetBox must be a callable of signature Box<Float>(const T&)");
+    static_assert(std::is_convertible_v<std::invoke_result_t<Equal, const T&, const T&>, bool>,
+        "Equal must be a callable of signature bool(const T&, const T&)");
+    static_assert(std::is_arithmetic_v<Float>);
 
 public:
-	QuadTreeContainer(const AABB& size, const size_t nDepth = 0) : root(size, nDepth) { }
+    QuadTree(const Box& box, const GetBox& getBox = GetBox(),
+        const Equal& equal = Equal()) :
+        mBox(box), mRoot(std::make_unique<Node>()), mGetBox(getBox), mEqual(equal)
+    {
 
-	// Sets the spatial coverage area of the quadtree
-	// Invalidates tree
-	void resize(const AABB& rArea) {
-		root.resize(rArea);
-	}
-
-	// Returns number of items within tree
-	size_t size() const {
-		return m_allItems.size();
-	}
-
-	// Returns true if tree is empty
-	bool empty() const {
-		return m_allItems.empty();
-	}
-
-	// Removes all items from tree
-	void clear() {
-		root.clear();
-		m_allItems.clear();
-	}
-
-
-	// Convenience functions for ranged for loop
-	typename QuadTreeContainerType::iterator begin() {
-		return m_allItems.begin();
-	}
-
-	typename QuadTreeContainerType::iterator end() {
-		return m_allItems.end();
-	}
-
-	typename QuadTreeContainerType::const_iterator cbegin() {
-		return m_allItems.cbegin();
-	}
-
-	typename QuadTreeContainerType::const_iterator cend() {
-		return m_allItems.cend();
-	}
-
-
-	// Insert item into tree in specified area
-	void insert(const OBJECT_TYPE& item, const AABB& itemsize) {
-        QuadTreeItem<OBJECT_TYPE> newItem = {item};
-
-		// Item is stored in container
-		m_allItems.push_back(newItem);
-		m_allItems.back().location = root.insert(std::prev(m_allItems.end()), itemsize);
-	}
-
-	// Returns a std::list of pointers to items within the search area
-	std::list<typename QuadTreeContainerType::iterator> search(const AABB& rArea) const {
-		std::list<typename QuadTreeContainerType::iterator> listItemPointers;
-		root.search(rArea, listItemPointers);
-		return listItemPointers;
-	}
-    void remove(typename QuadTreeContainerType::iterator item) {
-        item->location.container->erase(item->location.iterator);
-
-        m_allItems.erase(item);
-    }
-    void relocate(typename QuadTreeContainerType::iterator& item, AABB new_pos) {
-        item->location.container->erase(item->location.iterator);
-        item->location = root.insert(item, new_pos);
-    }
-    void draw(Window& rw, Color clr) {
-        root.draw(rw, clr);
     }
 
+    void add(const T& value)
+    {
+        add(mRoot.get(), 0, mBox, value);
+    }
+
+    void remove(const T& value)
+    {
+        remove(mRoot.get(), mBox, value);
+    }
+
+    std::vector<T> query(const Box& box) const
+    {
+        auto values = std::vector<T>();
+        query(mRoot.get(), mBox, box, values);
+        return values;
+    }
+
+    std::vector<std::pair<T, T>> findAllIntersections() const
+    {
+        auto intersections = std::vector<std::pair<T, T>>();
+        findAllIntersections(mRoot.get(), intersections);
+        return intersections;
+    }
+
+    Box getBox() const 
+    {
+        return mBox;
+    }
+    
+private:
+    static constexpr auto Threshold = std::size_t(16);
+    static constexpr auto MaxDepth = std::size_t(8);
+
+    struct Node
+    {
+        std::array<std::unique_ptr<Node>, 4> children;
+        std::vector<T> values;
+    };
+
+    Box mBox;
+    std::unique_ptr<Node> mRoot;
+    GetBox mGetBox;
+    Equal mEqual;
+
+    bool isLeaf(const Node* node) const
+    {
+        return !static_cast<bool>(node->children[0]);
+    }
+
+    Box computeBox(const Box& box, int i) const
+    {
+        auto origin = box.min;
+        auto childSize = box.size() / static_cast<Float>(2);
+        switch (i)
+        {
+            // North West
+            case 0:
+                return AABBms(origin, childSize);
+            // Norst East
+            case 1:
+                return AABBms(vec2f(origin.x + childSize.x, origin.y), childSize);
+            // South West
+            case 2:
+                return AABBms(vec2f(origin.x, origin.y + childSize.y), childSize);
+            // South East
+            case 3:
+                return AABBms(origin + childSize, childSize);
+            default:
+                assert(false && "Invalid child index");
+                return Box();
+        }
+    }
+
+    int getQuadrant(const Box& nodeBox, const Box& valueBox) const
+    {
+        auto center = nodeBox.center();
+        // West
+        if (valueBox.right() < center.x)
+        {
+            // North West
+            if (valueBox.bot() < center.y)
+                return 0;
+            // South West
+            else if (valueBox.top() >= center.y)
+                return 2;
+            // Not contained in any quadrant
+            else
+                return -1;
+        }
+        // East
+        else if (valueBox.left() >= center.x)
+        {
+            // North East
+            if (valueBox.bot() < center.y)
+                return 1;
+            // South East
+            else if (valueBox.top() >= center.y)
+                return 3;
+            // Not contained in any quadrant
+            else
+                return -1;
+        }
+        // Not contained in any quadrant
+        else
+            return -1;
+    }
+
+    void add(Node* node, std::size_t depth, const Box& box, const T& value)
+    {
+        assert(node != nullptr);
+        assert(AABBcontainsAABB(box, mGetBox(value)));
+        if (isLeaf(node))
+        {
+            // Insert the value in this node if possible
+            if (depth >= MaxDepth || node->values.size() < Threshold)
+                node->values.push_back(value);
+            // Otherwise, we split and we try again
+            else
+            {
+                split(node, box);
+                add(node, depth, box, value);
+            }
+        }
+        else
+        {
+            auto i = getQuadrant(box, mGetBox(value));
+            // Add the value in a child if the value is entirely contained in it
+            if (i != -1)
+                add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
+            // Otherwise, we add the value in the current node
+            else
+                node->values.push_back(value);
+        }
+    }
+
+    void split(Node* node, const Box& box)
+    {
+        assert(node != nullptr);
+        assert(isLeaf(node) && "Only leaves can be split");
+        // Create children
+        for (auto& child : node->children)
+            child = std::make_unique<Node>();
+        // Assign values to children
+        auto newValues = std::vector<T>(); // New values for this node
+        for (const auto& value : node->values)
+        {
+            auto i = getQuadrant(box, mGetBox(value));
+            if (i != -1)
+                node->children[static_cast<std::size_t>(i)]->values.push_back(value);
+            else
+                newValues.push_back(value);
+        }
+        node->values = std::move(newValues);
+    }
+
+    bool remove(Node* node, const Box& box, const T& value)
+    {
+        assert(node != nullptr);
+        assert(AABBcontainsAABB(box, mGetBox(value)));
+        if (isLeaf(node))
+        {
+            // Remove the value from node
+            removeValue(node, value);
+            return true;
+        }
+        else
+        {
+            // Remove the value in a child if the value is entirely contained in it
+            auto i = getQuadrant(box, mGetBox(value));
+            if (i != -1)
+            {
+                if (remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value))
+                    return tryMerge(node);
+            }
+            // Otherwise, we remove the value from the current node
+            else
+                removeValue(node, value);
+            return false;
+        }
+    }
+
+    void removeValue(Node* node, const T& value)
+    {
+        // Find the value in node->values
+        auto it = std::find_if(std::begin(node->values), std::end(node->values),
+            [this, &value](const auto& rhs){ return mEqual(value, rhs); });
+        assert(it != std::end(node->values) && "Trying to remove a value that is not present in the node");
+        // Swap with the last element and pop back
+        *it = std::move(node->values.back());
+        node->values.pop_back();
+    }
+
+    bool tryMerge(Node* node)
+    {
+        assert(node != nullptr);
+        assert(!isLeaf(node) && "Only interior nodes can be merged");
+        auto nbValues = node->values.size();
+        for (const auto& child : node->children)
+        {
+            if (!isLeaf(child.get()))
+                return false;
+            nbValues += child->values.size();
+        }
+        if (nbValues <= Threshold)
+        {
+            node->values.reserve(nbValues);
+            // Merge the values of all the children
+            for (const auto& child : node->children)
+            {
+                for (const auto& value : child->values)
+                    node->values.push_back(value);
+            }
+            // Remove the children
+            for (auto& child : node->children)
+                child.reset();
+            return true;
+        }
+        else
+            return false;
+    }
+
+    void query(Node* node, const Box& box, const Box& queryBox, std::vector<T>& values) const
+    {
+        assert(node != nullptr);
+        assert(AABBvAABB(queryBox, box));
+        for (const auto& value : node->values)
+        {
+            if (AABBvAABB(queryBox, mGetBox(value)))
+                values.push_back(value);
+        }
+        if (!isLeaf(node))
+        {
+            for (auto i = std::size_t(0); i < node->children.size(); ++i)
+            {
+                auto childBox = computeBox(box, static_cast<int>(i));
+                if (AABBvAABB(queryBox, childBox))
+                    query(node->children[i].get(), childBox, queryBox, values);
+            }
+        }
+    }
+
+    void findAllIntersections(Node* node, std::vector<std::pair<T, T>>& intersections) const
+    {
+        // Find intersections between values stored in this node
+        // Make sure to not report the same intersection twice
+        for (auto i = std::size_t(0); i < node->values.size(); ++i)
+        {
+            for (auto j = std::size_t(0); j < i; ++j)
+            {
+                if (AABBvAABB(mGetBox(node->values[i]), mGetBox(node->values[j])))
+                    intersections.emplace_back(node->values[i], node->values[j]);
+            }
+        }
+        if (!isLeaf(node))
+        {
+            // Values in this node can intersect values in descendants
+            for (const auto& child : node->children)
+            {
+                for (const auto& value : node->values)
+                    findIntersectionsInDescendants(child.get(), value, intersections);
+            }
+            // Find intersections in children
+            for (const auto& child : node->children)
+                findAllIntersections(child.get(), intersections);
+        }
+    }
+
+    void findIntersectionsInDescendants(Node* node, const T& value, std::vector<std::pair<T, T>>& intersections) const
+    {
+        // Test against the values stored in this node
+        for (const auto& other : node->values)
+        {
+            if (AABBvAABB(mGetBox(value), mGetBox(other)) )
+                intersections.emplace_back(value, other);
+        }
+        // Test against values stored into descendants of this node
+        if (!isLeaf(node))
+        {
+            for (const auto& child : node->children)
+                findIntersectionsInDescendants(child.get(), value, intersections);
+        }
+    }
 };
-
 }

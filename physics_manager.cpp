@@ -48,11 +48,11 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
         bool isEnding = false;
     };
     std::vector<BoundInfo> infos;
-    for(auto& r : m_rigidbodiesQT) {
-        infos.push_back({r.item, r.item->aabb().min.x});
-        infos.push_back({r.item, r.item->aabb().max.x, true});
+    for(auto& r : m_rigidbodies) {
+        infos.push_back({r, r->aabb().min.x});
+        infos.push_back({r, r->aabb().max.x, true});
     }
-    std::sort(infos.begin(), infos.end(), 
+    std::sort(infos.begin(), infos.end(),
           [](const BoundInfo& bi1, const BoundInfo& bi2) {
               return bi1.val < bi2.val;
           });
@@ -85,22 +85,22 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
 }
 void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInfo>& col_list) {
     for(auto& ci : col_list) {
-        float restitution = m_selectFrom(ci.r1->material.restitution, ci.r2->material.restitution, bounciness_select);
-        float sfriction = m_selectFrom(ci.r1->material.sfriction, ci.r2->material.sfriction, friction_select);
-        float dfriction = m_selectFrom(ci.r1->material.dfriction, ci.r2->material.dfriction, friction_select);
+        float restitution = m_selectFrom(ci.first->material.restitution, ci.second->material.restitution, bounciness_select);
+        float sfriction = m_selectFrom(ci.first->material.sfriction, ci.second->material.sfriction, friction_select);
+        float dfriction = m_selectFrom(ci.first->material.dfriction, ci.second->material.dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
-        auto result = m_solver->solve(ci.r1, ci.r2, restitution, sfriction, dfriction);
+        auto result = m_solver->solve(ci.first, ci.second, restitution, sfriction, dfriction);
         if(result.detected) {
-            ci.r1->collider.pressure += result.overlap;
-            ci.r2->collider.pressure += result.overlap;
+            ci.first->collider.pressure += result.overlap;
+            ci.second->collider.pressure += result.overlap;
         }
 
     }
 }
 void PhysicsManager::m_processCollisions(float delT) {
-    for(auto& r : m_rigidbodiesQT) {
-        r.item->collider.now_colliding = nullptr;
-        r.item->collider.pressure = 0.f;
+    for(auto& r : m_rigidbodies) {
+        r->collider.now_colliding = nullptr;
+        r->collider.pressure = 0.f;
     }
     auto col_list = processBroadPhase();
     processNarrowPhase(col_list);
@@ -124,10 +124,10 @@ void PhysicsManager::m_processDormant(float delT) {
 }
 void PhysicsManager::m_processTriggers() {
     for(auto& t : m_triggers) {
-        for(auto& r : m_rigidbodiesQT) {
-            auto man = m_solver->detect(r.item, t);
+        for(auto& r : m_rigidbodies) {
+            auto man = m_solver->detect(r, t);
             if(man.detected) {
-                t->onActivation(r.item, man.contact_normal);
+                t->onActivation(r, man.contact_normal);
             }
         }
     }
@@ -149,12 +149,8 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     rb.collider.last_pos = rb.getPos();
 }
 void PhysicsManager::m_updatePhysics(float delT) {
-    for(auto it = m_rigidbodiesQT.begin(); it != m_rigidbodiesQT.end(); it++) {
-        if(qlen(it->item->velocity) > 1.f)
-            m_rigidbodiesQT.relocate(it, it->item->aabb());
-        else
-            it->location.iterator->first = it->item->aabb();
-        m_updateRigidbody(*it->item, delT);
+    for(auto r : m_rigidbodies) {
+        m_updateRigidbody(*r, delT);
     }
 }
 void PhysicsManager::update(float delT ) {
@@ -178,13 +174,7 @@ static void unbind_any(T obj, std::vector<T>& obj_vec) {
         obj_vec.erase(itr);
 }
 void PhysicsManager::unbind(Rigidbody* rb) {
-    auto itr = m_rigidbodiesQT.begin();
-    for(; itr != m_rigidbodiesQT.end(); itr++) {
-        if(itr->item == rb)
-            break;
-    }
-    if(itr != m_rigidbodiesQT.end())
-        m_rigidbodiesQT.remove(itr);
+    unbind_any(rb, m_rigidbodies);
 }
 void PhysicsManager::unbind(RestraintInterface* res) {
     unbind_any(res, m_restraints);

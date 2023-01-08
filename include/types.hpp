@@ -61,6 +61,18 @@ struct AABB {
     vec2f center() const {
         return min + (max-min) / 2.f;
     }
+    float right() const {
+        return max.x;
+    };
+    float left() const {
+        return min.x;
+    };
+    float bot() const {
+        return max.y;
+    };
+    float top() const {
+        return min.y;
+    };
     vec2f size() const {
         return max - min;
     }
@@ -160,6 +172,7 @@ AABB AABBfromCircle(const Circle& c);
 
 AABB AABBmm(vec2f min, vec2f max);
 AABB AABBcs(vec2f center, vec2f size);
+AABB AABBms(vec2f min, vec2f size);
 
 Ray Rayab(vec2f a, vec2f b);
 Ray Raypd(vec2f p, vec2f d);
