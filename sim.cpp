@@ -59,7 +59,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
             color = PastelColor::Green;
     }
     if(rb->collider.pressure != 0.f)
-        color = blend(color, Color::Cyan, rb->collider.pressure / 5.f);
+        color = blend(color, Color::Cyan, rb->collider.pressure / 20.f);
     if(t.contains(rb))
         color = PastelColor::Red;
     switch(rb->getType()) {
@@ -302,10 +302,10 @@ void Sim::update(float delT) {
                 }ImGui::EndTabItem();
             } 
             static bool open_object = true;
-            if(ImGui::BeginTabItem("object settings", &open_object) && selection.selected.size() != 0)
+            if(ImGui::BeginTabItem("object settings", &open_object))
             {
-                auto hovered_last = *selection.selected.begin();
-                if(hovered_last) {
+                Rigidbody* hovered_last = *selection.selected.begin();
+                if(selection.selected.size() != 0 && hovered_last) {
                     if(ImGui::Button("isStatic")) {
                         hovered_last->isStatic = !hovered_last->isStatic;
                     }
@@ -321,7 +321,8 @@ void Sim::update(float delT) {
                     ImGui::InputScalar("layer: ", ImGuiDataType_U32, &hovered_last->collider.layer);
                 }else {
                     ImGui::Text("NONE SELECTED");
-                }ImGui::EndTabItem();
+                }
+                ImGui::EndTabItem();
             }
             ImGui::Text("total bodies: %d", int(rigidbodies.size()));
             ImGui::Text("delta time: %f", delT);
@@ -382,7 +383,7 @@ void Sim::Run() {
 
         while (window.pollEvent(event))
         {
-            ImGui::SFML::ProcessEvent(event);
+            ImGui::SFML::ProcessEvent(window, event);
             onEvent(event, delT.asSeconds());
         }
         ImGui::SFML::Update(window, delT);

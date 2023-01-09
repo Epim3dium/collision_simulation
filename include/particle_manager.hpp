@@ -8,6 +8,7 @@ namespace EPI_NAMESPACE {
 class ParticleManager {
     std::vector<Particle> m_particles;
     size_t m_cur_idx;
+    size_t m_active_particles;
 
     size_t findNextInactive();
 public:
@@ -19,11 +20,12 @@ public:
                 return;
             m_particles[idx].init(inits...);
         }
+        m_active_particles += count;
     }
     void update(float delT);
     void draw(Window& rw);
 
 
-    ParticleManager(size_t max_particle_count) : m_particles(max_particle_count), m_cur_idx(0U) {}
+    ParticleManager(size_t max_particle_count) : m_particles(max_particle_count), m_cur_idx(0U), m_active_particles(0U) {}
 };
 }

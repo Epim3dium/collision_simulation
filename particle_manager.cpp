@@ -13,9 +13,14 @@ size_t ParticleManager::findNextInactive() {
     return -1;
 }
 void ParticleManager::update(float delT) {
-    for(auto& p : m_particles)
-        if(p.isActive)
-            p.update(delT);
+    size_t count = 0U;
+    for(auto pitr = m_particles.begin(); pitr != m_particles.end() && count < m_active_particles; pitr++) {
+        if(pitr->isActive) {
+            pitr->update(delT);
+            count++;
+        }
+    }
+    m_active_particles = count;
 
 }
 void ParticleManager::draw(Window& rw) {

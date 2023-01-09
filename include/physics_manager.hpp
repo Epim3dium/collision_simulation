@@ -37,18 +37,16 @@ class PhysicsManager {
     std::vector<ColInfo> processBroadPhase();
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
 
-    void m_processCollisions(float delT);
-
     void m_updateRigidbody(Rigidbody& rb, float delT);
 
     void m_updatePhysics(float delT);
     void m_updateRestraints(float delT);
 
-    void m_processDormant(float delT);
     void m_processTriggers();
 
-    //QuadTree<Rigidbody*, std::function<AABB(Rigidbody*)> > m_rigidbodiesQT;
+    QuadTree<Rigidbody*, std::function<AABB(Rigidbody*)> > m_rigidbodiesQT;
     std::vector<Rigidbody*> m_rigidbodies;
+
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
 
@@ -83,6 +81,6 @@ public:
     void unbind(TriggerInterface* trigger);
     void update(float delT);
 
-    PhysicsManager(AABB size) {}
+    PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
 };
 }

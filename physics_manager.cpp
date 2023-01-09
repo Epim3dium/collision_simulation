@@ -41,50 +41,12 @@ static bool areIncompatible(Rigidbody& rb1, Rigidbody& rb2) {
         (rb1.collider.layer == rb2.collider.layer);
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
-    std::vector<PhysicsManager::ColInfo> col_list;
-    struct BoundInfo {
-        Rigidbody* id;
-        float val;
-        bool isEnding = false;
-    };
-    std::vector<BoundInfo> infos;
-    for(auto& r : m_rigidbodies) {
-        infos.push_back({r, r->aabb().min.x});
-        infos.push_back({r, r->aabb().max.x, true});
-    }
-    std::sort(infos.begin(), infos.end(),
-          [](const BoundInfo& bi1, const BoundInfo& bi2) {
-              return bi1.val < bi2.val;
-          });
-    std::map<int, std::vector<Rigidbody*>> open;
-    for(auto& i : infos) {
-        auto minval = i.id->aabb().min.y;
-        auto maxval = i.id->aabb().max.y;
-        if(i.isEnding) {
-            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
-                if(open.find(j) == open.end())
-                    continue;
-                auto& vec = open.at(j);
-                auto itr = std::find(vec.begin(), vec.end(), i.id);
-                if(itr != vec.end())
-                    vec.erase(itr);
-            }
-        } else {
-            for(int j = minval / segment_size; j <= maxval / segment_size; j++) {
-                auto& vec = open[j];
-                for(auto& o : vec) {
-                    if(!areIncompatible(*i.id, *o) && AABBvAABB(i.id->aabb(), o->aabb()) ) {
-                        col_list.push_back({i.id, o});
-                    }
-                }
-                vec.push_back(i.id);
-            }
-        }
-    }
-    return col_list;
+    return m_rigidbodiesQT.findAllIntersections();
 }
 void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInfo>& col_list) {
     for(auto& ci : col_list) {
+        if(areIncompatible(*ci.first, *ci.second))
+            continue;
         float restitution = m_selectFrom(ci.first->material.restitution, ci.second->material.restitution, bounciness_select);
         float sfriction = m_selectFrom(ci.first->material.sfriction, ci.second->material.sfriction, friction_select);
         float dfriction = m_selectFrom(ci.first->material.dfriction, ci.second->material.dfriction, friction_select);
@@ -97,34 +59,16 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
 
     }
 }
-void PhysicsManager::m_processCollisions(float delT) {
-    for(auto& r : m_rigidbodies) {
-        r->collider.now_colliding = nullptr;
-        r->collider.pressure = 0.f;
-    }
-    auto col_list = processBroadPhase();
-    processNarrowPhase(col_list);
-}
-static void devideToSegments(std::vector<Rigidbody*> rigidbodies, float segment_size, std::map<int, std::set<Rigidbody*>>& result) {
-    vec2f padding(segment_size, segment_size);
-    for(auto& r : rigidbodies) {
-        auto aabb = r->aabb();
-        aabb.min -= padding;
-        aabb.max += padding;
-        auto hashed = hash(aabb, segment_size);
-        for(auto h : hashed)
-            result[h].emplace(r);
-    }
-}
 void PhysicsManager::m_updateRestraints(float delT) {
     for(auto& r : m_restraints)
         r->update(delT);
 }
-void PhysicsManager::m_processDormant(float delT) {
-}
 void PhysicsManager::m_processTriggers() {
     for(auto& t : m_triggers) {
-        for(auto& r : m_rigidbodies) {
+        if(t->aabb().min == t->aabb().max)
+            continue;
+        auto possible = m_rigidbodiesQT.query(t->aabb());
+        for(auto& r : possible) {
             auto man = m_solver->detect(r, t);
             if(man.detected) {
                 t->onActivation(r, man.contact_normal);
@@ -155,13 +99,30 @@ void PhysicsManager::m_updatePhysics(float delT) {
 }
 void PhysicsManager::update(float delT ) {
     float deltaStep = delT / (float)steps;
-    for(int i = 0; i < steps; i++) {
-        m_updatePhysics(deltaStep);
-        m_updateRestraints(deltaStep);
-        m_processCollisions(deltaStep);
+    for(auto r : m_rigidbodies) {
+        r->collider.now_colliding = nullptr;
+        r->collider.pressure = 0.f;
     }
-    //m_processDormant(delT);
+    for(int i = 0; i < steps; i++) {
+        m_updateRestraints(deltaStep);
+
+        for(auto r : m_rigidbodies)
+            m_rigidbodiesQT.add(r);
+
+        auto col_list = processBroadPhase();
+
+        m_rigidbodiesQT.clear();
+
+        m_updatePhysics(deltaStep);
+        processNarrowPhase(col_list);
+
+    }
+    for(auto r : m_rigidbodies)
+        m_rigidbodiesQT.add(r);
     m_processTriggers();
+    m_rigidbodiesQT.clear();
+
+    m_rigidbodiesQT.updateLeafes();
 }
 template<class T>
 static void unbind_any(T obj, std::vector<T>& obj_vec) {
