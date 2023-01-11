@@ -264,6 +264,14 @@ void Sim::update(float delT) {
         }
         selection.selected.clear();
     }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+        for(auto s : selection.selected)
+            s->isStatic = true;
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+        for(auto s : selection.selected)
+            s->isStatic = false;
+    }
 
     ImGui::Begin("Demo window");
     {
@@ -325,8 +333,6 @@ void Sim::update(float delT) {
     }
     ImGui::End();
 
-    physics_manager.update(delT);
-    particle_manager.update(delT);
     //delete when out of frame
     for(auto& r : rigidbodies) {
         if(!AABBvAABB(aabb_outer, r->aabb())) {
@@ -339,6 +345,8 @@ void Sim::update(float delT) {
             break;
         }
     }
+    physics_manager.update(delT);
+    particle_manager.update(delT);
 }
 void Sim::draw() {
     //drawing
@@ -396,7 +404,7 @@ Sim::~Sim() {
     ImGui::SFML::Shutdown(window);
 }
 Sim::Sim(float w, float h)
-      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{0, 0}, {w, h}})
+      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{-w/2.f, -h/2.f}, {w * 10.5f, h * 10.5f}})
 {
 
     ImGui::SFML::Init(window);
