@@ -129,8 +129,7 @@ void Sim::setup() {
             m -= avg;\
         auto t = RigidPolygon(avg, 0.f, model);\
         t.isStatic = true;\
-        polys.push_back(t);\
-        rigidbodies.emplace(&polys.back());\
+        createRigidbody(t);\
     }
 
     ADD_SIDE(min.x, min.y, min.x, max.y);
@@ -139,8 +138,6 @@ void Sim::setup() {
     ADD_SIDE(max.x, max.y, max.x, min.y);
 
     //RigidPoly p0 = Polygon(vec2f(), 0.f, mini_model);
-    for(auto& d : polys)
-        physics_manager.bind(&d);
     physics_manager.steps = 3U;
 }
 void Sim::onEvent(const sf::Event &event, float delT) {
@@ -188,9 +185,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
     else if(event.type == sf::Event::KeyPressed) {
         if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
             RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
-            polys.push_back(t);
-            rigidbodies.emplace(&polys.back());
-            physics_manager.bind(&polys.back());
+            createRigidbody(t);
             polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::R) {
             selection.selected.clear();
@@ -205,17 +200,12 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
         RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
-        circs.push_back(t);
-
-        rigidbodies.emplace(&circs.back());
-        physics_manager.bind(&circs.back());
+        createRigidbody(t);
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
-        polys.push_back(t);
-        rigidbodies.emplace( &polys.back());
-        physics_manager.bind(&polys.back());
+        createRigidbody(t);
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
@@ -254,14 +244,14 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(PointVPoly(mpos, p)) {
-            found = &p;
+        if(PointVPoly(mpos, *p)) {
+            found = p;
             break;
         }
     }
     for(auto& c : circs) {
-        if(PointVCircle(mpos, c)) {
-            found = &c;
+        if(PointVCircle(mpos, *c)) {
+            found = c;
             break;
         }
     }

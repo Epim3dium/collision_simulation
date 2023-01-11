@@ -1,4 +1,5 @@
 #include "physics_manager.hpp"
+#include "imgui.h"
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include <cmath>
@@ -43,21 +44,24 @@ static bool areIncompatible(Rigidbody& rb1, Rigidbody& rb2) {
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     return m_rigidbodiesQT.findAllIntersections();
 }
-void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInfo>& col_list) {
-    for(auto& ci : col_list) {
-        if(areIncompatible(*ci.first, *ci.second))
+void PhysicsManager::processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator begining,std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator ending)
+{
+    for(auto ci = begining; ci != ending; ci++) {
+        float restitution = m_selectFrom(ci->first->material.restitution, ci->second->material.restitution, bounciness_select);
+        float sfriction = m_selectFrom(ci->first->material.sfriction, ci->second->material.sfriction, friction_select);
+        float dfriction = m_selectFrom(ci->first->material.dfriction, ci->second->material.dfriction, friction_select);
+        if(areIncompatible(*ci->first, *ci->second))
             continue;
-        float restitution = m_selectFrom(ci.first->material.restitution, ci.second->material.restitution, bounciness_select);
-        float sfriction = m_selectFrom(ci.first->material.sfriction, ci.second->material.sfriction, friction_select);
-        float dfriction = m_selectFrom(ci.first->material.dfriction, ci.second->material.dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
-        auto result = m_solver->solve(ci.first, ci.second, restitution, sfriction, dfriction);
+        auto result = m_solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
         if(result.detected) {
-            ci.first->collider.pressure += result.overlap;
-            ci.second->collider.pressure += result.overlap;
+            ci->first->collider.pressure += result.overlap;
+            ci->second->collider.pressure += result.overlap;
         }
-
     }
+}
+void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInfo>& col_list) {
+    processNarrowRange(col_list.begin(), col_list.end());
 }
 void PhysicsManager::m_updateRestraints(float delT) {
     for(auto& r : m_restraints)
@@ -110,7 +114,6 @@ void PhysicsManager::update(float delT ) {
             m_rigidbodiesQT.add(r);
 
         auto col_list = processBroadPhase();
-
         m_rigidbodiesQT.clear();
 
         m_updatePhysics(deltaStep);

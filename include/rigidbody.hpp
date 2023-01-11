@@ -1,5 +1,6 @@
 #pragma once
 #include "col_utils.hpp"
+#include "imgui.h"
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -50,7 +51,6 @@ public:
     inline size_t getID() const {
         return m_id;
     }
-    void operator=(const RigidbodyIdentificators&) {}
     RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()) {}
     RigidbodyIdentificators() : m_id(getNextID()) {}
 };
@@ -158,6 +158,7 @@ struct RigidCircle : public Rigidbody, public Circle {
         return m_aabb;
     }
     //bool detectPossibleOverlap(Rigidbody* other) override;
+    RigidCircle(const RigidCircle&) = default;
     RigidCircle(const Circle& c) : Circle(c) {}
     RigidCircle(vec2f pos, float radius) : Circle(pos, radius) {}
 };

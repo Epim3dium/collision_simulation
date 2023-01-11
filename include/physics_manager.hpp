@@ -1,3 +1,4 @@
+#include "allocator.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"
@@ -36,6 +37,7 @@ class PhysicsManager {
     typedef std::pair<Rigidbody*, Rigidbody*> ColInfo;
     std::vector<ColInfo> processBroadPhase();
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
+    void processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator begining,std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator ending);
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
 
@@ -49,6 +51,7 @@ class PhysicsManager {
 
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
+    allocator::PoolAllocator m_allocator;
 
     SolverInterface* m_solver = new DefaultSolver();
     static AABB getAABBfromRigidbody(Rigidbody* rb) {
@@ -63,6 +66,7 @@ public:
 
     eSelectMode bounciness_select = eSelectMode::Min;
     eSelectMode friction_select = eSelectMode::Min;
+
 
     inline void bind(Rigidbody* rb) {
         m_rigidbodies.push_back(rb);
@@ -81,6 +85,26 @@ public:
     void unbind(TriggerInterface* trigger);
     void update(float delT);
 
-    PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
+    RigidPolygon* createRigidbody(const RigidPolygon& poly) {
+        auto rb = new (m_allocator.allocate())RigidPolygon(poly);
+        bind(rb);
+        return rb;
+    }
+    void removeRigidbody(RigidPolygon* poly) {
+        unbind(poly);
+        m_allocator.deallocate(poly);
+    }
+
+    RigidCircle* createRigidbody(const RigidCircle& circ) {
+        auto rb = new (m_allocator.allocate())RigidCircle(circ);
+        bind(rb);
+        return rb;
+    }
+    void removeRigidbody(RigidCircle* circ) {
+        unbind(circ);
+        m_allocator.deallocate(circ);
+    }
+
+    PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody), m_allocator(10048U, std::max(sizeof(RigidCircle), sizeof(RigidPolygon))) {}
 };
 }
