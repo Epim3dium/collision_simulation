@@ -57,18 +57,16 @@ public:
 
     void delFromPolys(Rigidbody* rb) {
         for(auto p = polys.begin(); p != polys.end(); p++) {
-            if((void*)&p == (void*)&rb) {
+            if((void*)*p == (void*)rb) {
                 polys.erase(p);
-                physics_manager.unbind((RigidPolygon*)rb);
                 break;
             }
         }
     }
     void delFromCircs(Rigidbody* rb) {
         for(auto p = circs.begin(); p != circs.end(); p++) {
-            if((void*)&p == (void*)&rb) {
+            if((void*)*p == (void*)rb) {
                 circs.erase(p);
-                physics_manager.unbind((RigidCircle*)rb);
                 break;
             }
         }

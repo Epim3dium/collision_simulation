@@ -26,16 +26,10 @@ struct CollisionManifold {
 class SolverInterface {
 public:
     virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
-    struct DetectionResult {
-        bool detected = false;
-        vec2f contact_normal;
-    };
-    virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) = 0;
 };
 class BasicSolver : public SolverInterface {
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
-    virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
     virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
 class DefaultSolver : public SolverInterface {
@@ -52,7 +46,6 @@ private:
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
 
-    virtual DetectionResult detect(Rigidbody* rb1, TriggerInterface* rb2) override;
     virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
 

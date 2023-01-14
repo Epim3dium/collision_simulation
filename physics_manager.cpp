@@ -18,28 +18,10 @@
 
 namespace EPI_NAMESPACE {
 
-
-typedef int hash_vec;
-static hash_vec hash(vec2i pos) {
-    const hash_vec a = 73856093;
-    const hash_vec b = 83492791;
-    return (pos.x * a) ^ (pos.y * b);
-}
-std::vector<int> hash(AABB shape, float seg_size) {
-    vec2i min_hash(shape.min / seg_size);
-    vec2i max_hash(shape.max / seg_size);
-    std::vector<hash_vec> r;
-    for(int y = min_hash.y; y <= max_hash.y; y++) {
-        for(int x = min_hash.x; x <= max_hash.x; x++) {
-            r.push_back(hash(vec2i(x, y)) );
-        }
-    }
-    return r;
-}
-
-static bool areIncompatible(Rigidbody& rb1, Rigidbody& rb2) {
-    return ( rb1.isStatic && rb2.isStatic) || 
-        (rb1.collider.layer == rb2.collider.layer);
+static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
+    return !(
+        ( rb1.isStatic && rb2.isStatic) || 
+        (rb1.collider.layer == rb2.collider.layer));
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     return m_rigidbodiesQT.findAllIntersections();
@@ -50,7 +32,7 @@ void PhysicsManager::processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidb
         float restitution = m_selectFrom(ci->first->material.restitution, ci->second->material.restitution, bounciness_select);
         float sfriction = m_selectFrom(ci->first->material.sfriction, ci->second->material.sfriction, friction_select);
         float dfriction = m_selectFrom(ci->first->material.dfriction, ci->second->material.dfriction, friction_select);
-        if(areIncompatible(*ci->first, *ci->second))
+        if(!areCompatible(*ci->first, *ci->second))
             continue;
         //ewewewewewewwwwww pls don, float delTt judge me
         auto result = m_solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
@@ -73,7 +55,7 @@ void PhysicsManager::m_processTriggers() {
             continue;
         auto possible = m_rigidbodiesQT.query(t->aabb());
         for(auto& r : possible) {
-            auto man = m_solver->detect(r, t);
+            auto man = t->detectTrigger(r);
             if(man.detected) {
                 t->onActivation(r, man.contact_normal);
             }

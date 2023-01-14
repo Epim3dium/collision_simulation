@@ -90,19 +90,15 @@ public:
         bind(rb);
         return rb;
     }
-    void removeRigidbody(RigidPolygon* poly) {
-        unbind(poly);
-        m_allocator.deallocate(poly);
-    }
 
     RigidCircle* createRigidbody(const RigidCircle& circ) {
         auto rb = new (m_allocator.allocate())RigidCircle(circ);
         bind(rb);
         return rb;
     }
-    void removeRigidbody(RigidCircle* circ) {
-        unbind(circ);
-        m_allocator.deallocate(circ);
+    void removeRigidbody(Rigidbody* rb) {
+        unbind(rb);
+        m_allocator.deallocate(rb);
     }
 
     PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody), m_allocator(10048U, std::max(sizeof(RigidCircle), sizeof(RigidPolygon))) {}

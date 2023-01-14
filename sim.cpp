@@ -1,16 +1,4 @@
 #include "sim.hpp"
-#include "SFML/Graphics.hpp"
-#include "SFML/Window.hpp"
-
-#include "imgui-SFML.h"
-#include "imgui.h"
-
-#include "col_utils.hpp"
-#include "restraint.hpp"
-#include "rigidbody.hpp"
-#include "types.hpp"
-#include "particle.hpp"
-#include "quad_tree.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -59,7 +47,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
             color = PastelColor::Green;
     }
     if(rb->collider.pressure != 0.f)
-        color = blend(color, Color::Cyan, rb->collider.pressure / 20.f);
+        color = blend(color, Color::Cyan, rb->collider.pressure / 100.f);
     if(t.contains(rb))
         color = PastelColor::Red;
     switch(rb->getType()) {
@@ -199,6 +187,7 @@ void Sim::update(float delT) {
         polygon_creation_vec.clear();
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
+
         RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
         createRigidbody(t);
     }
@@ -257,10 +246,10 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace)) {
         for(auto s : selection.selected) {
-            physics_manager.unbind(s);
             delFromCircs(s);
             delFromPolys(s);
             rigidbodies.erase(s);
+            physics_manager.removeRigidbody(s);
         }
         selection.selected.clear();
     }
@@ -338,7 +327,7 @@ void Sim::update(float delT) {
         if(!AABBvAABB(aabb_outer, r->aabb())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);
-            physics_manager.unbind(r);
+            physics_manager.removeRigidbody(r);
             delFromCircs(r);
             delFromPolys(r);
             rigidbodies.erase(r);
@@ -404,7 +393,7 @@ Sim::~Sim() {
     ImGui::SFML::Shutdown(window);
 }
 Sim::Sim(float w, float h)
-      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{-w/2.f, -h/2.f}, {w * 10.5f, h * 10.5f}})
+      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{-w * 3.f, -h * 3.f}, {w * 3.f, h * 3.f}})
 {
 
     ImGui::SFML::Init(window);

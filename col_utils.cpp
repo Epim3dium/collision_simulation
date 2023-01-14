@@ -2,6 +2,7 @@
 #include "types.hpp"
 #include <cmath>
 namespace EPI_NAMESPACE {
+#define SQR(x) ((x) * (x))
 bool PointVAABB(const vec2f& p, const AABB& r) {
     return (p.x >= r.center().x - r.size().x / 2 && p.y > r.center().y - r.size().y / 2
         && p.x < r.center().x + r.size().x / 2 && p.y <= r.center().y + r.size().y / 2);
@@ -168,5 +169,106 @@ float calcArea(const std::vector<vec2f>& model) {
     }
 
     return abs(area / 2.0);
+}
+bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {
+    const Polygon *poly1 = &r1;
+    const Polygon *poly2 = &r2;
+
+    float overlap = INFINITY;
+    
+    for (int shape = 0; shape < 2; shape++) {
+        if (shape == 1) {
+            poly1 = &r2;
+            poly2 = &r1;
+        }
+        for (int a = 0; a < poly1->getVertecies().size(); a++) {
+            int b = (a + 1) % poly1->getVertecies().size();
+            vec2f axisProj = { -(poly1->getVertecies()[b].y - poly1->getVertecies()[a].y), poly1->getVertecies()[b].x - poly1->getVertecies()[a].x };
+            
+            // Optional normalisation of projection axis enhances stability slightly
+            float d = sqrtf(axisProj.x * axisProj.x + axisProj.y * axisProj.y);
+            axisProj = { axisProj.x / d, axisProj.y / d };
+
+            // Work out min and max 1D points for r1
+            float min_r1 = INFINITY, max_r1 = -INFINITY;
+            for (int p = 0; p < poly1->getVertecies().size(); p++) {
+                float q = (poly1->getVertecies()[p].x * axisProj.x + poly1->getVertecies()[p].y * axisProj.y);
+                min_r1 = std::min(min_r1, q);
+                max_r1 = std::max(max_r1, q);
+            }
+
+            // Work out min and max 1D points for r2
+            float min_r2 = INFINITY, max_r2 = -INFINITY;
+            for (int p = 0; p < poly2->getVertecies().size(); p++) {
+                float q = (poly2->getVertecies()[p].x * axisProj.x + poly2->getVertecies()[p].y * axisProj.y);
+                min_r2 = std::min(min_r2, q);
+                max_r2 = std::max(max_r2, q);
+            }
+
+            // Calculate actual overlap along projected axis, and store the minimum
+            if(std::min(max_r1, max_r2) - std::max(min_r1, min_r2) < overlap) {
+                overlap = std::min(max_r1, max_r2) - std::max(min_r1, min_r2);
+                if(cn) {
+                    *cn = axisProj;
+                }
+            }
+
+            if (!(max_r2 >= min_r1 && max_r1 >= min_r2))
+                return false;
+        }
+    }
+    //correcting normal
+    if(cn) {
+        float d = dot(r2.getPos() - r1.getPos(), *cn);
+        if(d > 0.f)
+            *cn *= -1.f;
+    }
+
+    if(t)
+        *t = overlap;
+    return true;
+}
+bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f* cp) {
+    vec2f max_reach = c.pos + norm(r.getPos() - c.pos) * c.radius;
+
+    vec2f closest(INFINITY, INFINITY);
+    vec2f prev = r.getVertecies().back();
+    for(const auto& p : r.getVertecies()) {
+        vec2f tmp = ClosestPointOnRay(prev, p - prev, c.pos);
+        if(qlen(closest - c.pos) > qlen(tmp - c.pos)) {
+            closest = tmp;
+        }
+        prev = p;
+    }
+    bool isOverlapping = len(closest - c.pos) <= c.radius || PointVPoly(c.pos, r);
+    if(!isOverlapping)
+        return false;
+    if(cn) {
+        *cn = norm(c.pos - closest);
+        if(dot(*cn, r.getPos() - closest) > 0.f) {
+            *cn *= -1.f;
+        }
+    }
+    if(overlap) {
+        *overlap = c.radius - len(c.pos - closest);
+    }
+    if(cp) {
+        *cp = closest;
+    }
+    return true;
+}
+bool detect(const Circle &c1, const Circle &c2, vec2f* cn, float* overlap, vec2f* cp) {
+    vec2f dist = c1.pos - c2.pos;
+    float dist_len = len(dist);
+    if(dist_len > c1.radius + c2.radius) {
+        return false;
+    }
+    if(cn)
+        *cn = dist / dist_len;
+    if(overlap)
+        *overlap = c1.radius + c2.radius - dist_len;
+    if(cp)
+        *cp =  dist / dist_len * c2.radius + c2.pos;
+    return true;
 }
 }
