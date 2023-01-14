@@ -198,17 +198,18 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-        particle_manager.emit(30000U * delT, 
-            Particle::PosInit(mpos),
-            Particle::LifetimeInit(0.1f, 0.5f),
-            Particle::ColorVecInit({PastelColor::Red}),
-            Particle::ShapeInit(5.f),
-            Particle::VelMagInit(250.f, 1000.f),
-            Particle::VelAngleInit(0.f, 3.141f),
-            Particle::ColorFuncInit(
+        particle_manager.emit(3000U * delT, {
+            &Particle::PosInit(mpos),
+            &Particle::LifetimeInit(0.1f, 0.5f),
+            &Particle::ColorVecInit({PastelColor::Red}),
+            &Particle::ShapeInit(5.f),
+            &Particle::VelMagInit(250.f, 1000.f),
+            &Particle::VelAngleInit(0.f, 3.141f),
+            &Particle::ColorFuncInit(
                 [](Color clr, float time)->Color {
-                    return blend(clr, PastelColor::Yellow, time);
+                    return blend(PastelColor::Yellow, clr, time);
                 })
+            }
         );
     }
     if(selection.isHolding) {

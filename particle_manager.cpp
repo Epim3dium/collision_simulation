@@ -21,7 +21,6 @@ void ParticleManager::update(float delT) {
         }
     }
     m_active_particles = count;
-
 }
 void ParticleManager::draw(Window& rw) {
     for(auto& p : m_particles)

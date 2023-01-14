@@ -12,13 +12,12 @@ class ParticleManager {
 
     size_t findNextInactive();
 public:
-    template<class ...Initializers>
-    void emit(size_t count, Initializers... inits) {
+    void emit(size_t count, std::vector<Particle::InitInerface*> inits) {
         for(size_t i = 0; i < count; i++) {
             size_t idx = findNextInactive();
             if(idx == -1)
                 return;
-            m_particles[idx].init(inits...);
+            m_particles[idx].init(inits);
         }
         m_active_particles += count;
     }

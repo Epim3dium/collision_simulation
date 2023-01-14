@@ -4,56 +4,45 @@
 #include "types.hpp"
 namespace  EPI_NAMESPACE {
 RNG epi::Particle::s_rng;
-template<> 
-void Particle::m_apply<Particle::PosInit>(Particle::PosInit i) {
-    this->pos.x = s_rng.Random(i.min.x, i.max.x);
-    this->pos.y = s_rng.Random(i.min.y, i.max.y);
+void Particle::PosInit::apply(Particle& p) {
+    p.pos.x = s_rng.Random(min.x, max.x);
+    p.pos.y = s_rng.Random(min.y, max.y);
 }
-template<> 
-void Particle::m_apply<Particle::RotInit>(Particle::RotInit i) {
-    this->rot = s_rng.Random(i.min, i.max);
+void Particle::RotInit::apply(Particle& p) {
+    p.rot = s_rng.Random(min, max);
 }
-template<> 
-void Particle::m_apply<Particle::AngVelInit>(Particle::AngVelInit i) {
-    this->ang_vel = s_rng.Random(i.min, i.max);
+void Particle::AngVelInit::apply(Particle& p) {
+    p.ang_vel = s_rng.Random(min, max);
 }
-template<> 
-void Particle::m_apply<Particle::VelMagInit>(Particle::VelMagInit i) {
-    this->vel *= s_rng.Random(i.min, i.max);
+void Particle::VelMagInit::apply(Particle& p) {
+    p.vel *= s_rng.Random(min, max);
 }
-template<> 
-void Particle::m_apply<Particle::VelAngleInit>(Particle::VelAngleInit i) {
-    float angle = s_rng.Random(i.min, i.max);
-    auto tmpvel = this->vel;
-    this->vel.x = cos(angle) * tmpvel.x - sin(angle) * tmpvel.y;
-    this->vel.y = sin(angle) * tmpvel.x + cos(angle) * tmpvel.y;
+void Particle::VelAngleInit::apply(Particle& p) {
+    float angle = s_rng.Random(min, max);
+    auto tmpvel = p.vel;
+    p.vel.x = cos(angle) * tmpvel.x - sin(angle) * tmpvel.y;
+    p.vel.y = sin(angle) * tmpvel.x + cos(angle) * tmpvel.y;
 }
-template<> 
-void Particle::m_apply<Particle::LifetimeInit>(Particle::LifetimeInit i) {
-    this->lifetime = s_rng.Random(i.min, i.max);
+void Particle::LifetimeInit::apply(Particle& p) {
+    p.lifetime = s_rng.Random(min, max);
 }
-template<> 
-void Particle::m_apply<Particle::ColorVecInit>(Particle::ColorVecInit i) {
-    this->color = i.possible_colors[s_rng.Random<size_t>(0U, i.possible_colors.size())];
+void Particle::ColorVecInit::apply(Particle& p) {
+    p.color = possible_colors[s_rng.Random<size_t>(0U, possible_colors.size())];
 }
-template<> 
-void Particle::m_apply<Particle::ShapeInit>(Particle::ShapeInit i) {
-    shape.type = i.type;
-    shape.model = i.model;
-    shape.size = i.size;
-    shape.radius = i.radius;
+void Particle::ShapeInit::apply(Particle& p) {
+    p.shape.type   = type;
+    p.shape.model  = model;
+    p.shape.size   = size;
+    p.shape.radius = radius;
 }
-template<> 
-void Particle::m_apply<Particle::VelFuncInit>(Particle::VelFuncInit i) {
-    change.vel = i.func;
+void Particle::VelFuncInit::apply(Particle& p) {
+    p.change.vel = func;
 }
-template<> 
-void Particle::m_apply<Particle::AngVelFuncInit>(Particle::AngVelFuncInit i) {
-    change.ang_vel = i.func;
+void Particle::AngVelFuncInit::apply(Particle& p) {
+    p.change.ang_vel = func;
 }
-template<> 
-void Particle::m_apply<Particle::ColorFuncInit>(Particle::ColorFuncInit i) {
-    change.color = i.func;
+void Particle::ColorFuncInit::apply(Particle& p) {
+    p.change.color = func;
 }
 
 void Particle::update(float delT) {

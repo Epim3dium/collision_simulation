@@ -92,9 +92,9 @@ void PhysicsManager::update(float delT ) {
     for(int i = 0; i < steps; i++) {
         m_updateRestraints(deltaStep);
 
+
         for(auto r : m_rigidbodies)
             m_rigidbodiesQT.add(r);
-
         auto col_list = processBroadPhase();
         m_rigidbodiesQT.clear();
 
