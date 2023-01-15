@@ -28,9 +28,33 @@ class Particle {
 public:
     struct InitInerface {
         virtual void apply(Particle& part) = 0;
+        virtual ~InitInerface() {}
+    };
+    struct InitList {
+    private:
+        template<class InitT>
+        void m_add(InitT first) {
+            inits.push_back(new InitT(first));
+        }
+        template<class InitT, class ...InitOther>
+        void m_add(InitT first, InitOther... rest) {
+            inits.push_back(new InitT(first));
+            m_add(rest...);
+        }
+    public:
+        std::vector<InitInerface*> inits;
+        template<class ...InitOther>
+        InitList(InitOther... inits) {
+            m_add(inits...);
+        }
+        ~InitList() {
+            for(auto& i : inits) {
+                delete i;
+            }
+        }
     };
 
-    void init(std::vector<InitInerface*> init_values) {
+    void init(const std::vector<InitInerface*>& init_values) {
         pos = vec2f(0.f, 0.f);
         rot = 0.f;
         vel = vec2f(1.f, 0.f);
@@ -47,6 +71,9 @@ public:
             i->apply(*this);
         }
         isActive = true;
+    }
+    void init(const InitList& init_values) {
+        init(init_values.inits);
     }
 
     void update(float delT);

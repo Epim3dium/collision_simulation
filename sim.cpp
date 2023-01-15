@@ -1,4 +1,6 @@
 #include "sim.hpp"
+#include "imgui.h"
+#include "types.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -131,6 +133,8 @@ void Sim::setup() {
 void Sim::onEvent(const sf::Event &event, float delT) {
     if (event.type == sf::Event::Closed)
         window.close();
+    if (ImGui::IsAnyItemHovered())
+        return;
     else if(event.type == sf::Event::MouseButtonPressed) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
             selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
@@ -198,18 +202,19 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-        particle_manager.emit(3000U * delT, {
-            &Particle::PosInit(mpos),
-            &Particle::LifetimeInit(0.1f, 0.5f),
-            &Particle::ColorVecInit({PastelColor::Red}),
-            &Particle::ShapeInit(5.f),
-            &Particle::VelMagInit(250.f, 1000.f),
-            &Particle::VelAngleInit(0.f, 3.141f),
-            &Particle::ColorFuncInit(
+        particle_manager.emit(3000U * delT, Particle::InitList(
+            Particle::PosInit(mpos),
+            Particle::LifetimeInit(0.15f, 0.2f),
+            Particle::ColorVecInit({PastelColor::Red}),
+            Particle::ShapeInit(5.f),
+            Particle::VelMagInit(1200.f, 1200.f),
+            Particle::VelAngleInit(-3.141f, 3.141f),
+            Particle::ColorFuncInit(
                 [](Color clr, float time)->Color {
+                    clr = blend(clr, Color::White, 0.1f);
                     return blend(PastelColor::Yellow, clr, time);
                 })
-            }
+            )
         );
     }
     if(selection.isHolding) {
@@ -335,7 +340,7 @@ void Sim::update(float delT) {
             break;
         }
     }
-    physics_manager.update(delT);
+    physics_manager.update(delT, &particle_manager);
     particle_manager.update(delT);
 }
 void Sim::draw() {

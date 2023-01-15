@@ -1,7 +1,11 @@
 #include "physics_manager.hpp"
+#include "col_utils.hpp"
 #include "imgui.h"
+
 #include "solver.hpp"
+#include "particle_manager.hpp"
 #include "rigidbody.hpp"
+
 #include <cmath>
 #include <cstddef>
 #include <iterator>
@@ -83,7 +87,28 @@ void PhysicsManager::m_updatePhysics(float delT) {
         m_updateRigidbody(*r, delT);
     }
 }
-void PhysicsManager::update(float delT ) {
+void PhysicsManager::m_processParticles(ParticleManager& pm) {
+    if(pm.m_active_particles == 0)
+        return;
+    for(auto& p : pm.m_particles) {
+        if(!p.isActive)
+            continue; 
+        auto open = m_rigidbodiesQT.query({p.pos - vec2f(0.1f, 0.1f), p.pos + vec2f(0.1f, 0.1f)});
+        for(auto& o : open) {
+            switch(o->getType()) {
+                case eRigidShape::Circle:
+                    if(PointVCircle(p.pos, *(RigidCircle*)o))
+                        p.isActive = false;
+                break;
+                case eRigidShape::Polygon:
+                    if(PointVPoly(p.pos, *(RigidPolygon*)o))
+                        p.isActive = false;
+                break;
+            }
+        }
+    }
+}
+void PhysicsManager::update(float delT, ParticleManager* pm ) {
     float deltaStep = delT / (float)steps;
     for(auto r : m_rigidbodies) {
         r->collider.now_colliding = nullptr;
@@ -105,6 +130,9 @@ void PhysicsManager::update(float delT ) {
     for(auto r : m_rigidbodies)
         m_rigidbodiesQT.add(r);
     m_processTriggers();
+    if(pm){
+        m_processParticles(*pm);
+    }
     m_rigidbodiesQT.clear();
 
     m_rigidbodiesQT.updateLeafes();

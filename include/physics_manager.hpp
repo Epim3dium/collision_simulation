@@ -10,7 +10,11 @@
 #include <vector>
 #include <set>
 
+
 namespace EPI_NAMESPACE {
+
+struct ParticleManager;
+
 enum class eSelectMode {
     Min,
     Max,
@@ -45,6 +49,7 @@ class PhysicsManager {
     void m_updateRestraints(float delT);
 
     void m_processTriggers();
+    void m_processParticles(ParticleManager& pm);
 
     QuadTree<Rigidbody*, std::function<AABB(Rigidbody*)> > m_rigidbodiesQT;
     std::vector<Rigidbody*> m_rigidbodies;
@@ -63,6 +68,8 @@ public:
     float min_dormant_velocity = 500.f;
     float min_angular_dormant_velocity = 30.f;
     float segment_size = 100.f;
+
+    void update(float delT, ParticleManager* pm = nullptr);
 
     eSelectMode bounciness_select = eSelectMode::Min;
     eSelectMode friction_select = eSelectMode::Min;
@@ -83,7 +90,7 @@ public:
     void unbind(Rigidbody* rb);
     void unbind(RestraintInterface* restriant);
     void unbind(TriggerInterface* trigger);
-    void update(float delT);
+
 
     RigidPolygon* createRigidbody(const RigidPolygon& poly) {
         auto rb = new (m_allocator.allocate())RigidPolygon(poly);
