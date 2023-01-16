@@ -127,13 +127,11 @@ void Sim::setup() {
     ADD_SIDE(max.x, max.y, min.x, max.y);
     ADD_SIDE(max.x, max.y, max.x, min.y);
 
-    //RigidPoly p0 = Polygon(vec2f(), 0.f, mini_model);
-    physics_manager.steps = 3U;
 }
 void Sim::onEvent(const sf::Event &event, float delT) {
     if (event.type == sf::Event::Closed)
         window.close();
-    if (ImGui::IsAnyItemHovered())
+    if (ImGui::IsAnyItemActive())
         return;
     else if(event.type == sf::Event::MouseButtonPressed) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
@@ -277,7 +275,7 @@ void Sim::update(float delT) {
             if(ImGui::BeginTabItem("global settings", &open_global))
             {
                 ImGui::SliderFloat("change seg size" , &physics_manager.segment_size, 5.0f, 300.0f, "%.0f");
-                static int tsteps = 10;
+                static int tsteps = 5;
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 physics_manager.steps = tsteps;
                 ImGui::SliderFloat("change gravity" , &physics_manager.grav, -3000.f, 3000.f, "%.1f");

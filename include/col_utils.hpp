@@ -1,6 +1,7 @@
 #pragma once
 #include "types.hpp"
 namespace EPI_NAMESPACE {
+vec2f rotateVec(vec2f vec, float angle);
 bool PointVAABB(const vec2f& p, const AABB& r) ;
 bool PointVCircle(const vec2f& p, const Circle& c);
 bool PointVPoly(const vec2f& p, const Polygon& poly);

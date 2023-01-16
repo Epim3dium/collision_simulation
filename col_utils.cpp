@@ -2,6 +2,11 @@
 #include "types.hpp"
 #include <cmath>
 namespace EPI_NAMESPACE {
+
+vec2f rotateVec(vec2f vec, float angle) {
+    return vec2f(cos(angle) * vec.x - sin(angle) * vec.y,
+        sin(angle) * vec.x + cos(angle) * vec.y);
+}
 #define SQR(x) ((x) * (x))
 bool PointVAABB(const vec2f& p, const AABB& r) {
     return (p.x >= r.center().x - r.size().x / 2 && p.y > r.center().y - r.size().y / 2
