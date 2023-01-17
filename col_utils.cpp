@@ -38,7 +38,7 @@ bool AABBcontainsAABB(const AABB& r1, const AABB& r2) {
 				(r2.min.y >= r1.min.y) && (r2.max.y <= r1.max.y);
 }
 bool RayVAABB(vec2f ray_origin, vec2f ray_dir,
-    const AABB& target, float* t_hit_near,
+    const AABB& target, float* t_hit_near, float* t_hit_far,
     vec2f* contact_normal, vec2f* contact_point)
 {
     vec2f invdir = { 1.0f / ray_dir.x, 1.0f / ray_dir.y };
@@ -59,9 +59,11 @@ bool RayVAABB(vec2f ray_origin, vec2f ray_dir,
     float thn = std::max(t_near.x, t_near.y);
     if (t_hit_near)
         *t_hit_near = thn;
-    float t_hit_far = std::min(t_far.x, t_far.y);
+    float thf = std::min(t_far.x, t_far.y);
+    if (t_hit_far)
+        *t_hit_far = thf;
 
-    if (t_hit_far < 0)
+    if (thf < 0)
         return false;
     if(contact_point)
         *contact_point = ray_origin + ray_dir * thn;

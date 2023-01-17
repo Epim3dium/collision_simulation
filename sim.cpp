@@ -1,6 +1,9 @@
 #include "sim.hpp"
+#include "col_utils.hpp"
 #include "imgui.h"
+#include "rigidbody.hpp"
 #include "types.hpp"
+#include "crumbler.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -9,6 +12,7 @@
 #include <numeric>
 #include <sys/_types/_size_t.h>
 #include <vector>
+
 
 namespace EPI_NAMESPACE {
 void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
@@ -88,6 +92,28 @@ static void setupImGuiFont() {
     
     ImFont* font = io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
     ImGui::SFML::UpdateFontTexture();
+}
+#define GRID_RATIO 0.3333f
+void Sim::crumbleSquarely(RigidPolygon* poly) {
+    Crumbler crumbler(80.f, 30.f);
+    auto devisions = crumbler.crumble(poly);
+    vec2f pos = poly->getPos();
+    vec2f vel = poly->velocity;
+    float angvel = poly->angular_velocity;
+    float mass = poly->mass / devisions.size();
+    removeRigidbody(poly);
+    for(auto& p : devisions) {
+        RigidPolygon t(p);
+
+        vec2f rad = t.getPos() - pos;
+        vec2f radperp(-rad.y, rad.x);
+        vec2f pang_vel_lin = radperp * angvel;
+        t.velocity = vel + pang_vel_lin;
+        t.mass = mass;
+
+        if(len(t.aabb().size()) > 50.f )
+            createRigidbody(t);
+    }
 }
 void Sim::setup() {
     physics_manager.segment_size = 50.f;
@@ -177,6 +203,12 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
             createRigidbody(t);
             polygon_creation_vec.clear();
+        }else if(event.key.code == sf::Keyboard::X) {
+            auto rb = *selection.selected.begin();
+            if(selection.selected.size() != 0 && rb->getType() == eRigidShape::Polygon) 
+                crumbleSquarely((RigidPolygon*)rb);
+            selection.selected.clear();
+            polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::R) {
             selection.selected.clear();
             polygon_creation_vec.clear();
@@ -250,10 +282,7 @@ void Sim::update(float delT) {
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace)) {
         for(auto s : selection.selected) {
-            delFromCircs(s);
-            delFromPolys(s);
-            rigidbodies.erase(s);
-            physics_manager.removeRigidbody(s);
+            removeRigidbody(s);
         }
         selection.selected.clear();
     }
@@ -331,10 +360,7 @@ void Sim::update(float delT) {
         if(!AABBvAABB(aabb_outer, r->aabb())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);
-            physics_manager.removeRigidbody(r);
-            delFromCircs(r);
-            delFromPolys(r);
-            rigidbodies.erase(r);
+            removeRigidbody(r);
             break;
         }
     }

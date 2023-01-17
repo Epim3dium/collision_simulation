@@ -29,6 +29,23 @@ struct SelectingTrigger : public TriggerPolygonInterface {
 class Sim {
     sf::RenderWindow window;
     float m_width, m_height;
+
+    void delFromPolys(Rigidbody* rb) {
+        for(auto p = polys.begin(); p != polys.end(); p++) {
+            if((void*)*p == (void*)rb) {
+                polys.erase(p);
+                break;
+            }
+        }
+    }
+    void delFromCircs(Rigidbody* rb) {
+        for(auto p = circs.begin(); p != circs.end(); p++) {
+            if((void*)*p == (void*)rb) {
+                circs.erase(p);
+                break;
+            }
+        }
+    }
 public:
     std::vector<float> FPS;
     float total_sim_time = 0.f;
@@ -54,23 +71,13 @@ public:
         circs.push_back(ptr);
         rigidbodies.insert(ptr);
     }
-
-    void delFromPolys(Rigidbody* rb) {
-        for(auto p = polys.begin(); p != polys.end(); p++) {
-            if((void*)*p == (void*)rb) {
-                polys.erase(p);
-                break;
-            }
-        }
+    void removeRigidbody(Rigidbody* r) {
+        delFromPolys(r);
+        delFromCircs(r);
+        rigidbodies.erase(r);
+        physics_manager.removeRigidbody(r);
     }
-    void delFromCircs(Rigidbody* rb) {
-        for(auto p = circs.begin(); p != circs.end(); p++) {
-            if((void*)*p == (void*)rb) {
-                circs.erase(p);
-                break;
-            }
-        }
-    }
+    void crumbleSquarely(RigidPolygon* poly);
 
 
     AABB aabb_outer = {{0, 0}, (vec2f)window.getSize()};
