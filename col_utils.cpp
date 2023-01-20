@@ -169,12 +169,10 @@ void getContactPoints(Polygon& p1, Polygon& p2, std::vector<vec2f>& cps) {
 float calcArea(const std::vector<vec2f>& model) {
     double area = 0.0;
     // Calculate value of shoelace formula
-    int j = model.size() - 1;
     for (int i = 0; i < model.size(); i++) {
-        area += (model[j].x + model[i].x) * (model[j].y - model[i].y);
-        j = i;  // j is previous vertex to i
+      int i1 = (i + 1) % model.size();
+      area += (model[i].y + model[i1].y) * (model[i1].x - model[i].x) / 2.0;
     }
-
     return abs(area / 2.0);
 }
 bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t) {

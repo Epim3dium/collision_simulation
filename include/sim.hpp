@@ -77,7 +77,7 @@ public:
         rigidbodies.erase(r);
         physics_manager.removeRigidbody(r);
     }
-    void crumbleSquarely(RigidPolygon* poly);
+    void crumbleSquarely(Rigidbody* poly);
 
 
     AABB aabb_outer = {{0, 0}, (vec2f)window.getSize()};

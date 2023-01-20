@@ -17,6 +17,8 @@ vec2f ClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point);
 vec2f findPointOnEdge(vec2f point, const Polygon& poly);
 void getContactPoints(Polygon& r1, Polygon& r2, std::vector<vec2f>& result);
 float calcArea(const std::vector<vec2f>& model);
+bool nearlyEqual(float a, float b);
+bool nearlyEqual(vec2f a, vec2f b);
 
 bool detect(const Polygon &r1, const Polygon &r2, vec2f* cn, float* t);
 bool detect(const Circle &c, const Polygon &r, vec2f* cn, float* overlap, vec2f* cp);

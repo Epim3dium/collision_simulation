@@ -1,5 +1,6 @@
 #include "crumbler.hpp"
 #include "col_utils.hpp"
+#include "physics_manager.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
 #include <algorithm>
@@ -10,18 +11,28 @@
 
 namespace EPI_NAMESPACE {
 
-std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
+Polygon Crumbler::m_getShape(Rigidbody* rb) {
+    switch(rb->getType()) {
+        case eRigidShape::Polygon:
+            return *(RigidPolygon*)rb;
+        case eRigidShape::Circle:
+            return PolygonReg(rb->getPos(), 0.f, 16U, ((RigidCircle*)rb)->radius);
+    }
+}
+std::vector<std::vector<Crumbler::VertNode> > Crumbler::m_generateVerticies(AABB aabb) {
     std::vector<std::vector<VertNode> > verticies;
-    std::vector<CenterNode> centers;
-
-    AABB aabb = rb->aabb();
-    std::deque<VertNode>* pervy = nullptr;
+    float angle = rng.Random(-3.141f, 3.141f);
     for(float y = aabb.min.y; y <= aabb.max.y + seg_size; y += seg_size) {
         verticies.push_back({});
         for(float x = aabb.min.x; x <= aabb.max.x + seg_size; x += seg_size) {
-            verticies.back().push_back({vec2f(x, y)});
+            auto vec = rotateVec(vec2f(x, y) - aabb.center(), angle);
+            verticies.back().push_back({vec + aabb.center()});
         }
     }
+    return verticies;
+}
+std::vector<Crumbler::CenterNode> Crumbler::m_generateCenters(std::vector<std::vector<VertNode> >& verticies) {
+    std::vector<CenterNode> centers;
     auto imax = verticies.size() - 1;
     auto iimax = verticies.back().size() - 1;
     for(int i = 0; i < imax; i++) {
@@ -34,24 +45,45 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
             cur.push_back(&verticies[i + 1][ii + 1]);
         }
     }
+    return centers;
+}
+std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
+    float focus = 1.f;
+    float offset_mag = seg_size * focus;
+
+    auto aabb = rb->aabb();
+    aabb.setSize(aabb.size() * 3.f);
+    auto verticies = m_generateVerticies(aabb);
+    auto centers = m_generateCenters(verticies);
+    Polygon shape = m_getShape(rb);
+    float big_area = calcArea(shape.getModelVertecies());
+
     //apply random deviation
     for(auto& v : verticies) {
         for(auto& vv : v) {
             vv.pos += vec2f(rng.Random(-deviation / 2.f, deviation / 2.f), rng.Random(-deviation / 2.f, deviation / 2.f));
+
+            float l = len(shape.getPos() - vv.pos);
+            if(focus_point.x != INFINITY && !nearlyEqual(l, 0.f)) {
+                float invl = std::clamp(1.f / l, 0.f, 1.f);
+                auto f = std::clamp((1.f - invl) * offset_mag, 0.f, l);
+
+                vv.pos += norm(shape.getPos() - vv.pos) * f;
+            }
         }
     }
-    Polygon shape;
-    switch(rb->getType()) {
-        case eRigidShape::Polygon:
-            shape = *(RigidPolygon*)rb;
-            break;
-        case eRigidShape::Circle:
-            shape = PolygonReg(rb->getPos(), 0.f, 24U, ((RigidCircle*)rb)->radius);
-            break;
+    //update active nodes
+    for(auto& v : verticies) {
+        for(auto& vv : v) {
+            if(PointVPoly(vv.pos, shape))
+                vv.isIncluded = true;
+        }
     }
     //snap to edges
     for(auto& v : verticies) {
         for(auto& vv : v) {
+            if(vv.isIncluded)
+                continue;
             float closest_dist = INFINITY;
             vec2f closest;
             auto prev = shape.getVertecies().back();
@@ -63,31 +95,39 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
                 }
                 prev = p;
             }
-            if(closest_dist < seg_size) {
+            if(closest_dist <= seg_size + deviation) {
                 vv.pos = closest;
                 vv.isIncluded = true;
             }
         }
     }
-    //update active nodes
-    for(auto& v : verticies) {
-        for(auto& vv : v) {
-            if(PointVPoly(vv.pos, shape))
-                vv.isIncluded = true;
-        }
-    }
     std::vector<Polygon> result;
+    //functions helpers
+    auto hash = [](vec2i i) {
+        const int p1 = 73856093;
+        const int p2 = 19349663;
+        return int(i.x * p1) ^ int(i.y * p2);
+    };
+    auto cmp = [&hash](vec2f a, vec2f b) { 
+        vec2i ai = (vec2i)a;
+        vec2i bi = (vec2i)b;
+        return hash(ai) < hash(bi);
+    };
+    //end of functions
     for(auto& c : centers) {
-        std::vector<vec2f> model;
+        std::set<vec2f, decltype(cmp)> model(cmp);
         for(int i = 0; i < c.size(); i++) {
             if(c[i]->isIncluded) {
-                model.push_back(c[i]->pos);
+                model.emplace(c[i]->pos);
             }
         }
-        if(model.size() > 2)
-            result.push_back(PolygonfromPoints(model));
+        auto t = PolygonfromPoints(std::vector<vec2f>(model.begin(), model.end()));
+        if(model.size() > 2 && calcArea(t.getModelVertecies()) > 0.0001f) {
+            result.push_back(t);
+        }
     }
     return result;
 }
 
 }
+

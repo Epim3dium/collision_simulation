@@ -161,12 +161,22 @@ public:
     }
     Polygon() {}
     Polygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : pos(pos_), rotation(rot_), model(model_), points(model_.size(), vec2f(0, 0)) {
-        std::sort(model.begin(), model.end(), [](vec2f a, vec2f b) {return std::atan2(a.x, -a.y) > std::atan2(b.x, -b.y);});
+        std::sort(model.begin(), model.end(), [](vec2f a, vec2f b) {
+                      auto anga = std::atan2(a.x, a.y);
+                      if (anga > M_PI)        { anga -= 2 * M_PI; }
+                      else if (anga <= -M_PI) { anga += 2 * M_PI; }
+                      auto angb = std::atan2(b.x, b.y);
+                      if (angb > M_PI)        { angb -= 2 * M_PI; }
+                      else if (angb <= -M_PI) { angb += 2 * M_PI; }
+
+                      return anga < angb;
+                  });
         m_updatePoints();
         m_avgPoints();
     }
     friend void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr);
     friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr);
+    friend void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr);
 };
 AABB AABBfromCircle(const Circle& c);
 

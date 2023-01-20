@@ -21,7 +21,6 @@ enum class eSelectMode {
     Max,
     Avg
 };
-std::vector<int> hash(AABB shape, float seg_size);
 class PhysicsManager {
     template<class T>
     static T m_selectFrom(T a, T b, eSelectMode mode) {

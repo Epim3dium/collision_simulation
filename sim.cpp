@@ -1,4 +1,6 @@
 #include "sim.hpp"
+#include "SFML/Graphics/Color.hpp"
+#include "SFML/Window/Keyboard.hpp"
 #include "col_utils.hpp"
 #include "imgui.h"
 #include "rigidbody.hpp"
@@ -72,6 +74,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
         }break;
         case eRigidShape::Polygon:
             drawFill(rw, *(RigidPolygon*)rb, color);
+            //drawOutline(rw, *(RigidPolygon*)rb, sf::Color::Black);
         break;
     }
 
@@ -94,13 +97,20 @@ static void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 #define GRID_RATIO 0.3333f
-void Sim::crumbleSquarely(RigidPolygon* poly) {
-    Crumbler crumbler(80.f, 30.f);
+void Sim::crumbleSquarely(Rigidbody* poly) {
+    auto size = std::max(poly->aabb().size().x, poly->aabb().size().y) * 0.3f;
+    Crumbler crumbler(size, size * 0.3f);
+
     auto devisions = crumbler.crumble(poly);
+    float total_area = 0.f;
+    for(auto& d : devisions) {
+        total_area += calcArea(d.getModelVertecies());
+    }
     vec2f pos = poly->getPos();
     vec2f vel = poly->velocity;
     float angvel = poly->angular_velocity;
-    float mass = poly->mass / devisions.size();
+    float mass = poly->mass;
+
     removeRigidbody(poly);
     for(auto& p : devisions) {
         RigidPolygon t(p);
@@ -109,7 +119,8 @@ void Sim::crumbleSquarely(RigidPolygon* poly) {
         vec2f radperp(-rad.y, rad.x);
         vec2f pang_vel_lin = radperp * angvel;
         t.velocity = vel + pang_vel_lin;
-        t.mass = mass;
+        float cur_mass = calcArea(p.getModelVertecies()) / total_area * mass;
+        t.mass = cur_mass;
 
         if(len(t.aabb().size()) > 50.f )
             createRigidbody(t);
@@ -118,7 +129,7 @@ void Sim::crumbleSquarely(RigidPolygon* poly) {
 void Sim::setup() {
     physics_manager.segment_size = 50.f;
     physics_manager.steps = 10;
-    physics_manager.grav = 1000.f;
+    physics_manager.grav = 0.f;
     physics_manager.bounciness_select = eSelectMode::Max;
     physics_manager.friction_select = eSelectMode::Max;
     //pm.bind(new BasicSolver());
@@ -157,7 +168,7 @@ void Sim::setup() {
 void Sim::onEvent(const sf::Event &event, float delT) {
     if (event.type == sf::Event::Closed)
         window.close();
-    if (ImGui::IsAnyItemActive())
+    if (ImGui::IsAnyItemHovered())
         return;
     else if(event.type == sf::Event::MouseButtonPressed) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
@@ -199,38 +210,38 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         }
     }
     else if(event.type == sf::Event::KeyPressed) {
-        if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
+        if(event.key.control && event.key.code == sf::Keyboard::A) {
+            selection.selected = rigidbodies;
+                std::cerr << "all";
+
+        } else if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
             RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
             createRigidbody(t);
             polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::X) {
-            auto rb = *selection.selected.begin();
-            if(selection.selected.size() != 0 && rb->getType() == eRigidShape::Polygon) 
-                crumbleSquarely((RigidPolygon*)rb);
+            for(auto rb : selection.selected) {
+                crumbleSquarely(rb);
+            }
             selection.selected.clear();
             polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::R) {
             selection.selected.clear();
             polygon_creation_vec.clear();
+        }else if (event.key.code == sf::Keyboard::C) {
+            RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
+            createRigidbody(t);
+        }else if (event.key.code == sf::Keyboard::V) {
+            vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
+            RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
+            createRigidbody(t);
         }
-        
     }
 }
 void Sim::update(float delT) {
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
         polygon_creation_vec.clear();
     }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::C)) {
-
-        RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
-        createRigidbody(t);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::V)) {
-        vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-        RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
-        createRigidbody(t);
-    }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::E) && false) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         particle_manager.emit(3000U * delT, Particle::InitList(
             Particle::PosInit(mpos),
@@ -246,6 +257,16 @@ void Sim::update(float delT) {
                 })
             )
         );
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
+        for(auto s : selection.selected) {
+            s->angular_velocity += 10.f * delT;
+        }
+    }
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
+        for(auto s : selection.selected) {
+            s->angular_velocity -= 10.f * delT;
+        }
     }
     if(selection.isHolding) {
         for(auto s : selection.selected) {
@@ -308,7 +329,7 @@ void Sim::update(float delT) {
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 physics_manager.steps = tsteps;
                 ImGui::SliderFloat("change gravity" , &physics_manager.grav, -3000.f, 3000.f, "%.1f");
-                ImGui::SliderFloat("radius" , &default_dynamic_radius, 1.f, 50.f);
+                ImGui::SliderFloat("radius" , &default_dynamic_radius, 1.f, 500.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {
                     static int cur_choice_friction = 0;

@@ -79,10 +79,6 @@ void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
     }
 }
 void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
-    struct VertPair {
-        sf::Vertex a;
-        sf::Vertex b;
-    };
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         sf::Vertex t[3];
         t[0].color = clr;
@@ -96,6 +92,20 @@ void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
             t[1].position = poly.getVertecies()[0];
         }
         rw.draw(t, 3, sf::Triangles);
+    }
+}
+void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
+    for(size_t i = 0; i < poly.getVertecies().size(); i++) {
+        sf::Vertex t[2];
+        t[0].color = clr;
+        t[1].color = clr;
+        t[0].position = poly.getVertecies()[i];
+        if(i != poly.getVertecies().size() - 1) {
+            t[1].position = poly.getVertecies()[i + 1];
+        } else {
+            t[1].position = poly.getVertecies()[0];
+        }
+        rw.draw(t, 2, sf::Lines);
     }
 }
 Polygon PolygonReg(vec2f pos, float rot, size_t count, float dist) {
