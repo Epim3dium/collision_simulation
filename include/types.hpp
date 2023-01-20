@@ -135,9 +135,6 @@ class Polygon {
         }
     }
 public:
-    AABB getAABB() const {
-        return m_aabb;
-    }
     float getRot() const {
         return rotation;
     }
@@ -180,6 +177,7 @@ public:
         m_updatePoints();
         m_avgPoints();
     }
+    friend AABB AABBfromPolygon(const Polygon& p) {return p.m_aabb; }
     friend void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr);
     friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr);
     friend void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr);

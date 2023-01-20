@@ -13,9 +13,9 @@ namespace EPI_NAMESPACE {
 
 Polygon Crumbler::m_getShape(Rigidbody* rb) {
     switch(rb->getType()) {
-        case eRigidShape::Polygon:
+        case eCollisionShape::Polygon:
             return *(RigidPolygon*)rb;
-        case eRigidShape::Circle:
+        case eCollisionShape::Circle:
             return PolygonReg(rb->getPos(), 0.f, 16U, ((RigidCircle*)rb)->radius);
     }
 }
@@ -53,7 +53,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
 
     Polygon shape = m_getShape(rb);
 
-    auto aabb = shape.getAABB();
+    auto aabb = AABBfromPolygon(shape);
     aabb.setSize(aabb.size() * 3.f);
     auto verticies = m_generateVerticies(aabb);
     auto centers = m_generateCenters(verticies);

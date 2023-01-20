@@ -95,11 +95,11 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
         auto open = m_rigidbodiesQT.query({p.pos - vec2f(0.1f, 0.1f), p.pos + vec2f(0.1f, 0.1f)});
         for(auto& o : open) {
             switch(o->getType()) {
-                case eRigidShape::Circle:
+                case eCollisionShape::Circle:
                     if(PointVCircle(p.pos, *(RigidCircle*)o))
                         p.isActive = false;
                 break;
-                case eRigidShape::Polygon:
+                case eCollisionShape::Polygon:
                     if(PointVPoly(p.pos, *(RigidPolygon*)o))
                         p.isActive = false;
                 break;

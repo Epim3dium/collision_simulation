@@ -190,9 +190,9 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
 }
 CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
-    if(rb1->getType() == eRigidShape::Polygon && rb2->getType() == eRigidShape::Polygon) {
+    if(rb1->getType() == eCollisionShape::Polygon && rb2->getType() == eCollisionShape::Polygon) {
         man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
-    } else if(rb1->getType() == eRigidShape::Circle && rb2->getType() == eRigidShape::Circle) {
+    } else if(rb1->getType() == eCollisionShape::Circle && rb2->getType() == eCollisionShape::Circle) {
         man = handleOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
     }
     for(int i = 0; i < 2; i++) {
@@ -201,7 +201,7 @@ CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float res
             rb2 = rb1;
             rb1 = t;
         }
-        if(rb1->getType() == eRigidShape::Circle && rb2->getType() == eRigidShape::Polygon) {
+        if(rb1->getType() == eCollisionShape::Circle && rb2->getType() == eCollisionShape::Polygon) {
             man = handleOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
         }
     }
@@ -211,22 +211,22 @@ CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float res
 CollisionManifold BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
     switch(rb1->getType()) {
-        case eRigidShape::Polygon:
+        case eCollisionShape::Polygon:
             switch(rb2->getType()) {
-                case eRigidShape::Polygon:
+                case eCollisionShape::Polygon:
                     man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
                 break;
-                case eRigidShape::Circle:
+                case eCollisionShape::Circle:
                     man = handleOverlap(*(RigidCircle*)rb2, *(RigidPolygon*)rb1);
                 break;
             };
         break;
-        case eRigidShape::Circle:
+        case eCollisionShape::Circle:
             switch(rb2->getType()) {
-                case eRigidShape::Polygon:
+                case eCollisionShape::Polygon:
                     man = handleOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
                 break;
-                case eRigidShape::Circle:
+                case eCollisionShape::Circle:
                     man = handleOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
                 break;
             };

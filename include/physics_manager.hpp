@@ -60,7 +60,7 @@ class PhysicsManager {
 
     SolverInterface* m_solver = new DefaultSolver();
     static AABB getAABBfromRigidbody(Rigidbody* rb) {
-        return rb->aabb();
+        return rb->getAABB();
     }
 public:
     float grav = 0.5f;

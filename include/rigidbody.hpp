@@ -8,14 +8,14 @@
 #include <vector>
 namespace EPI_NAMESPACE {
 
-enum class eRigidShape {
+enum class eCollisionShape {
     Polygon,
     Circle
 };
 struct Rigidbody;
 
 struct ColliderInterface {
-    virtual eRigidShape getType() const = 0;
+    virtual eCollisionShape getType() const = 0;
     virtual AABB getAABB() const = 0;
     virtual vec2f getPos() const = 0;
     virtual void setPos(vec2f) = 0;
@@ -74,10 +74,10 @@ public:
     virtual void setRot(float) = 0;
 
     //get type identificator
-    virtual eRigidShape getType() const = 0;
+    virtual eCollisionShape getType() const = 0;
     
     //get axis aligned bounding box of custom shape
-    virtual AABB aabb() const = 0;
+    virtual AABB getAABB() const = 0;
     //resolve overlap function for rigidbodies with diffrent types
 
     inline void addForce(vec2f force) {
@@ -113,11 +113,11 @@ public:
         Polygon::setRot(r);
     }
 
-    inline eRigidShape getType() const  override  {
-        return eRigidShape::Polygon;
+    inline eCollisionShape getType() const  override  {
+        return eCollisionShape::Polygon;
     }
-    AABB aabb() const override {
-        return this->getAABB();
+    AABB getAABB() const override {
+        return AABBfromPolygon(*this);
     }
 
     RigidPolygon(const Polygon& poly) : Polygon(poly) { 
@@ -148,10 +148,10 @@ struct RigidCircle : public Rigidbody, public Circle {
         rot = r;
     }
 
-    inline eRigidShape getType() const  override  {
-        return eRigidShape::Circle;
+    inline eCollisionShape getType() const  override  {
+        return eCollisionShape::Circle;
     }
-    AABB aabb() const override {
+    AABB getAABB() const override {
         return m_aabb;
     }
     //bool detectPossibleOverlap(Rigidbody* other) override;

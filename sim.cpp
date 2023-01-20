@@ -26,10 +26,10 @@ void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
 }
 static bool PointVRigidbody(vec2f p, Rigidbody* rb) {
     switch(rb->getType()) {
-        case eRigidShape::Circle:
+        case eCollisionShape::Circle:
             return PointVCircle(p, *(RigidCircle*)rb);
         break;
-        case eRigidShape::Polygon:
+        case eCollisionShape::Polygon:
             return PointVPoly(p, *(RigidPolygon*)rb);
         break;
     }
@@ -59,7 +59,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& t, sf::Rend
     if(t.contains(rb))
         color = PastelColor::Red;
     switch(rb->getType()) {
-        case eRigidShape::Circle: {
+        case eCollisionShape::Circle: {
             RigidCircle c(*(RigidCircle*)rb);
             sf::CircleShape cs(c.radius);
             cs.setPosition(c.pos - vec2f(c.radius, c.radius));
@@ -75,7 +75,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& t, sf::Rend
             cs.setFillColor(color);
             rw.draw(cs);
         }break;
-        case eRigidShape::Polygon:
+        case eCollisionShape::Polygon:
             drawFill(rw, *(RigidPolygon*)rb, color);
             drawOutline(rw, *(RigidPolygon*)rb, sf::Color::Black);
         break;
@@ -100,7 +100,7 @@ static void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 void Sim::crumbleSquarely(Rigidbody* poly) {
-    auto size = std::max(poly->aabb().size().x, poly->aabb().size().y) * 0.4f;
+    auto size = std::max(poly->getAABB().size().x, poly->getAABB().size().y) * 0.4f;
     Crumbler crumbler(size, size * 0.3f);
 
     auto devisions = crumbler.crumble(poly);
@@ -414,7 +414,7 @@ void Sim::update(float delT) {
 
     //delete when out of frame
     for(auto& r : rigidbodies) {
-        if(!AABBvAABB(aabb_outer, r->aabb())) {
+        if(!AABBvAABB(aabb_outer, r->getAABB())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);
             removeRigidbody(r);

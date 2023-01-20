@@ -5,7 +5,7 @@
 
 namespace EPI_NAMESPACE {
 struct TriggerInterface {
-    virtual eRigidShape getType() const = 0;
+    virtual eCollisionShape getType() const = 0;
     virtual void onActivation(Rigidbody* rb, vec2f cn) = 0;
     virtual AABB aabb() const = 0;
 
@@ -17,17 +17,17 @@ struct TriggerInterface {
     virtual DetectionResult detectTrigger(Rigidbody* rb1) = 0;
 };
 struct TriggerCircleInterface : public TriggerInterface, public Circle {
-    eRigidShape getType() const override {
-        return eRigidShape::Circle;
+    eCollisionShape getType() const override {
+        return eCollisionShape::Circle;
     }
     DetectionResult detectTrigger(Rigidbody* rb1) override {
         bool result;
         vec2f cn;
         switch(rb1->getType()) {
-            case eRigidShape::Polygon:
+            case eCollisionShape::Polygon:
                 result = detect(*this, *(RigidPolygon*)rb1, &cn, nullptr, nullptr);
             break;
-            case eRigidShape::Circle:
+            case eCollisionShape::Circle:
                 result = detect(*(RigidCircle*)rb1, *this, &cn, nullptr, nullptr);
             break;
         }
@@ -39,24 +39,24 @@ struct TriggerCircleInterface : public TriggerInterface, public Circle {
     TriggerCircleInterface(const Circle& shape) : Circle(shape) {}
 };
 struct TriggerPolygonInterface : public TriggerInterface, public Polygon {
-    eRigidShape getType() const override {
-        return eRigidShape::Polygon;
+    eCollisionShape getType() const override {
+        return eCollisionShape::Polygon;
     } 
     DetectionResult detectTrigger(Rigidbody* rb1) override {
         bool result;
         vec2f cn;
         switch(rb1->getType()) {
-            case eRigidShape::Polygon:
+            case eCollisionShape::Polygon:
                 result = detect(*(RigidPolygon*)rb1, *this, &cn, nullptr);
             break;
-            case eRigidShape::Circle:
+            case eCollisionShape::Circle:
                 result = detect(*(RigidCircle*)rb1, *this, &cn, nullptr, nullptr);
             break;
         }
         return {result, cn};
     }
     AABB aabb() const override {
-        return Polygon::getAABB();
+        return AABBfromPolygon(*this);
     }
     TriggerPolygonInterface(const Polygon& shape) : Polygon(shape) {}
 };
