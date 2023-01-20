@@ -1,6 +1,7 @@
 #include "sim.hpp"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Window/Keyboard.hpp"
+#include "SFML/Window/Mouse.hpp"
 #include "col_utils.hpp"
 #include "imgui.h"
 #include "rigidbody.hpp"
@@ -13,6 +14,7 @@
 #include <memory>
 #include <numeric>
 #include <sys/_types/_size_t.h>
+#include <thread>
 #include <vector>
 
 
@@ -99,7 +101,6 @@ static void setupImGuiFont() {
     ImFont* font = io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
     ImGui::SFML::UpdateFontTexture();
 }
-#define GRID_RATIO 0.3333f
 void Sim::crumbleSquarely(Rigidbody* poly) {
     auto size = std::max(poly->aabb().size().x, poly->aabb().size().y) * 0.4f;
     Crumbler crumbler(size, size * 0.3f);
@@ -200,6 +201,24 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                 selection.isMaking = true;
             }
         }
+        else if(event.mouseButton.button == sf::Mouse::Button::Right) {
+            selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
+            for(auto r : rigidbodies) {
+                if(PointVRigidbody(selection.last_mouse_pos, r)) {
+                    if(!selection.selected.contains(r)) {
+                        selection.selected = {r};
+                    }
+                    selection.isThrowing = true;
+                    break;
+                }
+            }
+            if(selection.isThrowing) {
+                for(auto s : selection.selected) {
+                    s->collider.lockRotation = true;
+                    s->isStatic = true;
+                }
+            }
+        }
     }
     else if(event.type == sf::Event::MouseButtonReleased) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
@@ -217,12 +236,22 @@ void Sim::onEvent(const sf::Event &event, float delT) {
 
             selection.trigger->setShape({});
         }
+        else if(event.mouseButton.button == sf::Mouse::Button::Right) {
+            if(selection.isThrowing) {
+                size_t idx = 0;
+                for(auto& s : selection.selected) {
+                    s->collider.lockRotation = false;
+                    s->isStatic = false;
+                    s->velocity += ((vec2f)sf::Mouse::getPosition(window) - selection.last_mouse_pos) * 5.f;
+                    idx++;
+                }
+            }
+            selection.isThrowing = false;
+        }
     }
     else if(event.type == sf::Event::KeyPressed) {
         if(event.key.control && event.key.code == sf::Keyboard::A) {
             selection.selected = rigidbodies;
-                std::cerr << "all";
-
         } else if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
             RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
             createRigidbody(t);

@@ -89,8 +89,9 @@ public:
     struct {
         std::unique_ptr<SelectingTrigger> trigger;
         bool isMaking = false;
-        float making_time = 0.f;
         bool isHolding = false;
+        bool isThrowing = true;
+        float making_time = 0.f;
         std::map<Rigidbody*, vec2f> offsets;
         std::set<Rigidbody*> selected;
         vec2f last_mouse_pos;
