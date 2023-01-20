@@ -12,7 +12,7 @@
 
 namespace EPI_NAMESPACE {
 
-CollisionManifold handleOverlap(RigidCircle& r1, RigidPolygon& r2) {
+CollisionManifold detectOverlap(RigidCircle& r1, RigidPolygon& r2) {
     if(r1.isStatic && r2.isStatic) {
         return {false};
     }
@@ -22,19 +22,11 @@ CollisionManifold handleOverlap(RigidCircle& r1, RigidPolygon& r2) {
     float overlap;
 
     if(detect(r1, r2, &cn, &overlap, &cp)) {
-        if(r2.isStatic) {
-            r1.pos += cn * overlap;
-        } else if(r1.isStatic) {
-            r2.setPos(r2.getPos() + -cn * overlap);
-        } else {
-            r1.pos += cn * overlap / 2.f;
-            r2.setPos(r2.getPos() + -cn * overlap / 2.f);
-        }
         return {true, &r1, &r2, r1.pos, r2.getPos(), cn, {cp} , overlap};
     }
     return {false};
 }
-CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2) {
+CollisionManifold detectOverlap(RigidPolygon& r1, RigidPolygon& r2) {
     if(r1.isStatic && r2.isStatic) {
         return {false};
     }
@@ -44,20 +36,11 @@ CollisionManifold handleOverlap(RigidPolygon& r1, RigidPolygon& r2) {
     if(detect(r1, r2, &cn, &overlap)) {
         std::vector<vec2f> cps;
         getContactPoints(r1, r2, cps);
-
-        if(r2.isStatic) {
-            r1.setPos(r1.getPos() + cn * overlap);
-        } else if(r1.isStatic) {
-            r2.setPos(r2.getPos() + -cn * overlap);
-        } else {
-            r1.setPos(r1.getPos() + cn * overlap / 2.f);
-            r2.setPos(r2.getPos() + -cn * overlap / 2.f);
-        }
         return {true, &r1, &r2, r1.getPos(), r2.getPos(), cn, std::move(cps), overlap};
     }
     return {false};
 }
-CollisionManifold handleOverlap(RigidCircle& r1, RigidCircle& r2) {
+CollisionManifold detectOverlap(RigidCircle& r1, RigidCircle& r2) {
     if(r1.isStatic && r2.isStatic) {
         return {false};
     }
@@ -65,17 +48,21 @@ CollisionManifold handleOverlap(RigidCircle& r1, RigidCircle& r2) {
     float overlap;
 
     if(detect(r1, r2, &cn, &overlap, &cp)) {
-        if(r2.isStatic) {
-            r1.pos += cn * overlap;
-        } else if(r1.isStatic) {
-            r2.pos += -cn * overlap;
-        } else {
-            r1.pos += cn * overlap / 2.f;
-            r2.pos += -cn * overlap / 2.f;
-        }
         return {true, &r1, &r2, r1.pos, r2.pos, cn, {cp}, overlap};
     }
     return {false};
+}
+void handleOverlap(Rigidbody& r1, Rigidbody& r2, const CollisionManifold& man) {
+    if(!man.detected)
+        return;
+    if(r2.isStatic) {
+        r1.setPos(r1.getPos() - man.cn * man.overlap);
+    } else if(r1.isStatic) {
+        r2.setPos(r2.getPos() + man.cn * man.overlap);
+    } else {
+        r1.setPos(r1.getPos() - man.cn * man.overlap / 2.f);
+        r2.setPos(r2.getPos() + man.cn * man.overlap / 2.f);
+    }
 }
 void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
        vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps)
@@ -191,9 +178,9 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
 CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
     if(rb1->getType() == eCollisionShape::Polygon && rb2->getType() == eCollisionShape::Polygon) {
-        man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
+        man = detectOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
     } else if(rb1->getType() == eCollisionShape::Circle && rb2->getType() == eCollisionShape::Circle) {
-        man = handleOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
+        man = detectOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
     }
     for(int i = 0; i < 2; i++) {
         if(i == 1) {
@@ -202,9 +189,10 @@ CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float res
             rb1 = t;
         }
         if(rb1->getType() == eCollisionShape::Circle && rb2->getType() == eCollisionShape::Polygon) {
-            man = handleOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
+            man = detectOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
         }
     }
+    handleOverlap(*rb1, *rb2, man);
     handle(man, restitution, sfriction, dfriction);
     return man;
 }
@@ -214,20 +202,20 @@ CollisionManifold BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float resti
         case eCollisionShape::Polygon:
             switch(rb2->getType()) {
                 case eCollisionShape::Polygon:
-                    man = handleOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
+                    man = detectOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
                 break;
                 case eCollisionShape::Circle:
-                    man = handleOverlap(*(RigidCircle*)rb2, *(RigidPolygon*)rb1);
+                    man = detectOverlap(*(RigidCircle*)rb2, *(RigidPolygon*)rb1);
                 break;
             };
         break;
         case eCollisionShape::Circle:
             switch(rb2->getType()) {
                 case eCollisionShape::Polygon:
-                    man = handleOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
+                    man = detectOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
                 break;
                 case eCollisionShape::Circle:
-                    man = handleOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
+                    man = detectOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
                 break;
             };
         break;
@@ -235,6 +223,7 @@ CollisionManifold BasicSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float resti
             throw std::exception();
         break;
     };
+    handleOverlap(*rb1, *rb2, man);
     handle(man, restitution, sfriction, dfriction);
     return man;
 }
