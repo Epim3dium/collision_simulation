@@ -64,7 +64,10 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
             sf::CircleShape cs(c.radius);
             cs.setPosition(c.pos - vec2f(c.radius, c.radius));
             cs.setFillColor(color);
+            cs.setOutlineColor(Color::Black);
+            cs.setOutlineThickness(1.f);
             rw.draw(cs);
+            cs.setOutlineThickness(0.f);
             float r = c.radius / 2.f;
             cs.setRadius(r);
             cs.setPosition(c.pos + vec2f(cos(c.rot), sin(c.rot)) * c.radius / 2.f - vec2f(r, r));
@@ -74,7 +77,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::Rende
         }break;
         case eRigidShape::Polygon:
             drawFill(rw, *(RigidPolygon*)rb, color);
-            //drawOutline(rw, *(RigidPolygon*)rb, sf::Color::Black);
+            drawOutline(rw, *(RigidPolygon*)rb, sf::Color::Black);
         break;
     }
 
@@ -121,9 +124,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
         t.velocity = vel + pang_vel_lin;
         float cur_mass = calcArea(p.getModelVertecies()) / total_area * mass;
         t.mass = cur_mass;
-
-        if(len(t.aabb().size()) > 50.f )
-            createRigidbody(t);
+        createRigidbody(t);
     }
 }
 void Sim::setup() {

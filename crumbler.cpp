@@ -51,11 +51,13 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
     float focus = 1.f;
     float offset_mag = seg_size * focus;
 
-    auto aabb = rb->aabb();
+    Polygon shape = m_getShape(rb);
+
+    auto aabb = shape.getAABB();
     aabb.setSize(aabb.size() * 3.f);
     auto verticies = m_generateVerticies(aabb);
     auto centers = m_generateCenters(verticies);
-    Polygon shape = m_getShape(rb);
+
     float big_area = calcArea(shape.getModelVertecies());
 
     //apply random deviation
