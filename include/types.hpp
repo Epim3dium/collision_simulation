@@ -152,6 +152,12 @@ public:
         pos = v;
         m_updatePoints();
     }
+    void scale(float s) {
+        for(auto& m : model) {
+            m *= s;
+        }
+        m_updatePoints();
+    }
 
     const std::vector<vec2f>& getVertecies() const {
         return points;
