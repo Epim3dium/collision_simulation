@@ -82,8 +82,8 @@ void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& 
 {
     float mass1 = rb1.isStatic ? INFINITY : rb1.mass;
     float mass2 = rb2.isStatic ? INFINITY : rb2.mass;
-    float inv_inertia1 = rb1.isStatic || rb1.collider.lockRotation ? INFINITY : rb1.inertia();
-    float inv_inertia2 = rb2.isStatic || rb2.collider.lockRotation ? INFINITY : rb2.inertia();
+    float inv_inertia1 = rb1.isStatic || rb1.lockRotation ? INFINITY : rb1.inertia();
+    float inv_inertia2 = rb2.isStatic || rb2.lockRotation ? INFINITY : rb2.inertia();
 
     if(inv_inertia1 != 0.f)
         inv_inertia1 = 1.f / inv_inertia1;
@@ -102,8 +102,8 @@ void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& 
         vec2f rad1perp(-rad1.y, rad1.x);
         vec2f rad2perp(-rad2.y, rad2.x);
 
-        vec2f p1ang_vel_lin = rb1.collider.lockRotation ? vec2f(0, 0) : rad1perp * rb1.angular_velocity;
-        vec2f p2ang_vel_lin = rb2.collider.lockRotation ? vec2f(0, 0) : rad2perp * rb2.angular_velocity;
+        vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * rb1.angular_velocity;
+        vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * rb2.angular_velocity;
 
         vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : rb1.velocity + p1ang_vel_lin;
         vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : rb2.velocity + p2ang_vel_lin;
@@ -118,12 +118,12 @@ void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& 
         impulse /= (float)cps.size();
         if(!rb1.isStatic) {
             rb1vel -= impulse / rb1.mass;
-            if(!rb1.collider.lockRotation)
+            if(!rb1.lockRotation)
                 rb1ang_vel += cross(impulse, rad1) * inv_inertia1;
         }
         if(!rb2.isStatic) {
             rb2vel += impulse / rb2.mass;
-            if(!rb2.collider.lockRotation)
+            if(!rb2.lockRotation)
                 rb2ang_vel -= cross(impulse, rad2) * inv_inertia2;
         }
     }

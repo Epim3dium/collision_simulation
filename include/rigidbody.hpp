@@ -13,25 +13,16 @@ enum class eRigidShape {
     Circle
 };
 struct Rigidbody;
-struct Collider {
-private:
-    inline static size_t getNextLayer() {
-        static size_t id = 0;
-        return ++id;
-    }
-public:
-#define MIN_DORMANT_TIME 5.f
-    bool isDormant = false;
-    bool isDormantCapable() const {return dormant_time > MIN_DORMANT_TIME;}
-    float dormant_time = 0;
-    vec2f last_pos = vec2f(0, 0);
-    float pressure = 0.f;
 
-    size_t layer;
-    bool lockRotation = false;
-    Rigidbody* now_colliding = nullptr;
-    Collider() : layer(getNextLayer()) {}
+struct ColliderInterface {
+    virtual eRigidShape getType() const = 0;
+    virtual AABB getAABB() const = 0;
+    virtual vec2f getPos() const = 0;
+    virtual void setPos(vec2f) = 0;
+    virtual float getRot() const = 0;
+    virtual void setRot(float) = 0;
 };
+
 struct Material {
     float restitution = 0.0f;
     float sfriction = 0.4f;
@@ -46,18 +37,24 @@ private:
         static size_t s_id = 1;
         return s_id++;
     }
+    inline static size_t getNextLayer() {
+        static size_t id = 0;
+        return ++id;
+    }
     size_t m_id;
 public:
+    size_t layer;
     inline size_t getID() const {
         return m_id;
     }
-    RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()) {}
-    RigidbodyIdentificators() : m_id(getNextID()) {}
+    RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()), layer(getNextLayer()) {}
+    RigidbodyIdentificators() : m_id(getNextID()), layer(getNextLayer()) {}
 };
 
 class Rigidbody : public RigidbodyIdentificators {
 public:
     bool isStatic = false;
+    bool lockRotation = false;
 
     vec2f velocity;
     vec2f acceleration;
@@ -65,7 +62,7 @@ public:
     float angular_velocity = 0.f;
     float mass = 1.f;
     Material material;
-    Collider collider;
+    float pressure = 0.f;
 
     //get inertia of custom shape
     virtual float inertia() const = 0;

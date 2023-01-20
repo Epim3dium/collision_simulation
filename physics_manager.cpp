@@ -25,7 +25,7 @@ namespace EPI_NAMESPACE {
 static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
     return !(
         ( rb1.isStatic && rb2.isStatic) || 
-        (rb1.collider.layer == rb2.collider.layer));
+        (rb1.layer == rb2.layer));
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     return m_rigidbodiesQT.findAllIntersections();
@@ -41,8 +41,8 @@ void PhysicsManager::processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidb
         //ewewewewewewwwwww pls don, float delTt judge me
         auto result = m_solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
         if(result.detected) {
-            ci->first->collider.pressure += result.overlap;
-            ci->second->collider.pressure += result.overlap;
+            ci->first->pressure += result.overlap;
+            ci->second->pressure += result.overlap;
         }
     }
 }
@@ -78,9 +78,8 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
     rb.setPos(rb.getPos() + rb.velocity * delT);
-    if(!rb.collider.lockRotation)
+    if(!rb.lockRotation)
         rb.setRot(rb.getRot() + rb.angular_velocity * delT);
-    rb.collider.last_pos = rb.getPos();
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto r : m_rigidbodies) {
@@ -111,8 +110,7 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
 void PhysicsManager::update(float delT, ParticleManager* pm ) {
     float deltaStep = delT / (float)steps;
     for(auto r : m_rigidbodies) {
-        r->collider.now_colliding = nullptr;
-        r->collider.pressure = 0.f;
+        r->pressure = 0.f;
     }
     for(int i = 0; i < steps; i++) {
         m_updateRestraints(deltaStep);

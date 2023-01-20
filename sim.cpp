@@ -53,11 +53,9 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& t, sf::Rend
     Color color = PastelColor::bg1;
     if(!rb->isStatic) {
         color = PastelColor::Aqua;
-        if(rb->collider.isDormant)
-            color = PastelColor::Green;
     }
-    if(rb->collider.pressure != 0.f)
-        color = blend(color, Color::Cyan, rb->collider.pressure / 100.f);
+    if(rb->pressure != 0.f)
+        color = blend(color, Color::Cyan, rb->pressure / 100.f);
     if(t.contains(rb))
         color = PastelColor::Red;
     switch(rb->getType()) {
@@ -195,7 +193,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             if(selection.isHolding) {
                 for(auto s : selection.selected) {
                     selection.offsets[s] = s->getPos() - selection.last_mouse_pos;
-                    s->collider.lockRotation = true;
+                    s->lockRotation = true;
                 }
             }else {
                 selection.isMaking = true;
@@ -214,7 +212,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             }
             if(selection.isThrowing) {
                 for(auto s : selection.selected) {
-                    s->collider.lockRotation = true;
+                    s->lockRotation = true;
                     s->isStatic = true;
                 }
             }
@@ -224,7 +222,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
             if(selection.isHolding) {
                 for(auto s : selection.selected) {
-                    s->collider.lockRotation = false;
+                    s->lockRotation = false;
                 }
             }
             else if(selection.making_time < 0.25f) {
@@ -240,7 +238,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             if(selection.isThrowing) {
                 size_t idx = 0;
                 for(auto& s : selection.selected) {
-                    s->collider.lockRotation = false;
+                    s->lockRotation = false;
                     s->isStatic = false;
                     s->velocity += ((vec2f)sf::Mouse::getPosition(window) - selection.last_mouse_pos) * 5.f;
                     idx++;
@@ -389,7 +387,7 @@ void Sim::update(float delT) {
                         hovered_last->isStatic = !hovered_last->isStatic;
                     }
                     if(ImGui::Button("LockRotation")) {
-                        hovered_last->collider.lockRotation = !hovered_last->collider.lockRotation;
+                        hovered_last->lockRotation = !hovered_last->lockRotation;
                     }
                     ImGui::Text("properties of selected object");
                     ImGui::SliderFloat("change mass" , &hovered_last->mass, 1.0f, 100.f);
@@ -397,7 +395,7 @@ void Sim::update(float delT) {
                     ImGui::SliderFloat("change static fric" , &hovered_last->material.sfriction, 0.0f, 1.f);
                     ImGui::SliderFloat("change dynamic fric" , &hovered_last->material.dfriction, 0.0f, 1.f);
                     ImGui::SliderFloat("change restitution" , &hovered_last->material.restitution, 0.0f, 1.f);
-                    ImGui::InputScalar("layer: ", ImGuiDataType_U32, &hovered_last->collider.layer);
+                    ImGui::InputScalar("layer: ", ImGuiDataType_U32, &hovered_last->layer);
                 }else {
                     ImGui::Text("NONE SELECTED");
                 }
