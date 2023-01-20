@@ -124,7 +124,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
             }
         }
         auto t = PolygonfromPoints(std::vector<vec2f>(model.begin(), model.end()));
-        if(model.size() > 2 && calcArea(t.getModelVertecies()) > 0.0001f) {
+        if(model.size() > 2 && calcArea(t.getModelVertecies()) > big_area * 0.001f) {
             result.push_back(t);
         }
     }

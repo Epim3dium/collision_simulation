@@ -47,7 +47,7 @@ Color blend(Color c1, Color c2, float t) {
     c1.b += c2.b;
     return c1;
 }
-static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*> t, sf::RenderWindow& rw) {
+static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& t, sf::RenderWindow& rw) {
     Color color = PastelColor::bg1;
     if(!rb->isStatic) {
         color = PastelColor::Aqua;
@@ -101,7 +101,7 @@ static void setupImGuiFont() {
 }
 #define GRID_RATIO 0.3333f
 void Sim::crumbleSquarely(Rigidbody* poly) {
-    auto size = std::max(poly->aabb().size().x, poly->aabb().size().y) * 0.3f;
+    auto size = std::max(poly->aabb().size().x, poly->aabb().size().y) * 0.4f;
     Crumbler crumbler(size, size * 0.3f);
 
     auto devisions = crumbler.crumble(poly);
@@ -124,7 +124,15 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
         t.velocity = vel + pang_vel_lin;
         float cur_mass = calcArea(p.getModelVertecies()) / total_area * mass;
         t.mass = cur_mass;
-        createRigidbody(t);
+        float cur_area = calcArea(t.getModelVertecies());
+        if(cur_area > 20.f) {
+            createRigidbody(t);
+        } else if(cur_area > 8.f){
+            RigidCircle c(Circle(t.getPos(), sqrt(cur_area / 3.141)));
+            c.mass = cur_mass;
+            c.velocity = vel + pang_vel_lin;
+            createRigidbody(c);
+        }
     }
 }
 void Sim::setup() {
