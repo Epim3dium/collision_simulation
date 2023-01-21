@@ -32,7 +32,7 @@ class Sim {
 
     void delFromPolys(Rigidbody* rb) {
         for(auto p = polys.begin(); p != polys.end(); p++) {
-            if((void*)*p == (void*)rb) {
+            if((void*)&p == (void*)rb) {
                 polys.erase(p);
                 break;
             }
@@ -40,7 +40,7 @@ class Sim {
     }
     void delFromCircs(Rigidbody* rb) {
         for(auto p = circs.begin(); p != circs.end(); p++) {
-            if((void*)*p == (void*)rb) {
+            if((void*)&p == (void*)rb) {
                 circs.erase(p);
                 break;
             }
@@ -57,25 +57,25 @@ public:
     ParticleManager particle_manager = ParticleManager(8192U);
     
     
-    std::vector<RigidPolygon*> polys;
-    std::vector<RigidCircle*> circs;
+    std::list<RigidPolygon> polys;
+    std::list<RigidCircle> circs;
     std::set<Rigidbody*> rigidbodies;
 
     void createRigidbody(const RigidPolygon& poly) {
-        auto ptr = physics_manager.createRigidbody(poly);
-        polys.push_back(ptr);
-        rigidbodies.insert(ptr);
+        polys.emplace_back(poly);
+        rigidbodies.insert(&polys.back());
+        physics_manager.bind(&polys.back());
     }
     void createRigidbody(const RigidCircle& circ) {
-        auto ptr = physics_manager.createRigidbody(circ);
-        circs.push_back(ptr);
-        rigidbodies.insert(ptr);
+        circs.emplace_back(circ);
+        rigidbodies.insert(&circs.back());
+        physics_manager.bind(&circs.back());
     }
     void removeRigidbody(Rigidbody* r) {
         delFromPolys(r);
         delFromCircs(r);
         rigidbodies.erase(r);
-        physics_manager.removeRigidbody(r);
+        physics_manager.unbind(r);
     }
     void crumbleSquarely(Rigidbody* poly);
 

@@ -56,7 +56,6 @@ class PhysicsManager {
 
     std::vector<RestraintInterface*> m_restraints;
     std::vector<TriggerInterface*> m_triggers;
-    allocator::PoolAllocator m_allocator;
 
     SolverInterface* m_solver = new DefaultSolver();
     static AABB getAABBfromRigidbody(Rigidbody* rb) {
@@ -91,23 +90,6 @@ public:
     void unbind(RestraintInterface* restriant);
     void unbind(TriggerInterface* trigger);
 
-
-    RigidPolygon* createRigidbody(const RigidPolygon& poly) {
-        auto rb = new (m_allocator.allocate())RigidPolygon(poly);
-        bind(rb);
-        return rb;
-    }
-
-    RigidCircle* createRigidbody(const RigidCircle& circ) {
-        auto rb = new (m_allocator.allocate())RigidCircle(circ);
-        bind(rb);
-        return rb;
-    }
-    void removeRigidbody(Rigidbody* rb) {
-        unbind(rb);
-        m_allocator.deallocate(rb);
-    }
-
-    PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody), m_allocator(10048U, std::max(sizeof(RigidCircle), sizeof(RigidPolygon))) {}
+    PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
 };
 }

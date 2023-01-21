@@ -49,14 +49,14 @@ Color blend(Color c1, Color c2, float t) {
     c1.b += c2.b;
     return c1;
 }
-static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& t, sf::RenderWindow& rw) {
+static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, sf::RenderWindow& rw) {
     Color color = PastelColor::bg1;
     if(!rb->isStatic) {
         color = PastelColor::Aqua;
     }
     if(rb->pressure != 0.f)
         color = blend(color, Color::Cyan, rb->pressure / 100.f);
-    if(t.contains(rb))
+    if(selection.contains(rb))
         color = PastelColor::Red;
     switch(rb->getType()) {
         case eCollisionShape::Circle: {
@@ -80,6 +80,8 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& t, sf::Rend
             drawOutline(rw, *(RigidPolygon*)rb, sf::Color::Black);
         break;
     }
+    AABB t = rb->getAABB();
+    drawOutline(rw, PolygonfromAABB(t), PastelColor::Purple);
 
 }
 
@@ -120,16 +122,19 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
         vec2f rad = t.getPos() - pos;
         vec2f radperp(-rad.y, rad.x);
         vec2f pang_vel_lin = radperp * angvel;
+
+        float cur_area = calcArea(p.getModelVertecies());
+        float cur_mass = cur_area / total_area * mass;
+
         t.velocity = vel + pang_vel_lin;
-        float cur_mass = calcArea(p.getModelVertecies()) / total_area * mass;
         t.mass = cur_mass;
-        float cur_area = calcArea(t.getModelVertecies());
-        if(cur_area > 20.f) {
+
+        if(cur_area > 100.f) {
             createRigidbody(t);
-        } else if(cur_area > 8.f){
-            RigidCircle c(Circle(t.getPos(), sqrt(cur_area / 3.141)));
-            c.mass = cur_mass;
+        }else if(cur_area > 20.f) {
+            RigidCircle c(t.getPos(), sqrt(cur_area / 3.141f));
             c.velocity = vel + pang_vel_lin;
+            c.mass = cur_mass;
             createRigidbody(c);
         }
     }
@@ -326,14 +331,14 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(PointVPoly(mpos, *p)) {
-            found = p;
+        if(PointVPoly(mpos, p)) {
+            found = &p;
             break;
         }
     }
     for(auto& c : circs) {
-        if(PointVCircle(mpos, *c)) {
-            found = c;
+        if(PointVCircle(mpos, c)) {
+            found = &c;
             break;
         }
     }
