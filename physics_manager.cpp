@@ -17,8 +17,6 @@
 #include <thread>
 #include <mutex>
 
-#define SQR(x) ((x) * (x))
-#define MAX_VELOCITY 50.0f
 
 namespace EPI_NAMESPACE {
 
@@ -96,11 +94,11 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
         for(auto& o : open) {
             switch(o->getType()) {
                 case eCollisionShape::Circle:
-                    if(PointVCircle(p.pos, *(RigidCircle*)o))
+                    if(isOverlappingPointCircle(p.pos, *(RigidCircle*)o))
                         p.isActive = false;
                 break;
                 case eCollisionShape::Polygon:
-                    if(PointVPoly(p.pos, *(RigidPolygon*)o))
+                    if(isOverlappingPointPoly(p.pos, *(RigidPolygon*)o))
                         p.isActive = false;
                 break;
             }

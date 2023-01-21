@@ -27,10 +27,10 @@ void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
 static bool PointVRigidbody(vec2f p, Rigidbody* rb) {
     switch(rb->getType()) {
         case eCollisionShape::Circle:
-            return PointVCircle(p, *(RigidCircle*)rb);
+            return isOverlappingPointCircle(p, *(RigidCircle*)rb);
         break;
         case eCollisionShape::Polygon:
-            return PointVPoly(p, *(RigidPolygon*)rb);
+            return isOverlappingPointPoly(p, *(RigidPolygon*)rb);
         break;
     }
 }
@@ -108,7 +108,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
     auto devisions = crumbler.crumble(poly);
     float total_area = 0.f;
     for(auto& d : devisions) {
-        total_area += calcArea(d.getModelVertecies());
+        total_area += area(d.getModelVertecies());
     }
     vec2f pos = poly->getPos();
     vec2f vel = poly->velocity;
@@ -123,7 +123,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
         vec2f radperp(-rad.y, rad.x);
         vec2f pang_vel_lin = radperp * angvel;
 
-        float cur_area = calcArea(p.getModelVertecies());
+        float cur_area = area(p.getModelVertecies());
         float cur_mass = cur_area / total_area * mass;
 
         t.velocity = vel + pang_vel_lin;
@@ -143,8 +143,8 @@ void Sim::setup() {
     physics_manager.segment_size = 50.f;
     physics_manager.steps = 10;
     physics_manager.grav = 0.f;
-    physics_manager.bounciness_select = eSelectMode::Max;
-    physics_manager.friction_select = eSelectMode::Max;
+    physics_manager.bounciness_select = PhysicsManager::eSelectMode::Max;
+    physics_manager.friction_select = PhysicsManager::eSelectMode::Max;
     //pm.bind(new BasicSolver());
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
@@ -331,13 +331,13 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(PointVPoly(mpos, p)) {
+        if(isOverlappingPointPoly(mpos, p)) {
             found = &p;
             break;
         }
     }
     for(auto& c : circs) {
-        if(PointVCircle(mpos, c)) {
+        if(isOverlappingPointCircle(mpos, c)) {
             found = &c;
             break;
         }
@@ -375,12 +375,12 @@ void Sim::update(float delT) {
                 {
                     static int cur_choice_friction = 0;
                     ImGui::ListBox("choose mode friction", &cur_choice_friction, select_modes, 3);
-                    physics_manager.friction_select = (eSelectMode)cur_choice_friction;
+                    physics_manager.friction_select = (PhysicsManager::eSelectMode)cur_choice_friction;
                 }
                 {
                     static int cur_choice_bounce = 0;
                     ImGui::ListBox("choose mode bounce", &cur_choice_bounce, select_modes, 3);
-                    physics_manager.bounciness_select = (eSelectMode)cur_choice_bounce;
+                    physics_manager.bounciness_select = (PhysicsManager::eSelectMode)cur_choice_bounce;
                 }ImGui::EndTabItem();
             } 
             static bool open_object = true;
@@ -419,7 +419,7 @@ void Sim::update(float delT) {
 
     //delete when out of frame
     for(auto& r : rigidbodies) {
-        if(!AABBvAABB(aabb_outer, r->getAABB())) {
+        if(!isOverlappingAABBAABB(aabb_outer, r->getAABB())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);
             removeRigidbody(r);

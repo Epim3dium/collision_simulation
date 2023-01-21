@@ -17,12 +17,9 @@ CollisionManifold detectOverlap(RigidCircle& r1, RigidPolygon& r2) {
         return {false};
     }
 
-    vec2f cn;
-    vec2f cp;
-    float overlap;
-
-    if(detect(r1, r2, &cn, &overlap, &cp)) {
-        return {true, &r1, &r2, r1.pos, r2.getPos(), cn, {cp} , overlap};
+    auto intersection = intersectCirclePolygon(r1, r2);
+    if(intersection.detected) {
+        return {true, &r1, &r2, r1.pos, r2.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
@@ -30,13 +27,12 @@ CollisionManifold detectOverlap(RigidPolygon& r1, RigidPolygon& r2) {
     if(r1.isStatic && r2.isStatic) {
         return {false};
     }
-    vec2f cn;
-    float overlap;
 
-    if(detect(r1, r2, &cn, &overlap)) {
+    auto intersection = intersectPolygonPolygon(r1, r2);
+    if(intersection.detected) {
         std::vector<vec2f> cps;
-        getContactPoints(r1, r2, cps);
-        return {true, &r1, &r2, r1.getPos(), r2.getPos(), cn, std::move(cps), overlap};
+        cps = findContactPoints(r1, r2);
+        return {true, &r1, &r2, r1.getPos(), r2.getPos(), intersection.contact_normal, std::move(cps), intersection.overlap};
     }
     return {false};
 }
@@ -44,11 +40,9 @@ CollisionManifold detectOverlap(RigidCircle& r1, RigidCircle& r2) {
     if(r1.isStatic && r2.isStatic) {
         return {false};
     }
-    vec2f cn, cp;
-    float overlap;
-
-    if(detect(r1, r2, &cn, &overlap, &cp)) {
-        return {true, &r1, &r2, r1.pos, r2.pos, cn, {cp}, overlap};
+    auto intersection = intersectCircleCircle(r1, r2);
+    if(intersection.detected) {
+        return {true, &r1, &r2, r1.pos, r2.pos, intersection.contact_normal, {intersection.contact_point}, intersection.overlap};
     }
     return {false};
 }

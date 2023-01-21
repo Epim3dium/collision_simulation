@@ -58,7 +58,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
     auto verticies = m_generateVerticies(aabb);
     auto centers = m_generateCenters(verticies);
 
-    float big_area = calcArea(shape.getModelVertecies());
+    float big_area = area(shape.getModelVertecies());
 
     //apply random deviation
     for(auto& v : verticies) {
@@ -77,7 +77,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
     //update active nodes
     for(auto& v : verticies) {
         for(auto& vv : v) {
-            if(PointVPoly(vv.pos, shape))
+            if(isOverlappingPointPoly(vv.pos, shape))
                 vv.isIncluded = true;
         }
     }
@@ -90,7 +90,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
             vec2f closest;
             auto prev = shape.getVertecies().back();
             for(auto& p : shape.getVertecies()) {
-                auto t = ClosestPointOnRay(p, prev - p, vv.pos);
+                auto t = findClosestPointOnRay(p, prev - p, vv.pos);
                 if(len(vv.pos - t) < closest_dist) {
                     closest_dist = len(vv.pos - t);
                     closest = t;
@@ -124,7 +124,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
             }
         }
         auto t = PolygonfromPoints(std::vector<vec2f>(model.begin(), model.end()));
-        if(model.size() > 2 && calcArea(t.getModelVertecies()) > big_area * 0.001f) {
+        if(model.size() > 2 && area(t.getModelVertecies()) > big_area * 0.001f) {
             result.push_back(t);
         }
     }

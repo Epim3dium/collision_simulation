@@ -21,17 +21,16 @@ struct TriggerCircleInterface : public TriggerInterface, public Circle {
         return eCollisionShape::Circle;
     }
     DetectionResult detectTrigger(Rigidbody* rb1) override {
-        bool result;
-        vec2f cn;
         switch(rb1->getType()) {
-            case eCollisionShape::Polygon:
-                result = detect(*this, *(RigidPolygon*)rb1, &cn, nullptr, nullptr);
-            break;
-            case eCollisionShape::Circle:
-                result = detect(*(RigidCircle*)rb1, *this, &cn, nullptr, nullptr);
-            break;
+            case eCollisionShape::Polygon: {
+                auto intersection = intersectCirclePolygon(*this, *(RigidPolygon*)rb1);
+                return {intersection.detected, intersection.contact_normal};
+            } break;
+            case eCollisionShape::Circle: {
+                auto intersection = intersectCirclePolygon(*this, *(RigidPolygon*)rb1);
+                return {intersection.detected, intersection.contact_normal};
+            } break;
         }
-        return {result, cn};
     }
     AABB aabb() const override {
         return AABBfromCircle(*this);
@@ -43,17 +42,16 @@ struct TriggerPolygonInterface : public TriggerInterface, public Polygon {
         return eCollisionShape::Polygon;
     } 
     DetectionResult detectTrigger(Rigidbody* rb1) override {
-        bool result;
-        vec2f cn;
         switch(rb1->getType()) {
-            case eCollisionShape::Polygon:
-                result = detect(*(RigidPolygon*)rb1, *this, &cn, nullptr);
-            break;
-            case eCollisionShape::Circle:
-                result = detect(*(RigidCircle*)rb1, *this, &cn, nullptr, nullptr);
-            break;
+            case eCollisionShape::Polygon: {
+                auto intersection = intersectPolygonPolygon(*(RigidPolygon*)rb1, *this);
+                return {intersection.detected, intersection.contact_normal};
+            }break;
+            case eCollisionShape::Circle: {
+                auto intersection = intersectCirclePolygon(*(RigidCircle*)rb1, *this);
+                return {intersection.detected, intersection.contact_normal};
+            } break;
         }
-        return {result, cn};
     }
     AABB aabb() const override {
         return AABBfromPolygon(*this);

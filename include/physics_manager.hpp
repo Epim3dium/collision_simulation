@@ -16,12 +16,14 @@ namespace EPI_NAMESPACE {
 
 struct ParticleManager;
 
-enum class eSelectMode {
-    Min,
-    Max,
-    Avg
-};
 class PhysicsManager {
+public:
+    enum class eSelectMode {
+        Min,
+        Max,
+        Avg
+    };
+private:
     template<class T>
     static T m_selectFrom(T a, T b, eSelectMode mode) {
         switch(mode) {

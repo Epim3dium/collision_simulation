@@ -279,17 +279,17 @@ private:
     void query(Node* node, const Box& box, const Box& queryBox, std::vector<T>& values) const
     {
         assert(node != nullptr);
-        if(!AABBvAABB(queryBox, box)) {
+        if(!isOverlappingAABBAABB(queryBox, box)) {
             return;
         }
         for (const auto& value : node->values) {
-            if (AABBvAABB(queryBox, mGetBox(value)))
+            if (isOverlappingAABBAABB(queryBox, mGetBox(value)))
                 values.push_back(value);
         }
         if (!isLeaf(node)) {
             for (auto i = std::size_t(0); i < node->children.size(); ++i) {
                 auto childBox = computeBox(box, static_cast<int>(i));
-                if (AABBvAABB(queryBox, childBox))
+                if (isOverlappingAABBAABB(queryBox, childBox))
                     query(node->children[i].get(), childBox, queryBox, values);
             }
         }
@@ -300,7 +300,7 @@ private:
         // Make sure to not report the same intersection twice
         for (auto i = std::size_t(0); i < node->values.size(); ++i) {
             for (auto j = std::size_t(0); j < i; ++j) {
-                if (AABBvAABB(mGetBox(node->values[i]), mGetBox(node->values[j])))
+                if (isOverlappingAABBAABB(mGetBox(node->values[i]), mGetBox(node->values[j])))
                     intersections.emplace_back(node->values[i], node->values[j]);
             }
         }
@@ -319,7 +319,7 @@ private:
     void findIntersectionsInDescendants(Node* node, const T& value, std::vector<std::pair<T, T>>& intersections) const {
         // Test against the values stored in this node
         for (const auto& other : node->values) {
-            if (AABBvAABB(mGetBox(value), mGetBox(other)) )
+            if (isOverlappingAABBAABB(mGetBox(value), mGetBox(other)) )
                 intersections.emplace_back(value, other);
         }
         // Test against values stored into descendants of this node
