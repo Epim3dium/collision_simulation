@@ -12,11 +12,11 @@
 namespace EPI_NAMESPACE {
 
 Polygon Crumbler::m_getShape(Rigidbody* rb) {
-    switch(rb->getType()) {
+    switch(rb->getCollider().getType()) {
         case eCollisionShape::Polygon:
-            return *(RigidPolygon*)rb;
+            return ((RigidPolygon*)rb)->collider;
         case eCollisionShape::Circle:
-            return PolygonReg(rb->getPos(), 0.f, 16U, ((RigidCircle*)rb)->radius);
+            return PolygonReg(rb->getCollider().getPos(), 0.f, 16U, ((RigidCircle*)rb)->collider.radius);
     }
 }
 std::vector<std::vector<Crumbler::VertNode> > Crumbler::m_generateVerticies(AABB aabb) {

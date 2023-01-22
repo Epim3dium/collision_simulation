@@ -61,7 +61,7 @@ private:
 
     SolverInterface* m_solver = new DefaultSolver();
     static AABB getAABBfromRigidbody(Rigidbody* rb) {
-        return rb->getAABB();
+        return rb->getCollider().getAABB();
     }
 public:
     float grav = 0.5f;

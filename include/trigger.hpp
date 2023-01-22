@@ -21,13 +21,13 @@ struct TriggerCircleInterface : public TriggerInterface, public Circle {
         return eCollisionShape::Circle;
     }
     DetectionResult detectTrigger(Rigidbody* rb1) override {
-        switch(rb1->getType()) {
+        switch(rb1->getCollider().getType()) {
             case eCollisionShape::Polygon: {
-                auto intersection = intersectCirclePolygon(*this, *(RigidPolygon*)rb1);
+                auto intersection = intersectCirclePolygon(*this, ((RigidPolygon*)rb1)->collider);
                 return {intersection.detected, intersection.contact_normal};
             } break;
             case eCollisionShape::Circle: {
-                auto intersection = intersectCirclePolygon(*this, *(RigidPolygon*)rb1);
+                auto intersection = intersectCircleCircle(*this, ((RigidCircle*)rb1)->collider);
                 return {intersection.detected, intersection.contact_normal};
             } break;
         }
@@ -42,13 +42,13 @@ struct TriggerPolygonInterface : public TriggerInterface, public Polygon {
         return eCollisionShape::Polygon;
     } 
     DetectionResult detectTrigger(Rigidbody* rb1) override {
-        switch(rb1->getType()) {
+        switch(rb1->getCollider().getType()) {
             case eCollisionShape::Polygon: {
-                auto intersection = intersectPolygonPolygon(*(RigidPolygon*)rb1, *this);
+                auto intersection = intersectPolygonPolygon(((RigidPolygon*)rb1)->collider, *this);
                 return {intersection.detected, intersection.contact_normal};
             }break;
             case eCollisionShape::Circle: {
-                auto intersection = intersectCirclePolygon(*(RigidCircle*)rb1, *this);
+                auto intersection = intersectCirclePolygon(((RigidCircle*)rb1)->collider, *this);
                 return {intersection.detected, intersection.contact_normal};
             } break;
         }

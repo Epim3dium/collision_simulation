@@ -17,9 +17,9 @@ CollisionManifold detectOverlap(RigidCircle& r1, RigidPolygon& r2) {
         return {false};
     }
 
-    auto intersection = intersectCirclePolygon(r1, r2);
+    auto intersection = intersectCirclePolygon(r1.collider, r2.collider);
     if(intersection.detected) {
-        return {true, &r1, &r2, r1.pos, r2.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
+        return {true, &r1, &r2, r1.collider.getPos(), r2.collider.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
@@ -28,11 +28,11 @@ CollisionManifold detectOverlap(RigidPolygon& r1, RigidPolygon& r2) {
         return {false};
     }
 
-    auto intersection = intersectPolygonPolygon(r1, r2);
+    auto intersection = intersectPolygonPolygon(r1.collider, r2.collider);
     if(intersection.detected) {
         std::vector<vec2f> cps;
-        cps = findContactPoints(r1, r2);
-        return {true, &r1, &r2, r1.getPos(), r2.getPos(), intersection.contact_normal, std::move(cps), intersection.overlap};
+        cps = findContactPoints(r1.collider, r2.collider);
+        return {true, &r1, &r2, r1.collider.getPos(), r2.collider.getPos(), intersection.contact_normal, cps , intersection.overlap};
     }
     return {false};
 }
@@ -40,9 +40,9 @@ CollisionManifold detectOverlap(RigidCircle& r1, RigidCircle& r2) {
     if(r1.isStatic && r2.isStatic) {
         return {false};
     }
-    auto intersection = intersectCircleCircle(r1, r2);
+    auto intersection = intersectCircleCircle(r1.collider, r2.collider);
     if(intersection.detected) {
-        return {true, &r1, &r2, r1.pos, r2.pos, intersection.contact_normal, {intersection.contact_point}, intersection.overlap};
+        return {true, &r1, &r2, r1.collider.getPos(), r2.collider.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
@@ -52,12 +52,12 @@ void handleOverlap(Rigidbody& a, Rigidbody& b, const CollisionManifold& man) {
     if(!man.detected)
         return;
     if(r2.isStatic) {
-        r1.setPos(r1.getPos() + man.cn * man.overlap);
+        r1.getCollider().setPos(r1.getCollider().getPos() + man.cn * man.overlap);
     } else if(r1.isStatic) {
-        r2.setPos(r2.getPos() - man.cn * man.overlap);
+        r2.getCollider().setPos(r2.getCollider().getPos() - man.cn * man.overlap);
     } else {
-        r1.setPos(r1.getPos() + man.cn * man.overlap / 2.f);
-        r2.setPos(r2.getPos() - man.cn * man.overlap / 2.f);
+        r1.getCollider().setPos(r1.getCollider().getPos() + man.cn * man.overlap / 2.f);
+        r2.getCollider().setPos(r2.getCollider().getPos() - man.cn * man.overlap / 2.f);
     }
 }
 void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
@@ -173,9 +173,9 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
 }
 CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
-    if(rb1->getType() == eCollisionShape::Polygon && rb2->getType() == eCollisionShape::Polygon) {
+    if(rb1->getCollider().getType() == eCollisionShape::Polygon && rb2->getCollider().getType() == eCollisionShape::Polygon) {
         man = detectOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
-    } else if(rb1->getType() == eCollisionShape::Circle && rb2->getType() == eCollisionShape::Circle) {
+    } else if(rb1->getCollider().getType() == eCollisionShape::Circle && rb2->getCollider().getType() == eCollisionShape::Circle) {
         man = detectOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
     }
     for(int i = 0; i < 2; i++) {
@@ -184,7 +184,7 @@ CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float res
             rb2 = rb1;
             rb1 = t;
         }
-        if(rb1->getType() == eCollisionShape::Circle && rb2->getType() == eCollisionShape::Polygon) {
+        if(rb1->getCollider().getType() == eCollisionShape::Circle && rb2->getCollider().getType() == eCollisionShape::Polygon) {
             man = detectOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
         }
     }

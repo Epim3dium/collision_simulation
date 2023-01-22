@@ -75,9 +75,9 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     if(abs(rb.angular_velocity) > 0.001f)
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
-    rb.setPos(rb.getPos() + rb.velocity * delT);
+    rb.getCollider().setPos(rb.getCollider().getPos() + rb.velocity * delT);
     if(!rb.lockRotation)
-        rb.setRot(rb.getRot() + rb.angular_velocity * delT);
+        rb.getCollider().setRot(rb.getCollider().getRot() + rb.angular_velocity * delT);
 }
 void PhysicsManager::m_updatePhysics(float delT) {
     for(auto r : m_rigidbodies) {
@@ -92,13 +92,13 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
             continue; 
         auto open = m_rigidbodiesQT.query({p.pos - vec2f(0.1f, 0.1f), p.pos + vec2f(0.1f, 0.1f)});
         for(auto& o : open) {
-            switch(o->getType()) {
+            switch(o->getCollider().getType()) {
                 case eCollisionShape::Circle:
-                    if(isOverlappingPointCircle(p.pos, *(RigidCircle*)o))
+                    if(isOverlappingPointCircle(p.pos, ((RigidCircle*)o)->collider))
                         p.isActive = false;
                 break;
                 case eCollisionShape::Polygon:
-                    if(isOverlappingPointPoly(p.pos, *(RigidPolygon*)o))
+                    if(isOverlappingPointPoly(p.pos, ((RigidPolygon*)o)->collider))
                         p.isActive = false;
                 break;
             }

@@ -42,7 +42,7 @@ void RigidPolygon::addVelocity(vec2f vel, vec2f cp) {
         return;
     vec2f cn = norm(vel);
     //convert angluar vel to linear
-    vec2f rad = cp - getPos();
+    vec2f rad = cp - getCollider().getPos();
 
     velocity += cn * dot(vel, norm(vel));
     angular_velocity -= cross(vel, rad) / inertia(); 

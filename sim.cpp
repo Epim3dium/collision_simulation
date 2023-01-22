@@ -24,13 +24,13 @@ void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
         return;
     selected.emplace(rb);
 }
-static bool PointVRigidbody(vec2f p, Rigidbody* rb) {
-    switch(rb->getType()) {
+static bool PointVCollider(vec2f p, ColliderInterface& rb) {
+    switch(rb.getType()) {
         case eCollisionShape::Circle:
-            return isOverlappingPointCircle(p, *(RigidCircle*)rb);
+            return isOverlappingPointCircle(p, (ColliderCircle&)rb);
         break;
         case eCollisionShape::Polygon:
-            return isOverlappingPointPoly(p, *(RigidPolygon*)rb);
+            return isOverlappingPointPoly(p, (ColliderPolygon&)rb);
         break;
     }
 }
@@ -58,9 +58,10 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
         color = blend(color, Color::Cyan, rb->pressure / 100.f);
     if(selection.contains(rb))
         color = PastelColor::Red;
-    switch(rb->getType()) {
+    auto& col = rb->getCollider();
+    switch(col.getType()) {
         case eCollisionShape::Circle: {
-            RigidCircle c(*(RigidCircle*)rb);
+            ColliderCircle c((ColliderCircle&)col);
             sf::CircleShape cs(c.radius);
             cs.setPosition(c.pos - vec2f(c.radius, c.radius));
             cs.setFillColor(color);
@@ -76,11 +77,11 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
             rw.draw(cs);
         }break;
         case eCollisionShape::Polygon:
-            drawFill(rw, *(RigidPolygon*)rb, color);
-            drawOutline(rw, *(RigidPolygon*)rb, sf::Color::Black);
+            drawFill(rw, (ColliderPolygon&)col, color);
+            drawOutline(rw, (ColliderPolygon&)col, sf::Color::Black);
         break;
     }
-    AABB t = rb->getAABB();
+    AABB t = rb->getCollider().getAABB();
     drawOutline(rw, PolygonfromAABB(t), PastelColor::Purple);
 
 }
@@ -102,7 +103,7 @@ static void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 void Sim::crumbleSquarely(Rigidbody* poly) {
-    auto size = std::max(poly->getAABB().size().x, poly->getAABB().size().y) * 0.4f;
+    auto size = std::max(poly->getCollider().getAABB().size().x, poly->getCollider().getAABB().size().y) * 0.4f;
     Crumbler crumbler(size, size * 0.3f);
 
     auto devisions = crumbler.crumble(poly);
@@ -110,7 +111,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
     for(auto& d : devisions) {
         total_area += area(d.getModelVertecies());
     }
-    vec2f pos = poly->getPos();
+    vec2f pos = poly->getCollider().getPos();
     vec2f vel = poly->velocity;
     float angvel = poly->angular_velocity;
     float mass = poly->mass;
@@ -119,7 +120,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
     for(auto& p : devisions) {
         RigidPolygon t(p);
 
-        vec2f rad = t.getPos() - pos;
+        vec2f rad = t.getCollider().getPos() - pos;
         vec2f radperp(-rad.y, rad.x);
         vec2f pang_vel_lin = radperp * angvel;
 
@@ -129,10 +130,10 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
         t.velocity = vel + pang_vel_lin;
         t.mass = cur_mass;
 
-        if(cur_area > 100.f) {
+        if(cur_area > 200.f) {
             createRigidbody(t);
-        }else if(cur_area > 20.f) {
-            RigidCircle c(t.getPos(), sqrt(cur_area / 3.141f));
+        }else if(cur_area > 50.f) {
+            RigidCircle c(t.getCollider().getPos(), sqrt(cur_area / 3.141f));
             c.velocity = vel + pang_vel_lin;
             c.mass = cur_mass;
             createRigidbody(c);
@@ -187,7 +188,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
             selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
             for(auto r : rigidbodies) {
-                if(PointVRigidbody(selection.last_mouse_pos, r)) {
+                if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
                     if(!selection.selected.contains(r)) {
                         selection.selected = {r};
                     }
@@ -197,7 +198,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             }
             if(selection.isHolding) {
                 for(auto s : selection.selected) {
-                    selection.offsets[s] = s->getPos() - selection.last_mouse_pos;
+                    selection.offsets[s] = s->getCollider().getPos() - selection.last_mouse_pos;
                     s->lockRotation = true;
                 }
             }else {
@@ -207,7 +208,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         else if(event.mouseButton.button == sf::Mouse::Button::Right) {
             selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
             for(auto r : rigidbodies) {
-                if(PointVRigidbody(selection.last_mouse_pos, r)) {
+                if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
                     if(!selection.selected.contains(r)) {
                         selection.selected = {r};
                     }
@@ -331,13 +332,13 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(isOverlappingPointPoly(mpos, p)) {
+        if(isOverlappingPointPoly(mpos, p.collider)) {
             found = &p;
             break;
         }
     }
     for(auto& c : circs) {
-        if(isOverlappingPointCircle(mpos, c)) {
+        if(isOverlappingPointCircle(mpos, c.collider)) {
             found = &c;
             break;
         }
@@ -419,7 +420,7 @@ void Sim::update(float delT) {
 
     //delete when out of frame
     for(auto& r : rigidbodies) {
-        if(!isOverlappingAABBAABB(aabb_outer, r->getAABB())) {
+        if(!isOverlappingAABBAABB(aabb_outer, r->getCollider().getAABB())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);
             removeRigidbody(r);
