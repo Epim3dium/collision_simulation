@@ -312,10 +312,10 @@ void Sim::update(float delT) {
     }
     if(selection.isHolding) {
         for(auto s : selection.selected) {
-            auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getPos();
+            auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getCollider().getPos();
             d /= sqrt(delT);
             s->velocity = d;
-            s->setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
+            s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
         }
     }
     
