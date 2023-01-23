@@ -11,17 +11,17 @@
 
 namespace EPI_NAMESPACE {
 
-Polygon Crumbler::m_getShape(Rigidbody* rb) {
-    switch(rb->getCollider().getType()) {
+Polygon Crumbler::m_getShape(ColliderInterface& col) {
+    switch(col.getType()) {
         case eCollisionShape::Polygon:
-            return ((RigidPolygon*)rb)->collider;
+            return (ColliderPolygon&)col;
         case eCollisionShape::Circle:
-            return PolygonReg(rb->getCollider().getPos(), 0.f, 16U, ((RigidCircle*)rb)->collider.radius);
+            return PolygonReg(col.getPos(), 0.f, 16U, ((ColliderCircle&)col).radius);
     }
 }
 std::vector<std::vector<Crumbler::VertNode> > Crumbler::m_generateVerticies(AABB aabb) {
     std::vector<std::vector<VertNode> > verticies;
-    float angle = rng.Random(-3.141f, 3.141f);
+    float angle = m_rng->Random(-3.141f, 3.141f);
     for(float y = aabb.min.y; y <= aabb.max.y + seg_size; y += seg_size) {
         verticies.push_back({});
         for(float x = aabb.min.x; x <= aabb.max.x + seg_size; x += seg_size) {
@@ -47,11 +47,17 @@ std::vector<Crumbler::CenterNode> Crumbler::m_generateCenters(std::vector<std::v
     }
     return centers;
 }
-std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
+std::vector<Polygon> Crumbler::crumble(ColliderInterface& col, RNG* rng) {
+    RNG tmpRng;
+    if(rng) {
+        m_rng = rng;
+    } else {
+        m_rng = &tmpRng;
+    }
     float focus = 1.f;
     float offset_mag = seg_size * focus;
 
-    Polygon shape = m_getShape(rb);
+    Polygon shape = m_getShape(col);
 
     auto aabb = AABBfromPolygon(shape);
     aabb.setSize(aabb.size() * 3.f);
@@ -63,7 +69,7 @@ std::vector<Polygon> Crumbler::crumble(Rigidbody* rb) {
     //apply random deviation
     for(auto& v : verticies) {
         for(auto& vv : v) {
-            vv.pos += vec2f(rng.Random(-deviation / 2.f, deviation / 2.f), rng.Random(-deviation / 2.f, deviation / 2.f));
+            vv.pos += vec2f(m_rng->Random(-deviation / 2.f, deviation / 2.f), m_rng->Random(-deviation / 2.f, deviation / 2.f));
 
             float l = len(shape.getPos() - vv.pos);
             if(focus_point.x != INFINITY && !nearlyEqual(l, 0.f)) {

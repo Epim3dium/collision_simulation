@@ -106,7 +106,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
     auto size = std::max(poly->getCollider().getAABB().size().x, poly->getCollider().getAABB().size().y) * 0.4f;
     Crumbler crumbler(size, size * 0.3f);
 
-    auto devisions = crumbler.crumble(poly);
+    auto devisions = crumbler.crumble(poly->getCollider());
     float total_area = 0.f;
     for(auto& d : devisions) {
         total_area += area(d.getModelVertecies());
@@ -141,9 +141,7 @@ void Sim::crumbleSquarely(Rigidbody* poly) {
     }
 }
 void Sim::setup() {
-    physics_manager.segment_size = 50.f;
     physics_manager.steps = 10;
-    physics_manager.grav = 0.f;
     physics_manager.bounciness_select = PhysicsManager::eSelectMode::Max;
     physics_manager.friction_select = PhysicsManager::eSelectMode::Max;
     //pm.bind(new BasicSolver());
@@ -205,24 +203,6 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                 selection.isMaking = true;
             }
         }
-        else if(event.mouseButton.button == sf::Mouse::Button::Right) {
-            selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
-            for(auto r : rigidbodies) {
-                if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
-                    if(!selection.selected.contains(r)) {
-                        selection.selected = {r};
-                    }
-                    selection.isThrowing = true;
-                    break;
-                }
-            }
-            if(selection.isThrowing) {
-                for(auto s : selection.selected) {
-                    s->lockRotation = true;
-                    s->isStatic = true;
-                }
-            }
-        }
     }
     else if(event.type == sf::Event::MouseButtonReleased) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
@@ -241,16 +221,6 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             selection.trigger->setShape({});
         }
         else if(event.mouseButton.button == sf::Mouse::Button::Right) {
-            if(selection.isThrowing) {
-                size_t idx = 0;
-                for(auto& s : selection.selected) {
-                    s->lockRotation = false;
-                    s->isStatic = false;
-                    s->velocity += ((vec2f)sf::Mouse::getPosition(window) - selection.last_mouse_pos) * 5.f;
-                    idx++;
-                }
-            }
-            selection.isThrowing = false;
         }
     }
     else if(event.type == sf::Event::KeyPressed) {
@@ -283,7 +253,7 @@ void Sim::update(float delT) {
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
         polygon_creation_vec.clear();
     }
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::E) && false) {
+    if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         particle_manager.emit(3000U * delT, Particle::InitList(
             Particle::PosInit(mpos),
@@ -313,9 +283,12 @@ void Sim::update(float delT) {
     if(selection.isHolding) {
         for(auto s : selection.selected) {
             auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getCollider().getPos();
-            d /= sqrt(delT);
-            s->velocity = d;
-            s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
+            if(!s->isStatic) {
+                s->velocity = d / sqrt(delT);
+            } else {
+                s->setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
+            }
+            //s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
         }
     }
     
@@ -366,11 +339,10 @@ void Sim::update(float delT) {
             static bool open_global = true;
             if(ImGui::BeginTabItem("global settings", &open_global))
             {
-                ImGui::SliderFloat("change seg size" , &physics_manager.segment_size, 5.0f, 300.0f, "%.0f");
                 static int tsteps = 5;
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 physics_manager.steps = tsteps;
-                ImGui::SliderFloat("change gravity" , &physics_manager.grav, -3000.f, 3000.f, "%.1f");
+                ImGui::SliderFloat("change gravity" , &gravity, -3000.f, 3000.f, "%.1f");
                 ImGui::SliderFloat("radius" , &default_dynamic_radius, 1.f, 500.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {
@@ -420,6 +392,7 @@ void Sim::update(float delT) {
 
     //delete when out of frame
     for(auto& r : rigidbodies) {
+        r->velocity += vec2f(0.f, gravity) * delT;
         if(!isOverlappingAABBAABB(aabb_outer, r->getCollider().getAABB())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);

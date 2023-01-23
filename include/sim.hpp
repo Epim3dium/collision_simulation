@@ -54,6 +54,7 @@ public:
     sf::Clock deltaClock;
 
     PhysicsManager physics_manager;
+    float gravity;
     ParticleManager particle_manager = ParticleManager(8192U);
     
     

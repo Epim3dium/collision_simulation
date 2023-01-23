@@ -7,6 +7,8 @@
 #include <vector>
 
 namespace EPI_NAMESPACE {
+//default return functions for particle
+namespace helper {
 static inline float return_const_float(float val, float time) {
     return val;
 }
@@ -15,6 +17,7 @@ static inline vec2f return_const_vec2f(vec2f val, float time) {
 }
 static inline Color return_const_color(Color val, float time) {
     return val;
+}
 }
 
 class Particle {
@@ -26,10 +29,14 @@ class Particle {
         Rectangle,
     };
 public:
+    //any value initializing particle should have function that applies that initialization
     struct InitInerface {
         virtual void apply(Particle& part) = 0;
         virtual ~InitInerface() {}
     };
+    //abstraction of the list of any initializers created in the future, only made to store pointer to interfaces
+    //For example initializing particle with a list:
+    //    Particle.init(Particle::InitList(Particle::PosInit(0.f, 0.f), Particle::RotInit(0.f)))
     struct InitList {
     private:
         template<class InitT>
@@ -54,29 +61,15 @@ public:
         }
     };
 
-    void init(const std::vector<InitInerface*>& init_values) {
-        pos = vec2f(0.f, 0.f);
-        rot = 0.f;
-        vel = vec2f(1.f, 0.f);
-        ang_vel = 0.f;
-
-        time_passed = 0.f;
-        lifetime = 1.f;
-
-        change.vel = return_const_vec2f;
-        change.ang_vel = return_const_float;
-        change.color = return_const_color;
-
-        for(auto& i : init_values) {
-            i->apply(*this);
-        }
-        isActive = true;
-    }
+    //applying all initInterfaces provided in vector
+    void init(const std::vector<InitInerface*>& init_values);
     void init(const InitList& init_values) {
         init(init_values.inits);
     }
 
+    //moving and changing colors (applyng change functions)
     void update(float delT);
+    //drawing shape
     void draw(Window& rw);
 
     struct {
@@ -86,6 +79,7 @@ public:
         std::vector<vec2f> model;
     }shape;
 
+    //diffrent functions changing vel, ang_vel and color based on time to end of activation
     struct {
         std::function<vec2f(vec2f, float)> vel;
         std::function<float(float, float)> ang_vel;
@@ -96,7 +90,9 @@ public:
     float rot;
     vec2f pos;
 
+    //time passed since last initalization
     float time_passed;
+    //max time allowed to live
     float lifetime;
 
     vec2f vel;
@@ -108,6 +104,8 @@ public:
         init(inits);
     }
     Particle() {}
+
+    //list of initalizer structs
     struct PosInit : InitInerface {
         vec2f min;
         vec2f max;

@@ -1,20 +1,6 @@
 #include "restraint.hpp"
 #include "col_utils.hpp"
 namespace EPI_NAMESPACE {
-void RestraintVertex::update(float delT) {
-    auto& ref_a = a->collider;
-    auto& ref_b = b->collider;
-    auto diff = ref_a.getVertecies()[a_vert] - ref_b.getVertecies()[b_vert];
-    auto l = len(diff);
-    if(l > dist) {
-        auto off = (l - dist) / 2.f * 0.9f;
-        auto n = diff / l;
-        if(!b->isStatic)
-            b->addForce(off * n * (1.f + a->isStatic) * b->mass, ref_b.getVertecies()[b_vert]);
-        if(!a->isStatic)
-            a->addForce(-off * n * (1.f + b->isStatic) * a->mass, ref_a.getVertecies()[a_vert]);
-    }
-}
 void RestraintPoint::update(float delT) {
     auto& ref_a = a->collider;
     auto& ref_b = b->collider;

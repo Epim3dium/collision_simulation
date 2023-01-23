@@ -64,34 +64,45 @@ private:
         return rb->getCollider().getAABB();
     }
 public:
-    float grav = 0.5f;
+    //number of physics/collision steps per frame
     size_t steps = 2;
-    float min_dormant_velocity = 500.f;
-    float min_angular_dormant_velocity = 30.f;
-    float segment_size = 100.f;
 
+    /*
+    * updates all rigidbodies bound applying their velocities and resoving collisions
+    * @param pm is particle manager, if bound collisions for all active particles will be resolved(colliding particles will become inactive)
+    */
     void update(float delT, ParticleManager* pm = nullptr);
 
+    //mode used to select bounce when colliding
     eSelectMode bounciness_select = eSelectMode::Min;
+    //mode used to select friciton when colliding
     eSelectMode friction_select = eSelectMode::Min;
 
 
+    //used to add any rigidbody
     inline void bind(Rigidbody* rb) {
         m_rigidbodies.push_back(rb);
     }
+    //used to add solver that is used to resolve collisions
     inline void bind(SolverInterface* solver) {
         m_solver = solver;
     }
+    //used to add restraints applied on rigidbodies bound
     inline void bind(RestraintInterface* restraint) {
         m_restraints.push_back(restraint);
     }
+    //used to add triggers that will detect rigidbodies bound
     inline void bind(TriggerInterface* trigger) {
         m_triggers.push_back(trigger);
     }
+    //removes rigidbody from manager
     void unbind(Rigidbody* rb);
+    //removes restraint from manager
     void unbind(RestraintInterface* restriant);
+    //removes trigger from manager
     void unbind(TriggerInterface* trigger);
 
+    //size should be max simulated size
     PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
 };
 }

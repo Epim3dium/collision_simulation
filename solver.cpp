@@ -12,37 +12,27 @@
 
 namespace EPI_NAMESPACE {
 
-CollisionManifold detectOverlap(RigidCircle& r1, RigidPolygon& r2) {
-    if(r1.isStatic && r2.isStatic) {
-        return {false};
-    }
+CollisionManifold detectOverlap(ColliderCircle& c1, ColliderPolygon& c2) {
 
-    auto intersection = intersectCirclePolygon(r1.collider, r2.collider);
+    auto intersection = intersectCirclePolygon(c1, c2);
     if(intersection.detected) {
-        return {true, &r1, &r2, r1.collider.getPos(), r2.collider.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
+        return {true, nullptr, nullptr, c1.getPos(), c2.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
-CollisionManifold detectOverlap(RigidPolygon& r1, RigidPolygon& r2) {
-    if(r1.isStatic && r2.isStatic) {
-        return {false};
-    }
-
-    auto intersection = intersectPolygonPolygon(r1.collider, r2.collider);
+CollisionManifold detectOverlap(ColliderPolygon& c1, ColliderPolygon& c2) {
+    auto intersection = intersectPolygonPolygon(c1, c2);
     if(intersection.detected) {
         std::vector<vec2f> cps;
-        cps = findContactPoints(r1.collider, r2.collider);
-        return {true, &r1, &r2, r1.collider.getPos(), r2.collider.getPos(), intersection.contact_normal, cps , intersection.overlap};
+        cps = findContactPoints(c1, c2);
+        return {true, nullptr, nullptr, c1.getPos(), c2.getPos(), intersection.contact_normal, cps , intersection.overlap};
     }
     return {false};
 }
-CollisionManifold detectOverlap(RigidCircle& r1, RigidCircle& r2) {
-    if(r1.isStatic && r2.isStatic) {
-        return {false};
-    }
-    auto intersection = intersectCircleCircle(r1.collider, r2.collider);
+CollisionManifold detectOverlap(ColliderCircle& r1, ColliderCircle& r2) {
+    auto intersection = intersectCircleCircle(r1, r2);
     if(intersection.detected) {
-        return {true, &r1, &r2, r1.collider.getPos(), r2.collider.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
+        return {true, nullptr, nullptr, r1.getPos(), r2.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
@@ -174,18 +164,20 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
 CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
     CollisionManifold man;
     if(rb1->getCollider().getType() == eCollisionShape::Polygon && rb2->getCollider().getType() == eCollisionShape::Polygon) {
-        man = detectOverlap(*(RigidPolygon*)rb1, *(RigidPolygon*)rb2);
+        man = detectOverlap((ColliderPolygon&)rb1->getCollider(), (ColliderPolygon&)rb2->getCollider());
     } else if(rb1->getCollider().getType() == eCollisionShape::Circle && rb2->getCollider().getType() == eCollisionShape::Circle) {
-        man = detectOverlap(*(RigidCircle*)rb1, *(RigidCircle*)rb2);
+        man = detectOverlap((ColliderCircle&)rb1->getCollider(), (ColliderCircle&)rb2->getCollider());
     }
+    man.r1 = rb1;
+    man.r2 = rb2;
     for(int i = 0; i < 2; i++) {
         if(i == 1) {
-            auto t = rb2;
-            rb2 = rb1;
-            rb1 = t;
+            std::swap(rb1, rb2);
         }
         if(rb1->getCollider().getType() == eCollisionShape::Circle && rb2->getCollider().getType() == eCollisionShape::Polygon) {
-            man = detectOverlap(*(RigidCircle*)rb1, *(RigidPolygon*)rb2);
+            man = detectOverlap((ColliderCircle&)rb1->getCollider(), (ColliderPolygon&)rb2->getCollider());
+            man.r1 = rb1;
+            man.r2 = rb2;
         }
     }
     handleOverlap(*rb1, *rb2, man);

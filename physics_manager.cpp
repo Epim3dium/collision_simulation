@@ -69,7 +69,6 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     //updating velocity and physics
     if(rb.isStatic)
         return;
-    rb.velocity.y += grav * delT;
     if(qlen(rb.velocity) > 0.001f)
         rb.velocity -= norm(rb.velocity) * std::clamp(qlen(rb.velocity) * rb.material.air_drag, 0.f, len(rb.velocity)) * delT;
     if(abs(rb.angular_velocity) > 0.001f)
@@ -94,8 +93,9 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
         for(auto& o : open) {
             switch(o->getCollider().getType()) {
                 case eCollisionShape::Circle:
-                    if(isOverlappingPointCircle(p.pos, ((RigidCircle*)o)->collider))
+                    if(isOverlappingPointCircle(p.pos, ((RigidCircle*)o)->collider)) {
                         p.isActive = false;
+                    }
                 break;
                 case eCollisionShape::Polygon:
                     if(isOverlappingPointPoly(p.pos, ((RigidPolygon*)o)->collider))
@@ -110,28 +110,26 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     for(auto r : m_rigidbodies) {
         r->pressure = 0.f;
     }
+    //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
+    m_rigidbodiesQT.clear();
+    m_rigidbodiesQT.updateLeafes();
+    for(auto r : m_rigidbodies)
+        m_rigidbodiesQT.add(r);
+
     for(int i = 0; i < steps; i++) {
         m_updateRestraints(deltaStep);
 
 
-        for(auto r : m_rigidbodies)
-            m_rigidbodiesQT.add(r);
         auto col_list = processBroadPhase();
-        m_rigidbodiesQT.clear();
 
         m_updatePhysics(deltaStep);
         processNarrowPhase(col_list);
 
     }
-    for(auto r : m_rigidbodies)
-        m_rigidbodiesQT.add(r);
     m_processTriggers();
     if(pm){
         m_processParticles(*pm);
     }
-    m_rigidbodiesQT.clear();
-
-    m_rigidbodiesQT.updateLeafes();
 }
 template<class T>
 static void unbind_any(T obj, std::vector<T>& obj_vec) {

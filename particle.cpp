@@ -45,6 +45,24 @@ void Particle::ColorFuncInit::apply(Particle& p) {
     p.change.color = func;
 }
 
+void Particle::init(const std::vector<InitInerface*>& init_values) {
+    pos = vec2f(0.f, 0.f);
+    rot = 0.f;
+    vel = vec2f(1.f, 0.f);
+    ang_vel = 0.f;
+
+    time_passed = 0.f;
+    lifetime = 1.f;
+
+    change.vel = helper::return_const_vec2f;
+    change.ang_vel = helper::return_const_float;
+    change.color = helper::return_const_color;
+
+    for(auto& i : init_values) {
+        i->apply(*this);
+    }
+    isActive = true;
+}
 void Particle::update(float delT) {
     time_passed += delT;
     float time = time_passed / lifetime;
