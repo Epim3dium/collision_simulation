@@ -1,5 +1,4 @@
 #pragma once
-#include "allocator.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"

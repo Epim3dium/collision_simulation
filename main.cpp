@@ -1,5 +1,3 @@
-#include "allocator.hpp"
-#include "rigidbody.hpp"
 #include "sim.hpp"
 
 using namespace epi;
