@@ -4,6 +4,7 @@
 #include "SFML/Window/Mouse.hpp"
 #include "col_utils.hpp"
 #include "imgui.h"
+#include "restraint.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
 #include "crumbler.hpp"
@@ -144,7 +145,6 @@ void Sim::setup() {
     physics_manager.steps = 10;
     physics_manager.bounciness_select = PhysicsManager::eSelectMode::Max;
     physics_manager.friction_select = PhysicsManager::eSelectMode::Max;
-    //pm.bind(new BasicSolver());
 
     aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
     {
@@ -184,23 +184,44 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         return;
     else if(event.type == sf::Event::MouseButtonPressed) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
-            selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
-            for(auto r : rigidbodies) {
-                if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
-                    if(!selection.selected.contains(r)) {
-                        selection.selected = {r};
+            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+                Rigidbody* sel = nullptr;
+                auto mpos = (vec2f)sf::Mouse::getPosition(window);
+                for(auto r : rigidbodies) {
+                    if(PointVCollider(mpos, r->getCollider())) {
+                        sel = r;
+                        break;
                     }
-                    selection.isHolding = true;
-                    break;
                 }
-            }
-            if(selection.isHolding) {
-                for(auto s : selection.selected) {
-                    selection.offsets[s] = s->getCollider().getPos() - selection.last_mouse_pos;
-                    s->lockRotation = true;
+                if(selection.last_restrain_sel && sel) {
+                    auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
+                    auto last_selP = selection.last_restrain_sel_off;
+                    physics_manager.bind(new RestraintPoint(5.f, (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP));
+                    selection.last_restrain_sel = nullptr;
+                } else if(sel){
+                    selection.last_restrain_sel = sel; 
+                    selection.last_restrain_sel_off = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
+
                 }
             }else {
-                selection.isMaking = true;
+                selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
+                for(auto r : rigidbodies) {
+                    if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
+                        if(!selection.selected.contains(r)) {
+                            selection.selected = {r};
+                        }
+                        selection.isHolding = true;
+                        break;
+                    }
+                }
+                if(selection.isHolding) {
+                    for(auto s : selection.selected) {
+                        selection.offsets[s] = s->getCollider().getPos() - selection.last_mouse_pos;
+                        s->lockRotation = true;
+                    }
+                }else {
+                    selection.isMaking = true;
+                }
             }
         }
     }
@@ -211,7 +232,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                     s->lockRotation = false;
                 }
             }
-            else if(selection.making_time < 0.25f) {
+            else if(selection.making_time < 0.25f && selection.isMaking) {
                 polygon_creation_vec.push_back(selection.last_mouse_pos);
             }
             selection.isMaking = false;
@@ -239,6 +260,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         }else if(event.key.code == sf::Keyboard::R) {
             selection.selected.clear();
             polygon_creation_vec.clear();
+            selection.last_restrain_sel = nullptr;
         }else if (event.key.code == sf::Keyboard::C) {
             RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
             createRigidbody(t);
@@ -250,9 +272,6 @@ void Sim::onEvent(const sf::Event &event, float delT) {
     }
 }
 void Sim::update(float delT) {
-    if(sf::Keyboard::isKeyPressed(sf::Keyboard::R)) {
-        polygon_creation_vec.clear();
-    }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
         vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
         particle_manager.emit(3000U * delT, Particle::InitList(

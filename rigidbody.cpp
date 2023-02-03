@@ -45,7 +45,8 @@ void RigidPolygon::addVelocity(vec2f vel, vec2f cp) {
     vec2f rad = cp - getCollider().getPos();
 
     velocity += cn * dot(vel, norm(vel));
-    angular_velocity -= cross(vel, rad) / inertia(); 
+    if(!lockRotation)
+        angular_velocity -= cross(vel, rad) / inertia(); 
 }
 
 }

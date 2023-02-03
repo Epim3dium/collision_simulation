@@ -95,6 +95,9 @@ public:
         float making_time = 0.f;
         std::map<Rigidbody*, vec2f> offsets;
         std::set<Rigidbody*> selected;
+        Rigidbody* last_restrain_sel = nullptr;
+        vec2f last_restrain_sel_off;
+
         vec2f last_mouse_pos;
     }selection;
     //Node* selected_node = nullptr;

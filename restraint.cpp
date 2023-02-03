@@ -5,17 +5,17 @@ void RestraintPoint::update(float delT) {
     auto& ref_a = a->collider;
     auto& ref_b = b->collider;
 
-    auto ap = rotateVec(model_point_a, ref_a.getRot()) + ref_a.getPos();
-    auto bp = rotateVec(model_point_b, ref_b.getRot()) + ref_b.getPos();
+    auto ap = rotateVec(model_point_a, ref_a.getRot()) + ref_a.getPos() + a->velocity * delT;
+    auto bp = rotateVec(model_point_b, ref_b.getRot()) + ref_b.getPos() + b->velocity * delT;
     auto diff = ap - bp;
     auto l = len(diff);
     if(l > dist) {
-        auto off = (l - dist) / 2.f * 0.9f;
+        auto off = (l - dist);
         auto n = diff / l;
         if(!b->isStatic)
-            b->addForce(off * n * (1.f + a->isStatic) * b->mass, bp);
+            b->addVelocity(off * n * (1.f + a->isStatic), bp);
         if(!a->isStatic)
-            a->addForce(-off * n * (1.f + b->isStatic) * a->mass, ap);
+            a->addVelocity(-off * n * (1.f + b->isStatic), ap);
     }
 }
 void RestraintDistance::update(float delT) {
