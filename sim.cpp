@@ -1,5 +1,6 @@
 #include "sim.hpp"
 #include "SFML/Graphics/Color.hpp"
+#include "SFML/Graphics/Vertex.hpp"
 #include "SFML/Window/Keyboard.hpp"
 #include "SFML/Window/Mouse.hpp"
 #include "col_utils.hpp"
@@ -18,6 +19,7 @@
 #include <thread>
 #include <vector>
 
+#define DEBUG_DRAW true 
 
 namespace EPI_NAMESPACE {
 void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
@@ -57,6 +59,8 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
     }
     if(rb->pressure != 0.f)
         color = blend(color, Color::Cyan, rb->pressure / 100.f);
+    if(rb->isDormant() && !rb->isStatic)
+        color = PastelColor::Yellow;
     if(selection.contains(rb))
         color = PastelColor::Red;
     auto& col = rb->getCollider();
@@ -82,8 +86,10 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
             drawOutline(rw, (ColliderPolygon&)col, sf::Color::Black);
         break;
     }
+#if DEBUG_DRAW
     AABB t = rb->getCollider().getAABB();
     drawOutline(rw, PolygonfromAABB(t), PastelColor::Purple);
+#endif
 
 }
 
@@ -196,9 +202,13 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                 if(selection.last_restrain_sel && sel) {
                     auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
                     auto last_selP = selection.last_restrain_sel_off;
-                    physics_manager.bind(new RestraintPoint(5.f, (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP));
+                    auto* res = new RestraintPoint(len(selection.last_mouse_pos - mpos)
+                        , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP);
+                    restraints.push_back(res);
+                    physics_manager.bind(res);
                     selection.last_restrain_sel = nullptr;
                 } else if(sel){
+                    selection.last_mouse_pos = mpos;
                     selection.last_restrain_sel = sel; 
                     selection.last_restrain_sel_off = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
 
@@ -305,7 +315,7 @@ void Sim::update(float delT) {
             if(!s->isStatic) {
                 s->velocity = d / sqrt(delT);
             } else {
-                s->setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
+                s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
             }
             //s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
         }
@@ -430,6 +440,20 @@ void Sim::draw() {
     for(auto& r : rigidbodies) {
         DrawRigidbody(r, selection.selected, window);
     }
+#if DEBUG_DRAW
+    for(auto& r : restraints) {
+        auto cons = r->getRestrainedObjects();
+        auto prev = cons.back();
+        for(auto cur : cons) {
+            sf::Vertex vert[2];
+            vert[0].color = Color::Cyan;
+            vert[0].position = prev->getCollider().getPos();
+            vert[1].color = Color::Cyan;
+            vert[1].position = cur->getCollider().getPos();
+            window.draw(vert, 2, sf::Lines);
+        }
+    }
+#endif
     particle_manager.draw(window);
     for(auto p : polygon_creation_vec) {
         float r = 5.f;

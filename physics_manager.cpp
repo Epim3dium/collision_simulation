@@ -22,20 +22,19 @@ namespace EPI_NAMESPACE {
 
 static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
     return !(
-        ( rb1.isStatic && rb2.isStatic) || 
+        ( rb1.isDormant() && rb2.isDormant()) ||
         (rb1.layer == rb2.layer));
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     return m_rigidbodiesQT.findAllIntersections();
 }
-void PhysicsManager::processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator begining,std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator ending)
-{
+void PhysicsManager::processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator begining,std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator ending) {
     for(auto ci = begining; ci != ending; ci++) {
+        if(!areCompatible(*ci->first, *ci->second))
+            continue;
         float restitution = m_selectFrom(ci->first->material.restitution, ci->second->material.restitution, bounciness_select);
         float sfriction = m_selectFrom(ci->first->material.sfriction, ci->second->material.sfriction, friction_select);
         float dfriction = m_selectFrom(ci->first->material.dfriction, ci->second->material.dfriction, friction_select);
-        if(!areCompatible(*ci->first, *ci->second))
-            continue;
         //ewewewewewewwwwww pls don, float delTt judge me
         auto result = m_solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
         if(result.detected) {
@@ -65,10 +64,26 @@ void PhysicsManager::m_processTriggers() {
     }
 }
 
+#define DORMANT_MIN_VELOCITY 300.f
 void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
-    //updating velocity and physics
     if(rb.isStatic)
         return;
+    //updating velocity and physics
+    if(qlen(rb.velocity) < DORMANT_MIN_VELOCITY) {
+        rb.time_immobile += delT;
+    }else {
+        if(rb.isDormant()) {
+            auto area = rb.getCollider().getAABB();
+            area.setSize(area.size() * 2.f);
+            for(auto& r : m_rigidbodiesQT.query(area))
+                r->time_immobile = 0.f;
+        }
+        rb.time_immobile = 0.f;
+    }
+    if(rb.isDormant()){
+        rb.velocity = vec2f();
+        return;
+    }
     if(qlen(rb.velocity) > 0.001f)
         rb.velocity -= norm(rb.velocity) * std::clamp(qlen(rb.velocity) * rb.material.air_drag, 0.f, len(rb.velocity)) * delT;
     if(abs(rb.angular_velocity) > 0.001f)
@@ -117,10 +132,10 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
         m_rigidbodiesQT.add(r);
 
     for(int i = 0; i < steps; i++) {
+        m_updatePhysics(deltaStep);
         auto col_list = processBroadPhase();
         m_updateRestraints(deltaStep);
 
-        m_updatePhysics(deltaStep);
         processNarrowPhase(col_list);
 
     }

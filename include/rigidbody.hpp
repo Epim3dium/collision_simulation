@@ -93,7 +93,7 @@ struct Material {
     float restitution = 0.0f;
     float sfriction = 0.4f;
     float dfriction = 0.4f;
-    float air_drag = 0.0001f;
+    float air_drag = 0.001f;
 };
 
 //struct made only to prevent ids from copying
@@ -129,6 +129,10 @@ public:
     float mass = 1.f;
     Material material;
     float pressure = 0.f;
+    float time_immobile = 0.f;
+    bool isDormant() const {
+        return time_immobile > 5.f || isStatic;
+    }
 
     virtual ColliderInterface& getCollider() = 0;
     const ColliderInterface& getCollider() const {
@@ -140,21 +144,6 @@ public:
     }
     eCollisionShape getType() const  {
         return getCollider().getType();
-    }
-    AABB getAABB() const  {
-        return getCollider().getAABB();
-    }
-    vec2f getPos() const  {
-        return getCollider().getPos();
-    }
-    void setPos(vec2f v) {
-        return getCollider().setPos(v);
-    }
-    float getRot() const  {
-        return getCollider().getRot();
-    }
-    void setRot(float f) {
-        return getCollider().setRot(f);
     }
     inline void addForce(vec2f force) {
         velocity += force / mass;

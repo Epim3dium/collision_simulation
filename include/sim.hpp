@@ -1,5 +1,6 @@
 #pragma once
 #include "SFML/Window/Event.hpp"
+#include "restraint.hpp"
 #include "rigidbody.hpp"
 #include "solver.hpp"
 #include "imgui.h"
@@ -61,6 +62,7 @@ public:
     std::list<RigidPolygon> polys;
     std::list<RigidCircle> circs;
     std::set<Rigidbody*> rigidbodies;
+    std::vector<RestraintInterface*> restraints;
 
     void createRigidbody(const RigidPolygon& poly) {
         polys.emplace_back(poly);
