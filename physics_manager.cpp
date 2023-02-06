@@ -64,12 +64,13 @@ void PhysicsManager::m_processTriggers() {
     }
 }
 
-#define DORMANT_MIN_VELOCITY 300.f
+#define DORMANT_MIN_VELOCITY 150.f
+#define DORMANT_MIN_ANGULAR_VELOCITY 0.1f
 void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     if(rb.isStatic)
         return;
     //updating velocity and physics
-    if(qlen(rb.velocity) < DORMANT_MIN_VELOCITY) {
+    if(qlen(rb.velocity) < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
         rb.time_immobile += delT;
     }else {
         if(rb.isDormant()) {
@@ -84,12 +85,14 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
         rb.velocity = vec2f();
         return;
     }
+    //applying drag
     if(qlen(rb.velocity) > 0.001f)
         rb.velocity -= norm(rb.velocity) * std::clamp(qlen(rb.velocity) * rb.material.air_drag, 0.f, len(rb.velocity)) * delT;
     if(abs(rb.angular_velocity) > 0.001f)
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * rb.material.air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
     rb.getCollider().setPos(rb.getCollider().getPos() + rb.velocity * delT);
+
     if(!rb.lockRotation)
         rb.getCollider().setRot(rb.getCollider().getRot() + rb.angular_velocity * delT);
 }
