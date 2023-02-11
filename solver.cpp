@@ -161,25 +161,30 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
                     *manifold.r2, manifold.r2->material, restitution, sfriction, dfriction, manifold.cn, manifold.cps);
     return true;
 }
-CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
+CollisionManifold DefaultSolver::detect(ColliderInterface* col1, ColliderInterface* col2, Rigidbody* rb1, Rigidbody* rb2) {
     CollisionManifold man;
-    if(rb1->getCollider().getType() == eCollisionShape::Polygon && rb2->getCollider().getType() == eCollisionShape::Polygon) {
-        man = detectOverlap((ColliderPolygon&)rb1->getCollider(), (ColliderPolygon&)rb2->getCollider());
-    } else if(rb1->getCollider().getType() == eCollisionShape::Circle && rb2->getCollider().getType() == eCollisionShape::Circle) {
-        man = detectOverlap((ColliderCircle&)rb1->getCollider(), (ColliderCircle&)rb2->getCollider());
+    if(col1->getType() == eCollisionShape::Polygon && col2->getType() == eCollisionShape::Polygon) {
+        man = detectOverlap(*(ColliderPolygon*)col1, *(ColliderPolygon*)col2);
+    } else if(col1->getType() == eCollisionShape::Circle && col2->getType() == eCollisionShape::Circle) {
+        man = detectOverlap(*(ColliderCircle*)col1, *(ColliderCircle*)col2);
     }
     man.r1 = rb1;
     man.r2 = rb2;
     for(int i = 0; i < 2; i++) {
         if(i == 1) {
             std::swap(rb1, rb2);
+            std::swap(col1, col2);
         }
-        if(rb1->getCollider().getType() == eCollisionShape::Circle && rb2->getCollider().getType() == eCollisionShape::Polygon) {
-            man = detectOverlap((ColliderCircle&)rb1->getCollider(), (ColliderPolygon&)rb2->getCollider());
+        if(col1->getType() == eCollisionShape::Circle && col2->getType() == eCollisionShape::Polygon) {
+            man = detectOverlap(*(ColliderCircle*)col1, *(ColliderPolygon*)col2);
             man.r1 = rb1;
             man.r2 = rb2;
         }
     }
+    return man;
+}
+CollisionManifold DefaultSolver::solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) {
+    auto man = detect(&rb1->getCollider(), &rb2->getCollider(), rb1, rb2);
     handleOverlap(*rb1, *rb2, man);
     handle(man, restitution, sfriction, dfriction);
     return man;

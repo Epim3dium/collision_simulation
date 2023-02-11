@@ -33,11 +33,11 @@ float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
     }
     return abs(mmoi);
 }
-void RigidPolygon::addForce(vec2f force, vec2f cp) {
+void Rigidbody::addForce(vec2f force, vec2f cp) {
     force /= mass;
     addVelocity(force, cp);
 }
-void RigidPolygon::addVelocity(vec2f vel, vec2f cp) {
+void Rigidbody::addVelocity(vec2f vel, vec2f cp) {
     if(isStatic)
         return;
     vec2f cn = norm(vel);

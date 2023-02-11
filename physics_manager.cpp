@@ -20,10 +20,18 @@
 
 namespace EPI_NAMESPACE {
 
+template<class T>
+static bool hasDuplicates(const std::set<T>& s1, const std::set<T>& s2) {
+    for(auto i : s2) {
+        if(s1.contains(i))
+            return true;
+    }
+    return false;
+}
 static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
-    return !(
-        ( rb1.isDormant() && rb2.isDormant()) ||
-        (rb1.layer == rb2.layer));
+    return !(rb1.isDormant() && rb2.isDormant()) && 
+        (rb2.collision_mask.size() == 0 || hasDuplicates(rb1.collision_layer, rb2.collision_mask)) && 
+        (rb1.collision_mask.size() == 0 || hasDuplicates(rb2.collision_layer, rb1.collision_mask));
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     return m_rigidbodiesQT.findAllIntersections();
@@ -52,13 +60,13 @@ void PhysicsManager::m_updateRestraints(float delT) {
 }
 void PhysicsManager::m_processTriggers() {
     for(auto& t : m_triggers) {
-        if(t->aabb().min == t->aabb().max)
+        if(t->getCollider().getAABB().min == t->getCollider().getAABB().max)
             continue;
-        auto possible = m_rigidbodiesQT.query(t->aabb());
+        auto possible = m_rigidbodiesQT.query(t->getCollider().getAABB());
         for(auto& r : possible) {
-            auto man = t->detectTrigger(r);
+            auto man = m_solver->detect(&t->getCollider(), &r->getCollider(), nullptr, nullptr);
             if(man.detected) {
-                t->onActivation(r, man.contact_normal);
+                t->onActivation(r, man.cn);
             }
         }
     }

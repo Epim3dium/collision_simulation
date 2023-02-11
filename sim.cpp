@@ -202,8 +202,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                 if(selection.last_restrain_sel && sel) {
                     auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
                     auto last_selP = selection.last_restrain_sel_off;
-                    auto* res = new RestraintPoint(len(selection.last_mouse_pos - mpos)
-                        , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP);
+                    auto* res = new RestraintRotation(sel, selection.last_restrain_sel);
                     restraints.push_back(res);
                     physics_manager.bind(res);
                     selection.last_restrain_sel = nullptr;
@@ -402,7 +401,6 @@ void Sim::update(float delT) {
                     ImGui::SliderFloat("change static fric" , &hovered_last->material.sfriction, 0.0f, 1.f);
                     ImGui::SliderFloat("change dynamic fric" , &hovered_last->material.dfriction, 0.0f, 1.f);
                     ImGui::SliderFloat("change restitution" , &hovered_last->material.restitution, 0.0f, 1.f);
-                    ImGui::InputScalar("layer: ", ImGuiDataType_U32, &hovered_last->layer);
                 }else {
                     ImGui::Text("NONE SELECTED");
                 }

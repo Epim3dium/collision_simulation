@@ -5,7 +5,10 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
+#include <sys/_types/_size_t.h>
 #include <vector>
+#include <set>
+
 namespace EPI_NAMESPACE {
 
 enum class eCollisionShape {
@@ -103,33 +106,32 @@ private:
         static size_t s_id = 1;
         return s_id++;
     }
-    inline static size_t getNextLayer() {
-        static size_t id = 0;
-        return ++id;
-    }
     size_t m_id;
 public:
-    size_t layer;
     inline size_t getID() const {
         return m_id;
     }
-    RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()), layer(getNextLayer()) {}
-    RigidbodyIdentificators() : m_id(getNextID()), layer(getNextLayer()) {}
+    RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()) {}
+    RigidbodyIdentificators() : m_id(getNextID()) {}
 };
 
 class Rigidbody : public RigidbodyIdentificators {
 public:
+    std::set<size_t> collision_mask = {1};
+    std::set<size_t> collision_layer = {1};
+
     bool isStatic = false;
     bool lockRotation = false;
 
     vec2f velocity;
-    vec2f acceleration;
-
     float angular_velocity = 0.f;
+
     float mass = 1.f;
     Material material;
+
     float pressure = 0.f;
     float time_immobile = 0.f;
+
     bool isDormant() const {
         return time_immobile > 5.f || isStatic;
     }
@@ -148,6 +150,8 @@ public:
     inline void addForce(vec2f force) {
         velocity += force / mass;
     }
+    void addVelocity(vec2f dir, vec2f cp);
+    void addForce(vec2f dir, vec2f cp);
 };
 
 
@@ -158,8 +162,6 @@ public:
     ColliderInterface& getCollider() override {
         return collider;
     }
-    void addVelocity(vec2f dir, vec2f cp);
-    void addForce(vec2f dir, vec2f cp);
 
     RigidPolygon(const Polygon& poly) : collider(poly) { 
     }

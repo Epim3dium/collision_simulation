@@ -25,6 +25,7 @@ struct CollisionManifold {
 };
 class SolverInterface {
 public:
+    virtual CollisionManifold detect(ColliderInterface* col1, ColliderInterface* col2, Rigidbody* rb1, Rigidbody* rb2) = 0;
     virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) = 0;
 };
 class DefaultSolver : public SolverInterface {
@@ -41,7 +42,8 @@ private:
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);
 public:
 
-    virtual CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
+    CollisionManifold detect(ColliderInterface* col1, ColliderInterface* col2, Rigidbody* rb1 = nullptr, Rigidbody* rb2 = nullptr) override;
+    CollisionManifold solve(Rigidbody* rb1, Rigidbody* rb2, float restitution, float sfriction, float dfriction) override;
 };
 
 }
