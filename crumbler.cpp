@@ -16,7 +16,7 @@ Polygon Crumbler::m_getShape(ColliderInterface& col) {
         case eCollisionShape::Polygon:
             return (ColliderPolygon&)col;
         case eCollisionShape::Circle:
-            return PolygonReg(col.getPos(), 0.f, 16U, ((ColliderCircle&)col).radius);
+            return Polygon::CreateRegular(col.getPos(), 0.f, 16U, ((ColliderCircle&)col).radius);
     }
 }
 std::vector<std::vector<Crumbler::VertNode> > Crumbler::m_generateVerticies(AABB aabb) {
@@ -59,7 +59,7 @@ std::vector<Polygon> Crumbler::crumble(ColliderInterface& col, RNG* rng) {
 
     Polygon shape = m_getShape(col);
 
-    auto aabb = AABBfromPolygon(shape);
+    auto aabb = AABB::CreateFromPolygon(shape);
     aabb.setSize(aabb.size() * 3.f);
     auto verticies = m_generateVerticies(aabb);
     auto centers = m_generateCenters(verticies);
@@ -129,7 +129,7 @@ std::vector<Polygon> Crumbler::crumble(ColliderInterface& col, RNG* rng) {
                 model.emplace(c[i]->pos);
             }
         }
-        auto t = PolygonfromPoints(std::vector<vec2f>(model.begin(), model.end()));
+        auto t = Polygon::CreateFromPoints(std::vector<vec2f>(model.begin(), model.end()));
         if(model.size() > 2 && area(t.getModelVertecies()) > big_area * 0.001f) {
             result.push_back(t);
         }

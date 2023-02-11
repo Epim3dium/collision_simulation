@@ -99,16 +99,16 @@ private:
         {
             // North West
             case 0:
-                return AABBms(origin, childSize);
+                return AABB::CreateMinSize(origin, childSize);
             // Norst East
             case 1:
-                return AABBms(vec2f(origin.x + childSize.x, origin.y), childSize);
+                return AABB::CreateMinSize(vec2f(origin.x + childSize.x, origin.y), childSize);
             // South West
             case 2:
-                return AABBms(vec2f(origin.x, origin.y + childSize.y), childSize);
+                return AABB::CreateMinSize(vec2f(origin.x, origin.y + childSize.y), childSize);
             // South East
             case 3:
-                return AABBms(origin + childSize, childSize);
+                return AABB::CreateMinSize(origin + childSize, childSize);
             default:
                 assert(false && "Invalid child index");
                 return Box();

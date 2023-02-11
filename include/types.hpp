@@ -41,6 +41,8 @@ float dot(vec2f, vec2f);
 float cross(vec2f, vec2f);
 vec2f sign(vec2f);
 
+struct Circle;
+struct Polygon;
 struct AABB {
     vec2f min;
     vec2f max;
@@ -86,7 +88,11 @@ struct AABB {
         min = t - s / 2.f;
         max = t + s / 2.f;
     }
-    AABB(vec2f min_ = vec2f(0.f, 0.f), vec2f max_ = vec2f(1.f, 1.f)) : min(min_), max(max_) {}
+    static AABB CreateMinMax(vec2f min, vec2f max);
+    static AABB CreateCenterSize(vec2f center, vec2f size);
+    static AABB CreateMinSize(vec2f min, vec2f size);
+    static AABB CreateFromCircle(const Circle& c);
+    static AABB CreateFromPolygon(const Polygon& p);
 };
 struct Ray {
     vec2f pos;
@@ -96,6 +102,8 @@ struct Ray {
         return len(dir);
     }
     Ray() {}
+    static Ray CreatePoints(vec2f a, vec2f b);
+    static Ray CreatePositionDirection(vec2f p, vec2f d);
 };
 struct Circle {
 
@@ -108,20 +116,12 @@ class Polygon {
     std::vector<vec2f> model;
     float rotation;
     vec2f pos;
-    AABB m_aabb;
     void m_updatePoints() {
-        m_aabb.min = vec2f(INFINITY, INFINITY);
-        m_aabb.max = vec2f(-INFINITY, -INFINITY);
         for(size_t i = 0; i < model.size(); i++) {
             const auto& t = model[i];
             points[i].x = t.x * cosf(rotation) - t.y * sinf(rotation);
             points[i].y = t.x * sinf(rotation) + t.y * cosf(rotation);
             points[i] += pos;
-
-            m_aabb.min.x = std::min(m_aabb.min.x, points[i].x);
-            m_aabb.max.x = std::max(m_aabb.max.x, points[i].x);
-            m_aabb.min.y = std::min(m_aabb.min.y, points[i].y);
-            m_aabb.max.y = std::max(m_aabb.max.y, points[i].y);
         }
     }
     void m_avgPoints() {
@@ -177,23 +177,17 @@ public:
         m_updatePoints();
         m_avgPoints();
     }
-    friend AABB AABBfromPolygon(const Polygon& p) {return p.m_aabb; }
+
+    static Polygon CreateRegular(vec2f pos, float rot, size_t count, float dist);
+    static Polygon CreateFromAABB(const AABB& aabb);
+    static Polygon CreateFromPoints(std::vector<vec2f> verticies);
+
     friend void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr);
     friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr);
     friend void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr);
 };
-AABB AABBfromCircle(const Circle& c);
 
-AABB AABBmm(vec2f min, vec2f max);
-AABB AABBcs(vec2f center, vec2f size);
-AABB AABBms(vec2f min, vec2f size);
 
-Ray Rayab(vec2f a, vec2f b);
-Ray Raypd(vec2f p, vec2f d);
-
-Polygon PolygonReg(vec2f pos, float rot, size_t count, float dist);
-Polygon PolygonfromPoints(std::vector<vec2f> verticies);
-Polygon PolygonfromAABB(const AABB& aabb);
 // hue: 0-360°; sat: 0.f-1.f; val: 0.f-1.f
 
 vec2f operator* (vec2f a, vec2f b);

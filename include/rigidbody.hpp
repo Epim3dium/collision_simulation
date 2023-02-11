@@ -83,7 +83,7 @@ public:
         return eCollisionShape::Polygon;
     }
     AABB getAABB() const override {
-        return AABBfromPolygon(*this);
+        return AABB::CreateFromPolygon(*this);
     }
 
     ColliderPolygon(const Polygon& poly) : Polygon(poly) { 

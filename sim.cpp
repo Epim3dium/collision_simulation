@@ -88,7 +88,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
     }
 #if DEBUG_DRAW
     AABB t = rb->getCollider().getAABB();
-    drawOutline(rw, PolygonfromAABB(t), PastelColor::Purple);
+    drawOutline(rw, Polygon::CreateFromAABB(t), PastelColor::Purple);
 #endif
 
 }
@@ -156,7 +156,7 @@ void Sim::setup() {
     {
         AABB trigger = aabb_inner;
         trigger.setCenter({10000.f, 10000.f});
-        selection.trigger = std::make_unique<SelectingTrigger>(SelectingTrigger(PolygonfromAABB(trigger)));
+        selection.trigger = std::make_unique<SelectingTrigger>(SelectingTrigger(Polygon::CreateFromAABB(trigger)));
         physics_manager.bind(selection.trigger.get());
     }
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
@@ -202,7 +202,8 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                 if(selection.last_restrain_sel && sel) {
                     auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
                     auto last_selP = selection.last_restrain_sel_off;
-                    auto* res = new RestraintRotation(sel, selection.last_restrain_sel);
+                    auto* res = new RestraintPoint(len(selection.last_mouse_pos - mpos)
+                        , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP);
                     restraints.push_back(res);
                     physics_manager.bind(res);
                     selection.last_restrain_sel = nullptr;
@@ -257,7 +258,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         if(event.key.control && event.key.code == sf::Keyboard::A) {
             selection.selected = rigidbodies;
         } else if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
-            RigidPolygon t(PolygonfromPoints(polygon_creation_vec));
+            RigidPolygon t(Polygon::CreateFromPoints(polygon_creation_vec));
             createRigidbody(t);
             polygon_creation_vec.clear();
         }else if(event.key.code == sf::Keyboard::X) {
@@ -275,7 +276,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             createRigidbody(t);
         }else if (event.key.code == sf::Keyboard::V) {
             vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-            RigidPolygon t = PolygonReg(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
+            RigidPolygon t = Polygon::CreateRegular(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
             createRigidbody(t);
         }
     }

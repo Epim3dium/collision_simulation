@@ -10,7 +10,7 @@ void RestraintPoint::update(float delT) {
     auto bp = rotateVec(model_point_b, ref_b.getRot()) + ref_b.getPos() + b->velocity * delT;
     auto diff = ap - bp;
     auto l = len(diff);
-    if(l > dist) {
+    if(abs(l) > dist * 0.1f) {
         auto off = (l - dist);
         auto n = diff / l;
         if(!b->isStatic)

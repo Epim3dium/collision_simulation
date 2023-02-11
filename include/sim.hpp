@@ -23,7 +23,7 @@ struct SelectingTrigger : public TriggerPolygonInterface {
     void onActivation(Rigidbody* rb, vec2f cn) override;
     void clear() { selected.clear(); }
     void setShape(AABB aabb) {
-        *this = PolygonfromAABB(aabb);
+        *this = Polygon::CreateFromAABB(aabb);
     }
     SelectingTrigger(const Polygon& shape) : TriggerPolygonInterface(shape) {}
 };

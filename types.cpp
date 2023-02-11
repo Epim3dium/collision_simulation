@@ -27,34 +27,45 @@ float cross(vec2f a, vec2f b) {
 vec2f sign(vec2f x) {
     return { std::copysign(1.f, x.x), std::copysign(1.f, x.y) };
 }
-AABB AABBfromCircle(const Circle& c) {
-    return AABB(c.pos - vec2f(c.radius, c.radius), c.pos + vec2f(c.radius, c.radius));
+AABB AABB::CreateFromCircle(const Circle& c) {
+    return AABB::CreateMinMax(c.pos - vec2f(c.radius, c.radius), c.pos + vec2f(c.radius, c.radius));
 }
-AABB AABBmm(vec2f min, vec2f max) {
+AABB AABB::CreateFromPolygon(const Polygon& p) {
+    vec2f min = {INFINITY, INFINITY};
+    vec2f max = {-INFINITY, -INFINITY};
+    for(auto& v : p.getVertecies()) {
+        min.x = std::min(min.x, v.x);
+        min.y = std::min(min.y, v.y);
+        max.x = std::max(max.x, v.x);
+        max.y = std::max(max.y, v.y);
+    }
+    return AABB::CreateMinMax(min, max);
+}
+AABB AABB::CreateMinMax(vec2f min, vec2f max) {
     AABB a;
     a.min = min;
     a.max = max;
     return a;
 }
-AABB AABBcs(vec2f center, vec2f size) {
+AABB AABB::CreateCenterSize(vec2f center, vec2f size) {
     AABB a;
     a.setCenter(center);
     a.setSize(size);
     return a;
 }
-AABB AABBms(vec2f min, vec2f size) {
+AABB AABB::CreateMinSize(vec2f min, vec2f size) {
     AABB a;
     a.min = min;
     a.max = a.min + size;
     return a;
 }
-Ray Rayab(vec2f a, vec2f b) {
+Ray Ray::CreatePoints(vec2f a, vec2f b) {
     Ray r;
     r.pos = a;
     r.dir = b - a;
     return r;
 }
-Ray Raypd(vec2f p, vec2f d) {
+Ray Ray::CreatePositionDirection(vec2f p, vec2f d) {
     Ray r;
     r.pos = p;
     r.dir = d;
@@ -108,22 +119,22 @@ void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
         rw.draw(t, 2, sf::Lines);
     }
 }
-Polygon PolygonReg(vec2f pos, float rot, size_t count, float dist) {
+Polygon Polygon::CreateRegular(vec2f pos, float rot, size_t count, float dist) {
     std::vector<vec2f> model;
     for(size_t i = 0; i < count; i++) {
         model.push_back(vec2f(sinf(3.141f * 2.f * ((float)i / (float)count)), cosf(3.141f * 2.f * ((float)i / (float)count))) * dist );
     }
     return Polygon(pos, rot, model);
 }
-Polygon PolygonfromPoints(std::vector<vec2f> verticies) {
+Polygon Polygon::CreateFromPoints(std::vector<vec2f> verticies) {
     vec2f avg = std::reduce(verticies.begin(), verticies.end()) / (float)verticies.size();
     for(auto& v : verticies)
         v -= avg;
     return Polygon(avg, 0.f, verticies);
 }
-Polygon PolygonfromAABB(const AABB& aabb) {
+Polygon Polygon::CreateFromAABB(const AABB& aabb) {
     std::vector<vec2f> points = {aabb.min, vec2f(aabb.min.x, aabb.max.y), aabb.max, vec2f(aabb.max.x, aabb.min.y)};
-    return PolygonfromPoints(points);
+    return Polygon::CreateFromPoints(points);
 }
 
 
