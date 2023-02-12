@@ -1,7 +1,8 @@
+#pragma once
 #include "SFML/Graphics/PrimitiveType.hpp"
 #include "SFML/System/Vector2.hpp"
 
-namespace EPI_NAMESPACE {
+namespace epi {
 
 typedef sf::Vector2f vec2f;
 
@@ -36,10 +37,10 @@ public:
             return EPI_CAST_SCALEPROXY(*this).setScale(right);
         }
     }scale;
-private:
+protected:
     vec2f m_position;
-    float m_rotation;
-    vec2f m_scale;
+    float m_rotation = 0.f;
+    vec2f m_scale = {1.f, 1.f};
 public:
     virtual vec2f getPos() const {return m_position; }
     virtual void setPos(vec2f v) {m_position = v; }

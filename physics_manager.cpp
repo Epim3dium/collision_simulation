@@ -119,12 +119,12 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
         for(auto& o : open) {
             switch(o->getCollider().getType()) {
                 case eCollisionShape::Circle:
-                    if(isOverlappingPointCircle(p.pos, ((RigidCircle*)o)->collider)) {
+                    if(isOverlappingPointCircle(p.pos, ((RigidCircle*)o)->collider.getShape())) {
                         p.isActive = false;
                     }
                 break;
                 case eCollisionShape::Polygon:
-                    if(isOverlappingPointPoly(p.pos, ((RigidPolygon*)o)->collider))
+                    if(isOverlappingPointPoly(p.pos, ((RigidPolygon*)o)->collider.getShape()))
                         p.isActive = false;
                 break;
             }

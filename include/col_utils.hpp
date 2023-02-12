@@ -11,7 +11,7 @@ vec2f findClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point);
 //finds the closest vetor to point that lies on one of poly's edges
 vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly);
 //returns all of contact points of 2 polygons
-std::vector<vec2f> findContactPoints(Polygon& r1, Polygon& r2);
+std::vector<vec2f> findContactPoints(const Polygon& r1, const Polygon& r2);
 //calculates area of polygon whose center should be at {0, 0}
 float area(const std::vector<vec2f>& model);
 //returns true if a and b are nearly equal

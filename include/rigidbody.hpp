@@ -19,34 +19,51 @@ struct Rigidbody;
 //calculating inertia of polygon shape
 float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
 
-struct ColliderInterface {
+struct ColliderInterface : public Transform {
     virtual eCollisionShape getType() const = 0;
     virtual AABB getAABB() const = 0;
-    virtual vec2f getPos() const = 0;
-    virtual void setPos(vec2f) = 0;
-    virtual float getRot() const = 0;
-    virtual void setRot(float) = 0;
+
+    virtual vec2f getPos() const override = 0;
+    virtual void setPos(vec2f) override = 0;
+
+    virtual vec2f getScale() const override = 0;
+    virtual void setScale(vec2f) override = 0;
+
+    virtual float getRot() const override = 0;
+    virtual void setRot(float) override = 0;
     virtual float inertia(float mass) const = 0;
 };
-struct ColliderCircle : public ColliderInterface, public Circle {
+struct ColliderCircle : public ColliderInterface {
     AABB m_aabb;
+    Circle m_shape;
     public:
-    float rot;
     inline float inertia(float mass) const override {
-        return 0.25f * mass * radius * radius;
+        return 0.25f * mass * m_shape.radius * m_shape.radius;
     }
+
     virtual vec2f getPos() const override {
-        return pos;
+        return m_shape.pos;
     }
     void setPos(vec2f p) override {
-        pos = p;
-        m_aabb = {pos - vec2f(radius, radius), pos + vec2f(radius, radius) };
+        m_shape.pos = p;
+        m_aabb = {p - vec2f(m_shape.radius, m_shape.radius), p + vec2f(m_shape.radius, m_shape.radius) };
     }
     float getRot() const override {
-        return rot;
+        return m_rotation;
     }
     void setRot(float r) override {
-        rot = r;
+        m_rotation = r;
+    }
+    vec2f getScale() const override {
+        return m_scale;
+    }
+    void setScale(vec2f s) override {
+        m_scale = s;
+    }
+    Circle getShape() const {
+        auto tmp = m_shape;
+        tmp.radius *= std::max(m_scale.x, m_scale.y);
+        return tmp;
     }
 
     inline eCollisionShape getType() const  override  {
@@ -55,40 +72,53 @@ struct ColliderCircle : public ColliderInterface, public Circle {
     AABB getAABB() const override {
         return m_aabb;
     }
-    ColliderCircle(const Circle& c) : Circle(c) {}
-    ColliderCircle(vec2f pos, float radius) : Circle(pos, radius) {}
+    ColliderCircle(const Circle& c) : m_shape(c) { }
+    ColliderCircle(vec2f pos, float radius) : m_shape(pos, radius) { }
 };
-struct ColliderPolygon : public ColliderInterface, public Polygon {
+struct ColliderPolygon : public ColliderInterface {
 private:
+    Polygon m_shape;
 public:
     void addVelocity(vec2f dir, vec2f cp);
     void addForce(vec2f dir, vec2f cp);
+
     inline float inertia(float mass) const override { 
-        return getInertia(vec2f(0, 0), getModelVertecies(), mass); 
+        return getInertia(vec2f(0, 0), m_shape.getModelVertecies(), mass); 
     }
     virtual vec2f getPos() const override {
-        return Polygon::getPos();
+        return m_shape.getPos();
     }
     void setPos(vec2f p) override {
-        Polygon::setPos(p);
+        m_shape.setPos(p);
     }
     float getRot() const override {
-        return Polygon::getRot();
+        return m_shape.getRot();
     }
     void setRot(float r) override {
-        Polygon::setRot(r);
+        m_shape.setRot(r);
+    }
+    vec2f getScale() const override {
+        return m_scale;
+    }
+    void setScale(vec2f s) override {
+        m_scale = s;
+    }
+    Polygon getShape() const {
+        auto tmp = m_shape;
+        tmp.scale(m_scale);
+        return tmp;
     }
 
     inline eCollisionShape getType() const  override  {
         return eCollisionShape::Polygon;
     }
     AABB getAABB() const override {
-        return AABB::CreateFromPolygon(*this);
+        return AABB::CreateFromPolygon(m_shape);
     }
 
-    ColliderPolygon(const Polygon& poly) : Polygon(poly) { 
+    ColliderPolygon(const Polygon& poly) : m_shape(poly) { 
     }
-    ColliderPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : Polygon(pos_, rot_, model_) { 
+    ColliderPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : m_shape(pos_, rot_, model_) { 
     }
 };
 

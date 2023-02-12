@@ -14,9 +14,9 @@ namespace EPI_NAMESPACE {
 Polygon Crumbler::m_getShape(ColliderInterface& col) {
     switch(col.getType()) {
         case eCollisionShape::Polygon:
-            return (ColliderPolygon&)col;
+            return ((ColliderPolygon&)col).getShape();
         case eCollisionShape::Circle:
-            return Polygon::CreateRegular(col.getPos(), 0.f, 16U, ((ColliderCircle&)col).radius);
+            return Polygon::CreateRegular(col.getPos(), 0.f, 16U, ((ColliderCircle&)col).getShape().radius);
     }
 }
 std::vector<std::vector<Crumbler::VertNode> > Crumbler::m_generateVerticies(AABB aabb) {

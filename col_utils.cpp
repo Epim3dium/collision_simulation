@@ -128,10 +128,10 @@ bool nearlyEqual(float a, float b) {
 bool nearlyEqual(vec2f a, vec2f b) {
     return nearlyEqual(a.x, b.x) && nearlyEqual(a.y, b.y);
 }
-std::vector<vec2f> findContactPoints(Polygon& p1, Polygon& p2) {
+std::vector<vec2f> findContactPoints(const Polygon& p1, const Polygon& p2) {
     std::vector<vec2f> cps;
-    Polygon* poly1 = &p1;
-    Polygon* poly2 = &p2;
+    Polygon const* poly1 = &p1;
+    Polygon const* poly2 = &p2;
     float closest_dist = INFINITY;
     for(int j = 0; j< 2; j++) {
         if(j == 1){ 

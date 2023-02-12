@@ -30,10 +30,10 @@ void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
 static bool PointVCollider(vec2f p, ColliderInterface& rb) {
     switch(rb.getType()) {
         case eCollisionShape::Circle:
-            return isOverlappingPointCircle(p, (ColliderCircle&)rb);
+            return isOverlappingPointCircle(p, ((ColliderCircle&)rb).getShape());
         break;
         case eCollisionShape::Polygon:
-            return isOverlappingPointPoly(p, (ColliderPolygon&)rb);
+            return isOverlappingPointPoly(p, ((ColliderPolygon&)rb).getShape());
         break;
     }
 }
@@ -67,23 +67,23 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
     switch(col.getType()) {
         case eCollisionShape::Circle: {
             ColliderCircle c((ColliderCircle&)col);
-            sf::CircleShape cs(c.radius);
-            cs.setPosition(c.pos - vec2f(c.radius, c.radius));
+            sf::CircleShape cs(c.getShape().radius);
+            cs.setPosition(c.position - vec2f(c.getShape().radius, c.getShape().radius));
             cs.setFillColor(color);
             cs.setOutlineColor(Color::Black);
             cs.setOutlineThickness(1.f);
             rw.draw(cs);
             cs.setOutlineThickness(0.f);
-            float r = c.radius / 2.f;
+            float r = c.getShape().radius / 2.f;
             cs.setRadius(r);
-            cs.setPosition(c.pos + vec2f(cos(c.rot), sin(c.rot)) * c.radius / 2.f - vec2f(r, r));
+            cs.setPosition(c.position + vec2f(cos(c.rotation()), sin(c.rotation())) * c.getShape().radius / 2.f - vec2f(r, r));
             color = blend(color, Color::Black, 0.2f);
             cs.setFillColor(color);
             rw.draw(cs);
         }break;
         case eCollisionShape::Polygon:
-            drawFill(rw, (ColliderPolygon&)col, color);
-            drawOutline(rw, (ColliderPolygon&)col, sf::Color::Black);
+            drawFill(rw, ((ColliderPolygon&)col).getShape(), color);
+            drawOutline(rw, ((ColliderPolygon&)col).getShape(), sf::Color::Black);
         break;
     }
 #if DEBUG_DRAW
@@ -334,13 +334,13 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(isOverlappingPointPoly(mpos, p.collider)) {
+        if(isOverlappingPointPoly(mpos, p.collider.getShape())) {
             found = &p;
             break;
         }
     }
     for(auto& c : circs) {
-        if(isOverlappingPointCircle(mpos, c.collider)) {
+        if(isOverlappingPointCircle(mpos, c.collider.getShape())) {
             found = &c;
             break;
         }
@@ -434,7 +434,7 @@ void Sim::update(float delT) {
 void Sim::draw() {
     //drawing
     window.clear(PastelColor::bg4);
-    drawFill(window, *selection.trigger, PastelColor::Purple);
+    drawFill(window, selection.trigger->getShape(), PastelColor::Purple);
 
     for(auto& r : rigidbodies) {
         DrawRigidbody(r, selection.selected, window);

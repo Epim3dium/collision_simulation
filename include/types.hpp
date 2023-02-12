@@ -154,9 +154,10 @@ public:
         pos = v;
         m_updatePoints();
     }
-    void scale(float s) {
+    void scale(vec2f s) {
         for(auto& m : model) {
-            m *= s;
+            m.x *= s.x;
+            m.y *= s.y;
         }
         m_updatePoints();
     }

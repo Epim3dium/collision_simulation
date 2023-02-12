@@ -14,23 +14,23 @@ namespace EPI_NAMESPACE {
 
 CollisionManifold detectOverlap(ColliderCircle& c1, ColliderPolygon& c2) {
 
-    auto intersection = intersectCirclePolygon(c1, c2);
+    auto intersection = intersectCirclePolygon(c1.getShape(), c2.getShape());
     if(intersection.detected) {
         return {true, nullptr, nullptr, c1.getPos(), c2.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
 CollisionManifold detectOverlap(ColliderPolygon& c1, ColliderPolygon& c2) {
-    auto intersection = intersectPolygonPolygon(c1, c2);
+    auto intersection = intersectPolygonPolygon(c1.getShape(), c2.getShape());
     if(intersection.detected) {
         std::vector<vec2f> cps;
-        cps = findContactPoints(c1, c2);
+        cps = findContactPoints(c1.getShape(), c2.getShape());
         return {true, nullptr, nullptr, c1.getPos(), c2.getPos(), intersection.contact_normal, cps , intersection.overlap};
     }
     return {false};
 }
 CollisionManifold detectOverlap(ColliderCircle& r1, ColliderCircle& r2) {
-    auto intersection = intersectCircleCircle(r1, r2);
+    auto intersection = intersectCircleCircle(r1.getShape(), r2.getShape());
     if(intersection.detected) {
         return {true, nullptr, nullptr, r1.getPos(), r2.getPos(), intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
