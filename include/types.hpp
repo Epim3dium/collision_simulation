@@ -10,9 +10,13 @@
 
 #include "SFML/Graphics.hpp"
 
+#include "transform.hpp"
+
 #define CONSOLAS_PATH "assets/Consolas.ttf"
 #define EPI_NAMESPACE epi
+
 namespace EPI_NAMESPACE {
+
 typedef sf::Vector2f vec2f;
 typedef sf::Vector2i vec2i;
 typedef sf::Color Color;
@@ -43,6 +47,7 @@ vec2f sign(vec2f);
 
 struct Circle;
 struct Polygon;
+
 struct AABB {
     vec2f min;
     vec2f max;
