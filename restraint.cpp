@@ -6,17 +6,25 @@ void RestraintPoint::update(float delT) {
     auto& ref_a = a->getCollider();
     auto& ref_b = b->getCollider();
 
-    auto ap = rotateVec(model_point_a, ref_a.getRot()) + ref_a.getPos() + a->velocity * delT;
-    auto bp = rotateVec(model_point_b, ref_b.getRot()) + ref_b.getPos() + b->velocity * delT;
+    vec2f ap = ref_a.position + rotateVec(model_point_a, ref_a.rotation);
+    vec2f bp = ref_b.position + rotateVec(model_point_b, ref_b.rotation);
     auto diff = ap - bp;
     auto l = len(diff);
+    auto spring_velocity = (a->velocity + b->velocity) / 2.f;
     if(abs(l) > dist * 0.1f) {
         auto off = (l - dist);
         auto n = diff / l;
-        if(!b->isStatic)
-            b->addVelocity(off * n * (1.f + a->isStatic), bp);
-        if(!a->isStatic)
-            a->addVelocity(-off * n * (1.f + b->isStatic), ap);
+        float damp_mag = delT * abs(off) / dist;
+        if(!b->isStatic) {
+            b->addVelocity(off * n * (1.f + a->isStatic) * delT * 1000.f, bp);
+            auto vn = norm(b->velocity);
+            b->velocity -= b->velocity * abs(dot(vn, n)) * damp_mag;
+        }
+        if(!a->isStatic){
+            a->addVelocity(off * -n * (1.f + b->isStatic) * delT * 1000.f, ap);
+            auto vn = norm(a->velocity);
+            a->velocity -= a->velocity * abs(dot(vn, -n)) * damp_mag;
+        }
     }
 }
 void RestraintDistance::update(float delT) {
@@ -25,10 +33,12 @@ void RestraintDistance::update(float delT) {
     if(l > dist) {
         auto off = (l - dist) / 2.f;
         auto n = diff / l;
-        if(!b->isStatic)
+        if(!b->isStatic) {
             b->velocity += off * n * (1.f + a->isStatic);
-        if(!a->isStatic)
+        }
+        if(!a->isStatic) {
             a->velocity -= off * n * (1.f + b->isStatic);
+        }
     }
 }
 void RestraintRotation::update(float delT) {
