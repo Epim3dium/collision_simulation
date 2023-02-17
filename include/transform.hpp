@@ -17,39 +17,67 @@ public:
         vec2f operator()() const {
             return EPI_CAST_POSPROXY(*this).getPos();
         }
+        void operator =(const PosProxy& right) {
+            *this = right();
+        }
         void operator =(const vec2f& right) {
             return EPI_CAST_POSPROXY(*this).setPos(right);
+        }
+        operator vec2f() const {
+            return (*this)();
         }
     }position;
     struct RotProxy{
         float operator()() const {
             return EPI_CAST_ROTATIONPROXY(*this).getRot();
         }
+        void operator =(const RotProxy& right) {
+            *this = right();
+        }
         void operator =(const float& right) {
             return EPI_CAST_ROTATIONPROXY(*this).setRot(right);
+        }
+        operator float() const {
+            return (*this)();
         }
     }rotation;
     struct ScaleProxy{
         vec2f operator()() const {
             return EPI_CAST_SCALEPROXY(*this).getScale();
         }
+        void operator =(const ScaleProxy& right) {
+            *this = right();
+        }
         void operator =(const vec2f& right) {
             return EPI_CAST_SCALEPROXY(*this).setScale(right);
         }
+        operator vec2f() const {
+            return (*this)();
+        }
     }scale;
-protected:
-    vec2f m_position;
-    float m_rotation = 0.f;
-    vec2f m_scale = {1.f, 1.f};
+
+    virtual vec2f getPos() const = 0;
+    virtual void setPos(vec2f v) = 0;
+
+    virtual vec2f getScale() const = 0;
+    virtual void setScale(vec2f v) = 0;
+
+    virtual float getRot() const = 0;
+    virtual void setRot(float r) = 0;
+};
+class ParentedTransform : public Transform {
+private:
+    Transform* m_parent;
 public:
-    virtual vec2f getPos() const {return m_position; }
-    virtual void setPos(vec2f v) {m_position = v; }
+    vec2f getPos() const override { return m_parent->getPos(); }
+    void setPos(vec2f v) override { m_parent->setPos(v); }
 
-    virtual vec2f getScale() const {return m_scale; }
-    virtual void setScale(vec2f v) {m_scale = v; }
+    vec2f getScale() const override { return m_parent->getScale(); }
+    void setScale(vec2f v) override { m_parent->setScale(v); }
 
-    virtual float getRot() const {return m_rotation; }
-    virtual void setRot(float r) {m_rotation = r; }
+    float getRot() const override { return m_parent->getRot(); }
+    void setRot(float r) override { m_parent->setRot(r); }
+    ParentedTransform(Transform* parent) : m_parent(parent) {}
 };
 
 

@@ -1,6 +1,7 @@
 #pragma once
 #include "col_utils.hpp"
 #include "imgui.h"
+#include "transform.hpp"
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -36,6 +37,8 @@ struct ColliderInterface : public Transform {
 struct ColliderCircle : public ColliderInterface {
     AABB m_aabb;
     Circle m_shape;
+    float m_rotation = 0.f;
+    vec2f m_scale = vec2f(1.f, 1.f);
     public:
     inline float inertia(float mass) const override {
         return 0.25f * mass * m_shape.radius * m_shape.radius;
@@ -78,6 +81,7 @@ struct ColliderCircle : public ColliderInterface {
 struct ColliderPolygon : public ColliderInterface {
 private:
     Polygon m_shape;
+    vec2f m_scale = {1.f, 1.f};
 public:
     void addVelocity(vec2f dir, vec2f cp);
     void addForce(vec2f dir, vec2f cp);
@@ -130,22 +134,7 @@ struct Material {
 };
 
 //struct made only to prevent ids from copying
-struct RigidbodyIdentificators {
-private:
-    inline static size_t getNextID()  {
-        static size_t s_id = 1;
-        return s_id++;
-    }
-    size_t m_id;
-public:
-    inline size_t getID() const {
-        return m_id;
-    }
-    RigidbodyIdentificators(const RigidbodyIdentificators&) : m_id(getNextID()) {}
-    RigidbodyIdentificators() : m_id(getNextID()) {}
-};
-
-class Rigidbody : public RigidbodyIdentificators {
+class Rigidbody : public ParentedTransform {
 public:
     std::set<size_t> collision_mask = {1};
     std::set<size_t> collision_layer = {1};
@@ -182,6 +171,7 @@ public:
     }
     void addVelocity(vec2f dir, vec2f cp);
     void addForce(vec2f dir, vec2f cp);
+    Rigidbody(Transform* parent) : ParentedTransform(parent) {}
 };
 
 
@@ -193,10 +183,8 @@ public:
         return collider;
     }
 
-    RigidPolygon(const Polygon& poly) : collider(poly) { 
-    }
-    RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : collider(pos_, rot_, model_) { 
-    }
+    RigidPolygon(const Polygon& poly) : collider(poly), Rigidbody(&collider) { }
+    RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : collider(pos_, rot_, model_), Rigidbody(&collider) { }
 };
 struct RigidCircle : public Rigidbody {
     AABB m_aabb;
@@ -206,9 +194,8 @@ struct RigidCircle : public Rigidbody {
     ColliderInterface& getCollider() override {
         return collider;
     }
-    //bool detectPossibleOverlap(Rigidbody* other) override;
     RigidCircle(const RigidCircle&) = default;
-    RigidCircle(const Circle& c) : collider(c) {}
-    RigidCircle(vec2f pos, float radius) : collider(pos, radius) {}
+    RigidCircle(const Circle& c) : collider(c), Rigidbody(&collider) {}
+    RigidCircle(vec2f pos, float radius) : collider(pos, radius), Rigidbody(&collider) {}
 };
 }
