@@ -420,7 +420,8 @@ void Sim::update(float delT) {
 
     //delete when out of frame
     for(auto& r : rigidbodies) {
-        r->velocity += vec2f(0.f, gravity) * delT;
+        if(!r->isStatic)
+            r->velocity += vec2f(0.f, gravity) * delT;
         if(!isOverlappingAABBAABB(aabb_outer, r->getCollider().getAABB())) {
             if(selection.selected.contains(r))
                 selection.selected.erase(r);

@@ -12,6 +12,7 @@ struct RestraintInterface {
 };
 
 struct RestraintDistance : public RestraintInterface {
+    static constexpr float restraint_force = 1000.f;
     Rigidbody* a;
     Rigidbody* b;
     float dist = 0.f;
@@ -23,6 +24,7 @@ struct RestraintDistance : public RestraintInterface {
     RestraintDistance(float distance, Rigidbody* r1, Rigidbody* r2) : a(r1), b(r2), dist(distance) { }
 };
 struct RestraintPoint : public RestraintInterface {
+    static constexpr float restraint_force = 1000.f;
     Rigidbody* a;
     vec2f model_point_a;
     Rigidbody* b;

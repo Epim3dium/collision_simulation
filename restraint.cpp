@@ -12,18 +12,14 @@ void RestraintPoint::update(float delT) {
     auto l = len(diff);
     auto spring_velocity = (a->velocity + b->velocity) / 2.f;
     if(abs(l) > dist * 0.1f) {
-        auto off = (l - dist);
+        auto off = (l - dist) / 2.f;
         auto n = diff / l;
-        float damp_mag = delT * abs(off) / dist;
+        auto mag = off * off * copysignf(1.f, off) * n * delT * restraint_force;
         if(!b->isStatic) {
-            b->addVelocity(off * n * (1.f + a->isStatic) * delT * 1000.f, bp);
-            auto vn = norm(b->velocity);
-            b->velocity -= b->velocity * abs(dot(vn, n)) * damp_mag;
+            b->addVelocity(mag * (1.f + a->isStatic), bp);
         }
         if(!a->isStatic){
-            a->addVelocity(off * -n * (1.f + b->isStatic) * delT * 1000.f, ap);
-            auto vn = norm(a->velocity);
-            a->velocity -= a->velocity * abs(dot(vn, -n)) * damp_mag;
+            a->addVelocity(-mag * (1.f + b->isStatic), ap);
         }
     }
 }
@@ -33,11 +29,12 @@ void RestraintDistance::update(float delT) {
     if(l > dist) {
         auto off = (l - dist) / 2.f;
         auto n = diff / l;
+        auto mag = off * off * copysignf(1.f, off) * n * delT * restraint_force;
         if(!b->isStatic) {
-            b->velocity += off * n * (1.f + a->isStatic);
+            b->velocity += mag* (1.f + a->isStatic);
         }
         if(!a->isStatic) {
-            a->velocity -= off * n * (1.f + b->isStatic);
+            a->velocity -= mag* (1.f + b->isStatic);
         }
     }
 }
