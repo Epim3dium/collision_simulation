@@ -13,48 +13,48 @@ typedef sf::Vector2f vec2f;
 
 class Transform {
 public:
-    struct PosProxy{
-        vec2f operator()() const {
-            return EPI_CAST_POSPROXY(*this).getPos();
-        }
-        void operator =(const PosProxy& right) {
-            *this = right();
-        }
-        void operator =(const vec2f& right) {
-            return EPI_CAST_POSPROXY(*this).setPos(right);
-        }
-        operator vec2f() const {
-            return (*this)();
-        }
-    }position;
-    struct RotProxy{
-        float operator()() const {
-            return EPI_CAST_ROTATIONPROXY(*this).getRot();
-        }
-        void operator =(const RotProxy& right) {
-            *this = right();
-        }
-        void operator =(const float& right) {
-            return EPI_CAST_ROTATIONPROXY(*this).setRot(right);
-        }
-        operator float() const {
-            return (*this)();
-        }
-    }rotation;
-    struct ScaleProxy{
-        vec2f operator()() const {
-            return EPI_CAST_SCALEPROXY(*this).getScale();
-        }
-        void operator =(const ScaleProxy& right) {
-            *this = right();
-        }
-        void operator =(const vec2f& right) {
-            return EPI_CAST_SCALEPROXY(*this).setScale(right);
-        }
-        operator vec2f() const {
-            return (*this)();
-        }
-    }scale;
+//    struct PosProxy{
+//        vec2f operator()() const {
+//            return EPI_CAST_POSPROXY(*this).getPos();
+//        }
+//        void operator =(const PosProxy& right) {
+//            *this = right();
+//        }
+//        void operator =(const vec2f& right) {
+//            return EPI_CAST_POSPROXY(*this).setPos(right);
+//        }
+//        operator vec2f() const {
+//            return (*this)();
+//        }
+//    }position;
+//    struct RotProxy{
+//        float operator()() const {
+//            return EPI_CAST_ROTATIONPROXY(*this).getRot();
+//        }
+//        void operator =(const RotProxy& right) {
+//            *this = right();
+//        }
+//        void operator =(const float& right) {
+//            return EPI_CAST_ROTATIONPROXY(*this).setRot(right);
+//        }
+//        operator float() const {
+//            return (*this)();
+//        }
+//    }rotation;
+//    struct ScaleProxy{
+//        vec2f operator()() const {
+//            return EPI_CAST_SCALEPROXY(*this).getScale();
+//        }
+//        void operator =(const ScaleProxy& right) {
+//            *this = right();
+//        }
+//        void operator =(const vec2f& right) {
+//            return EPI_CAST_SCALEPROXY(*this).setScale(right);
+//        }
+//        operator vec2f() const {
+//            return (*this)();
+//        }
+//    }scale;
 
     virtual vec2f getPos() const = 0;
     virtual void setPos(vec2f v) = 0;
@@ -144,8 +144,8 @@ static inline bool operator !=(type& left, Transform::PROXY##Proxy& right) {\
     return right() != left;\
 }\
 
-PROXYOPERATORS(Pos, vec2f);
-PROXYOPERATORS(Rot, float);
-PROXYOPERATORS(Scale, vec2f);
+//PROXYOPERATORS(Pos, vec2f);
+//PROXYOPERATORS(Rot, float);
+//PROXYOPERATORS(Scale, vec2f);
 
 }

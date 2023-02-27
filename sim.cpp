@@ -68,7 +68,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
         case eCollisionShape::Circle: {
             ColliderCircle c((ColliderCircle&)col);
             sf::CircleShape cs(c.getShape().radius);
-            cs.setPosition(c.position - vec2f(c.getShape().radius, c.getShape().radius));
+            cs.setPosition(c.getPos() - vec2f(c.getShape().radius, c.getShape().radius));
             cs.setFillColor(color);
             cs.setOutlineColor(Color::Black);
             cs.setOutlineThickness(1.f);
@@ -76,7 +76,7 @@ static void DrawRigidbody(Rigidbody* rb, const std::set<Rigidbody*>& selection, 
             cs.setOutlineThickness(0.f);
             float r = c.getShape().radius / 2.f;
             cs.setRadius(r);
-            cs.setPosition(c.position + vec2f(cos(c.rotation()), sin(c.rotation())) * c.getShape().radius / 2.f - vec2f(r, r));
+            cs.setPosition(c.getPos() + vec2f(cos(c.getRot()), sin(c.getRot())) * c.getShape().radius / 2.f - vec2f(r, r));
             color = blend(color, Color::Black, 0.2f);
             cs.setFillColor(color);
             rw.draw(cs);
@@ -193,20 +193,25 @@ void Sim::onEvent(const sf::Event &event, float delT) {
             if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
                 Rigidbody* sel = nullptr;
                 auto mpos = (vec2f)sf::Mouse::getPosition(window);
+                //detect the hovered body
                 for(auto r : rigidbodies) {
                     if(PointVCollider(mpos, r->getCollider())) {
                         sel = r;
                         break;
                     }
                 }
+                //what if last body was already selected
                 if(selection.last_restrain_sel && sel) {
                     auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
                     auto last_selP = selection.last_restrain_sel_off;
+                        
                     auto* res = new RestraintPoint(len(selection.last_mouse_pos - mpos)
                         , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP);
+                    res->damping_coef = 0.1f;
                     restraints.push_back(res);
                     physics_manager.bind(res);
                     selection.last_restrain_sel = nullptr;
+                //what if it is the first body selected
                 } else if(sel){
                     selection.last_mouse_pos = mpos;
                     selection.last_restrain_sel = sel; 

@@ -2,40 +2,51 @@
 #include "col_utils.hpp"
 #include <cmath>
 namespace EPI_NAMESPACE {
+//Correction impulse = - ( object mass / timestep ) * overlap distance along axis * coefficient - velocity along axis * coefficient
 void RestraintPoint::update(float delT) {
     auto& ref_a = a->getCollider();
     auto& ref_b = b->getCollider();
 
-    vec2f ap = ref_a.position + rotateVec(model_point_a, ref_a.rotation);
-    vec2f bp = ref_b.position + rotateVec(model_point_b, ref_b.rotation);
+    vec2f ap = ref_a.getPos() + rotateVec(model_point_a, ref_a.getRot());
+    vec2f bp = ref_b.getPos() + rotateVec(model_point_b, ref_b.getRot());
     auto diff = ap - bp;
+
     auto l = len(diff);
-    auto spring_velocity = (a->velocity + b->velocity) / 2.f;
-    if(abs(l) > dist * 0.1f) {
-        auto off = (l - dist) / 2.f;
-        auto n = diff / l;
-        auto mag = off * off * copysignf(1.f, off) * n * delT * restraint_force;
-        if(!b->isStatic) {
-            b->addVelocity(mag * (1.f + a->isStatic), bp);
-        }
-        if(!a->isStatic){
-            a->addVelocity(-mag * (1.f + b->isStatic), ap);
-        }
+    auto off = (l - dist) / 2.f;
+    float mag = off * off * copysign(1.f, off);
+    auto n = diff / l;
+
+    vec2f avg_vel = (a->velocity + b->velocity) / 2.f;
+
+    if(!b->isStatic) {
+        float b_corr_impulse = -(b->mass / delT) * mag * damping_coef - dot(-n, b->velocity - avg_vel) * damping_coef;
+        b->addForce(-n * b_corr_impulse * delT, ap);
+    }
+    if(!a->isStatic){
+        float a_corr_impulse = -(a->mass / delT) * mag * damping_coef - dot(n, a->velocity - avg_vel) * damping_coef;
+        a->addForce(n * a_corr_impulse * delT, ap);
     }
 }
 void RestraintDistance::update(float delT) {
     auto diff = a->getCollider().getPos() - b->getCollider().getPos();
     auto l = len(diff);
+
     if(l > dist) {
         auto off = (l - dist) / 2.f;
         auto n = diff / l;
-        auto mag = off * off * copysignf(1.f, off) * n * delT * restraint_force;
+        float mag = off * off * copysign(1.f, off);
+
+        vec2f avg_vel = (a->velocity + b->velocity) / 2.f;
+
         if(!b->isStatic) {
-            b->velocity += mag* (1.f + a->isStatic);
+            float b_corr_impulse = -(b->mass / delT) * mag * damping_coef - dot(-n, b->velocity - avg_vel) * damping_coef;
+            b->addForce(-n * b_corr_impulse * delT);
         }
-        if(!a->isStatic) {
-            a->velocity -= mag* (1.f + b->isStatic);
+        if(!a->isStatic){
+            float a_corr_impulse = -(a->mass / delT) * mag * damping_coef - dot(n, a->velocity - avg_vel) * damping_coef;
+            a->addForce(n * a_corr_impulse * delT);
         }
+
     }
 }
 void RestraintRotation::update(float delT) {
