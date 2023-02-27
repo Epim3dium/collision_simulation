@@ -33,7 +33,7 @@ class Sim {
 
     void delFromPolys(Rigidbody* rb) {
         for(auto p = polys.begin(); p != polys.end(); p++) {
-            if((void*)&p == (void*)rb) {
+            if(p->get() == rb) {
                 polys.erase(p);
                 break;
             }
@@ -41,7 +41,7 @@ class Sim {
     }
     void delFromCircs(Rigidbody* rb) {
         for(auto p = circs.begin(); p != circs.end(); p++) {
-            if((void*)&p == (void*)rb) {
+            if(p->get() == rb) {
                 circs.erase(p);
                 break;
             }
@@ -59,26 +59,25 @@ public:
     ParticleManager particle_manager = ParticleManager(8192U);
     
     
-    std::list<RigidPolygon> polys;
-    std::list<RigidCircle> circs;
+    std::vector<std::shared_ptr<RigidPolygon>> polys;
+    std::vector<std::shared_ptr<RigidCircle>> circs;
     std::set<Rigidbody*> rigidbodies;
-    std::vector<RestraintInterface*> restraints;
+    std::vector<std::shared_ptr<RestraintInterface>> restraints;
 
     void createRigidbody(const RigidPolygon& poly) {
-        polys.emplace_back(poly);
-        rigidbodies.insert(&polys.back());
-        physics_manager.bind(&polys.back());
+        polys.push_back(std::make_shared<RigidPolygon>(poly));
+        rigidbodies.insert(polys.back().get());
+        physics_manager.bind(std::dynamic_pointer_cast<Rigidbody>(polys.back()));
     }
     void createRigidbody(const RigidCircle& circ) {
-        circs.emplace_back(circ);
-        rigidbodies.insert(&circs.back());
-        physics_manager.bind(&circs.back());
+        circs.push_back(std::make_shared<RigidCircle>(circ));
+        rigidbodies.insert(circs.back().get());
+        physics_manager.bind(std::dynamic_pointer_cast<Rigidbody>(circs.back()));
     }
     void removeRigidbody(Rigidbody* r) {
         delFromPolys(r);
         delFromCircs(r);
         rigidbodies.erase(r);
-        physics_manager.unbind(r);
     }
     void crumbleSquarely(Rigidbody* poly);
 
@@ -90,7 +89,7 @@ public:
     std::vector<vec2f> polygon_creation_vec;
 
     struct {
-        std::unique_ptr<SelectingTrigger> trigger;
+        std::shared_ptr<SelectingTrigger> trigger;
         bool isMaking = false;
         bool isHolding = false;
         bool isThrowing = true;

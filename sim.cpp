@@ -157,7 +157,7 @@ void Sim::setup() {
         AABB trigger = aabb_inner;
         trigger.setCenter({10000.f, 10000.f});
         selection.trigger = std::make_unique<SelectingTrigger>(SelectingTrigger(Polygon::CreateFromAABB(trigger)));
-        physics_manager.bind(selection.trigger.get());
+        physics_manager.bind(selection.trigger);
     }
     //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
 
@@ -205,8 +205,8 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                     auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
                     auto last_selP = selection.last_restrain_sel_off;
                         
-                    auto* res = new RestraintPoint(len(selection.last_mouse_pos - mpos)
-                        , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP);
+                    auto res = std::make_shared<RestraintPoint>(RestraintPoint(len(selection.last_mouse_pos - mpos)
+                        , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP));
                     res->damping_coef = 0.1f;
                     restraints.push_back(res);
                     physics_manager.bind(res);
@@ -339,14 +339,14 @@ void Sim::update(float delT) {
     auto mpos = (vec2f)sf::Mouse::getPosition(window);
     Rigidbody* found = nullptr;
     for(auto& p : polys) {
-        if(isOverlappingPointPoly(mpos, p.collider.getShape())) {
-            found = &p;
+        if(isOverlappingPointPoly(mpos, p->collider.getShape())) {
+            found = p.get();
             break;
         }
     }
     for(auto& c : circs) {
-        if(isOverlappingPointCircle(mpos, c.collider.getShape())) {
-            found = &c;
+        if(isOverlappingPointCircle(mpos, c->collider.getShape())) {
+            found = c.get();
             break;
         }
     }

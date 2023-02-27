@@ -11,6 +11,7 @@
 #include <iterator>
 #include <map>
 #include <mutex>
+#include <memory>
 #include <set>
 #include <sys/_types/_size_t.h>
 #include <vector>
@@ -32,6 +33,20 @@ static bool areCompatible(Rigidbody& rb1, Rigidbody& rb2) {
     return !(rb1.isDormant() && rb2.isDormant()) && 
         (rb2.collision_mask.size() == 0 || hasDuplicates(rb1.collision_layer, rb2.collision_mask)) && 
         (rb1.collision_mask.size() == 0 || hasDuplicates(rb2.collision_layer, rb1.collision_mask));
+}
+template <class T>
+static void checkAndDeleteOrphansFromVec(std::vector<std::shared_ptr<T> >& vec) {
+    for(int i = 0; i < vec.size(); i++) {
+        if(vec[i].unique()) {
+            vec.erase(vec.begin() + i);
+            i--;
+        }
+    }
+}
+void PhysicsManager::m_checkAndDeleteOrphans() {
+    checkAndDeleteOrphansFromVec(m_rigidbodies);
+    checkAndDeleteOrphansFromVec(m_triggers);
+    checkAndDeleteOrphansFromVec(m_restraints);
 }
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     return m_rigidbodiesQT.findAllIntersections();
@@ -138,9 +153,10 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     }
     //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
     m_rigidbodiesQT.clear();
+    m_checkAndDeleteOrphans();
     m_rigidbodiesQT.updateLeafes();
     for(auto r : m_rigidbodies)
-        m_rigidbodiesQT.add(r);
+        m_rigidbodiesQT.add(r.get());
 
     for(int i = 0; i < steps; i++) {
         m_updatePhysics(deltaStep);
@@ -165,13 +181,13 @@ static void unbind_any(T obj, std::vector<T>& obj_vec) {
     if(itr != obj_vec.end())
         obj_vec.erase(itr);
 }
-void PhysicsManager::unbind(Rigidbody* rb) {
+void PhysicsManager::unbind(std::shared_ptr<Rigidbody> rb) {
     unbind_any(rb, m_rigidbodies);
 }
-void PhysicsManager::unbind(RestraintInterface* res) {
+void PhysicsManager::unbind(std::shared_ptr<RestraintInterface> res) {
     unbind_any(res, m_restraints);
 }
-void PhysicsManager::unbind(TriggerInterface* trigger) {
+void PhysicsManager::unbind(std::shared_ptr<TriggerInterface> trigger) {
     unbind_any(trigger, m_triggers);
 }
 
