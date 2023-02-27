@@ -163,23 +163,36 @@ bool DefaultSolver::handle(const CollisionManifold& manifold, float restitution,
 }
 CollisionManifold DefaultSolver::detect(ColliderInterface* col1, ColliderInterface* col2, Rigidbody* rb1, Rigidbody* rb2) {
     CollisionManifold man;
-    if(col1->getType() == eCollisionShape::Polygon && col2->getType() == eCollisionShape::Polygon) {
-        man = detectOverlap(*(ColliderPolygon*)col1, *(ColliderPolygon*)col2);
-    } else if(col1->getType() == eCollisionShape::Circle && col2->getType() == eCollisionShape::Circle) {
-        man = detectOverlap(*(ColliderCircle*)col1, *(ColliderCircle*)col2);
-    }
-    man.r1 = rb1;
-    man.r2 = rb2;
-    for(int i = 0; i < 2; i++) {
-        if(i == 1) {
-            std::swap(rb1, rb2);
-            std::swap(col1, col2);
-        }
-        if(col1->getType() == eCollisionShape::Circle && col2->getType() == eCollisionShape::Polygon) {
-            man = detectOverlap(*(ColliderCircle*)col1, *(ColliderPolygon*)col2);
-            man.r1 = rb1;
-            man.r2 = rb2;
-        }
+    //ik its ugly but switch case will catch new variants if eCollisionShape will be getting more shapes
+    switch(col1->getType()) {
+        case eCollisionShape::Polygon:
+            switch(col2->getType()) {
+                case eCollisionShape::Polygon:
+                    man = detectOverlap(*(ColliderPolygon*)col1, *(ColliderPolygon*)col2);
+                    man.r1 = rb1;
+                    man.r2 = rb2;
+                break;
+                case eCollisionShape::Circle:
+                    man = detectOverlap(*(ColliderCircle*)col2, *(ColliderPolygon*)col1);
+                    man.r2 = rb1;
+                    man.r1 = rb2;
+                break;
+            }
+        break;
+        case eCollisionShape::Circle:
+            switch(col2->getType()) {
+                case eCollisionShape::Polygon:
+                    man = detectOverlap(*(ColliderCircle*)col1, *(ColliderPolygon*)col2);
+                    man.r1 = rb1;
+                    man.r2 = rb2;
+                break;
+                case eCollisionShape::Circle:
+                    man = detectOverlap(*(ColliderCircle*)col1, *(ColliderCircle*)col2);
+                    man.r1 = rb1;
+                    man.r2 = rb2;
+                break;
+            }
+        break;
     }
     return man;
 }
