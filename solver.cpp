@@ -108,7 +108,7 @@ void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& 
 void DefaultSolver::processReaction(const CollisionManifold& man, float bounce, float sfric, float dfric) {
     processReaction(man.r1pos, *man.r1, man.r1->material, man.r2pos, *man.r2, man.r2->material, bounce, sfric, dfric, man.cn, man.cps);
 }
-float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inertia, float mass1, const vec2f& rad2perp, float p2inertia, float mass2, 
+float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia, float mass1, const vec2f& rad2perp, float p2inv_inertia, float mass2, 
         float restitution, const vec2f& rel_vel, vec2f cn) {
     float contact_vel_mag = dot(rel_vel, cn);
     if(contact_vel_mag < 0.f)
@@ -118,8 +118,8 @@ float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inertia, flo
     float r2perp_dotN = dot(rad2perp, cn);
 
     float denom = 1.f / mass1 + 1.f / mass2 +
-        (r1perp_dotN * r1perp_dotN) *  p1inertia +
-        (r2perp_dotN * r2perp_dotN) *  p2inertia;
+        (r1perp_dotN * r1perp_dotN) *  p1inv_inertia +
+        (r2perp_dotN * r2perp_dotN) *  p2inv_inertia;
 
     float j = -(1.f + restitution) * contact_vel_mag;
     j /= denom;
