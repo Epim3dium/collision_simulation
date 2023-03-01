@@ -134,7 +134,7 @@ struct Material {
 };
 
 //struct made only to prevent ids from copying
-class Rigidbody : public ParentedTransform {
+class Rigidbody : public Transform {
 public:
     std::set<size_t> collision_mask = {1};
     std::set<size_t> collision_layer = {1};
@@ -152,7 +152,7 @@ public:
     float time_immobile = 0.f;
 
     bool isDormant() const {
-        return time_immobile > 5.f || isStatic;
+        return time_immobile > 1.f || isStatic;
     }
 
     virtual ColliderInterface& getCollider() = 0;
@@ -171,7 +171,7 @@ public:
     }
     void addVelocity(vec2f dir, vec2f cp);
     void addForce(vec2f dir, vec2f cp);
-    Rigidbody(Transform* parent) : ParentedTransform(parent) {}
+    Rigidbody() : Transform() {}
 };
 
 
@@ -183,8 +183,29 @@ public:
         return collider;
     }
 
-    RigidPolygon(const Polygon& poly) : collider(poly), Rigidbody(&collider) { }
-    RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : collider(pos_, rot_, model_), Rigidbody(&collider) { }
+    vec2f getPos() const override {
+        return collider.getPos();
+    }
+    void setPos(vec2f v) override {
+        collider.setPos(v);
+    }
+
+    vec2f getScale() const override {
+        return collider.getScale();
+    }
+    void setScale(vec2f v) override {
+        collider.setScale(v);
+    }
+
+    float getRot() const override {
+        return collider.getRot();
+    }
+    void setRot(float r) override {
+        collider.setRot(r);
+    }
+
+    RigidPolygon(const Polygon& poly) : collider(poly) { }
+    RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : collider(pos_, rot_, model_) { }
 };
 struct RigidCircle : public Rigidbody {
     AABB m_aabb;
@@ -194,8 +215,28 @@ struct RigidCircle : public Rigidbody {
     ColliderInterface& getCollider() override {
         return collider;
     }
+    vec2f getPos() const override {
+        return collider.getPos();
+    }
+    void setPos(vec2f v) override {
+        collider.setPos(v);
+    }
+
+    vec2f getScale() const override {
+        return collider.getScale();
+    }
+    void setScale(vec2f v) override {
+        collider.setScale(v);
+    }
+
+    float getRot() const override {
+        return collider.getRot();
+    }
+    void setRot(float r) override {
+        collider.setRot(r);
+    }
     RigidCircle(const RigidCircle&) = default;
-    RigidCircle(const Circle& c) : collider(c), Rigidbody(&collider) {}
-    RigidCircle(vec2f pos, float radius) : collider(pos, radius), Rigidbody(&collider) {}
+    RigidCircle(const Circle& c) : collider(c) {}
+    RigidCircle(vec2f pos, float radius) : collider(pos, radius) {}
 };
 }
