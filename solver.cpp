@@ -147,8 +147,8 @@ vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1
     jt /= denom;
 
     vec2f friction_impulse;
-    if(abs(jt) <= j * sfric) {
-        friction_impulse = tangent * jt;
+    if(abs(jt) <= abs(j * sfric)) {
+        friction_impulse = tangent * -jt;
     } else {
         friction_impulse = tangent * -j * dfric;
     }
