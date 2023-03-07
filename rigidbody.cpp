@@ -34,8 +34,8 @@ float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
     return abs(mmoi);
 }
 void Rigidbody::addForce(vec2f force, vec2f cp) {
-    force /= mass;
-    addVelocity(force, cp);
+    auto vel = force / mass;
+    addVelocity(vel, cp);
 }
 void Rigidbody::addVelocity(vec2f vel, vec2f cp) {
     if(isStatic)
@@ -46,7 +46,7 @@ void Rigidbody::addVelocity(vec2f vel, vec2f cp) {
 
     velocity += cn * dot(vel, norm(vel));
     if(!lockRotation)
-        angular_velocity -= cross(vel, rad) / inertia(); 
+        angular_velocity -= cross(vel * mass, rad) / inertia(); 
 }
 
 }
