@@ -207,7 +207,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                         
                     auto res = std::make_shared<RestraintPoint>(RestraintPoint(len(selection.last_mouse_pos - mpos)
                         , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP));
-                    res->damping_coef = 0.1f;
+                    res->damping_coef = 0.5f;
                     restraints.push_back(res);
                     physics_manager.bind(res);
                     selection.last_restrain_sel = nullptr;

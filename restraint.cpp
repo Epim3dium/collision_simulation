@@ -19,12 +19,12 @@ void RestraintPoint::update(float delT) {
     vec2f avg_vel = (a->velocity + b->velocity) / 2.f;
 
     if(!b->isStatic) {
-        float b_corr_impulse = -mag * damping_coef - dot(-n, b->velocity - avg_vel) * damping_coef;
-        b->addForce(-n * b_corr_impulse, bp);
+        float b_corr_impulse = -mag * damping_coef * 1.f / delT - dot(-n, b->velocity - avg_vel) * damping_coef;
+        b->addForce(-n * b_corr_impulse * delT, bp);
     }
     if(!a->isStatic){
-        float a_corr_impulse = -mag * damping_coef - dot(n, a->velocity - avg_vel) * damping_coef;
-        a->addForce(n * a_corr_impulse, ap);
+        float a_corr_impulse = -mag * damping_coef * 1.f / delT - dot(n, a->velocity - avg_vel) * damping_coef;
+        a->addForce(n * a_corr_impulse * delT, ap);
     }
 }
 void RestraintDistance::update(float delT) {
