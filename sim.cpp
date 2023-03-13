@@ -22,6 +22,7 @@
 #define DEBUG_DRAW true 
 
 namespace EPI_NAMESPACE {
+extern std::vector<vec2f> g_contacts;
 void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
     if(selected.contains(rb))
         return;
@@ -462,6 +463,13 @@ void Sim::draw() {
         vert[1].color = Color::Cyan;
         vert[1].position = r->b->getPos() + rotateVec(r->model_point_b, r->b->getRot());
         window.draw(vert, 2, sf::Lines);
+    }
+    for(auto p : g_contacts) {
+        float r = 2.f;
+        sf::CircleShape c(r);
+        c.setPosition(p - vec2f(r, r));
+        c.setFillColor(PastelColor::Orange);
+        window.draw(c);
     }
 #endif
     particle_manager.draw(window);

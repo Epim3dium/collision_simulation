@@ -96,6 +96,7 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     if(qlen(rb.velocity) < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
         rb.time_immobile += delT;
     }else {
+        //wake up all objects around it
         if(rb.isDormant()) {
             auto area = rb.getCollider().getAABB();
             area.setSize(area.size() * 2.f);

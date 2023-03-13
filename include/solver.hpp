@@ -36,7 +36,7 @@ private:
             float restitution, const vec2f& rel_vel, vec2f cn);
 
     static void processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
-           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps);
+           vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, const std::vector<vec2f>& cps);
     static void processReaction(const CollisionManifold& maninfold, float bounce, float sfric, float dfric);
 
     static bool handle(const CollisionManifold& manifold, float restitution, float sfriction, float dfriction);

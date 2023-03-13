@@ -25,6 +25,8 @@ CollisionManifold detectOverlap(ColliderPolygon& c1, ColliderPolygon& c2) {
     if(intersection.detected) {
         std::vector<vec2f> cps;
         cps = findContactPoints(c1.getShape(), c2.getShape());
+        if(cps.size() > 2)
+            std::cerr << cps.size() << "\n";
         return {true, nullptr, nullptr, c1.getPos(), c2.getPos(), intersection.contact_normal, cps , intersection.overlap};
     }
     return {false};
@@ -51,7 +53,7 @@ void handleOverlap(Rigidbody& a, Rigidbody& b, const CollisionManifold& man) {
     }
 }
 void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& mat1, 
-       vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, std::vector<vec2f> cps)
+       vec2f pos2, Rigidbody& rb2, const Material& mat2, float bounce, float sfric, float dfric, vec2f cn, const std::vector<vec2f>& cps)
 {
     float mass1 = rb1.isStatic ? INFINITY : rb1.mass;
     float mass2 = rb2.isStatic ? INFINITY : rb2.mass;
@@ -65,8 +67,8 @@ void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& 
 
 
     vec2f impulse (0, 0);
-    vec2f rb1vel(0, 0); float rb1ang_vel = 0.f;
-    vec2f rb2vel(0, 0); float rb2ang_vel = 0.f;
+    vec2f additional_rb1vel(0, 0); float additional_rb1ang_vel = 0.f;
+    vec2f additional_rb2vel(0, 0); float additional_rb2ang_vel = 0.f;
 
     for(auto& cp : cps) {
         vec2f rad1 = cp - pos1;
@@ -88,22 +90,22 @@ void DefaultSolver::processReaction(vec2f pos1, Rigidbody& rb1, const Material& 
         vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, cn);
         impulse += cn * j - fj;
 
-        impulse /= (float)cps.size();
         if(!rb1.isStatic) {
-            rb1vel -= impulse / rb1.mass;
+            additional_rb1vel -= impulse / rb1.mass;
             if(!rb1.lockRotation)
-                rb1ang_vel += cross(impulse, rad1) * inv_inertia1;
+                additional_rb1ang_vel += cross(impulse, rad1) * inv_inertia1;
         }
         if(!rb2.isStatic) {
-            rb2vel += impulse / rb2.mass;
+            additional_rb2vel += impulse / rb2.mass;
             if(!rb2.lockRotation)
-                rb2ang_vel -= cross(impulse, rad2) * inv_inertia2;
+                additional_rb2ang_vel -= cross(impulse, rad2) * inv_inertia2;
         }
     }
-    rb1.velocity +=     rb1vel;
-    rb1.angular_velocity += rb1ang_vel;
-    rb2.velocity +=     rb2vel;
-    rb2.angular_velocity += rb2ang_vel;
+    float cps_count = cps.size();
+    rb1.velocity         += additional_rb1vel / cps_count;
+    rb1.angular_velocity += additional_rb1ang_vel / cps_count;
+    rb2.velocity         += additional_rb2vel / cps_count;
+    rb2.angular_velocity += additional_rb2ang_vel / cps_count;
 }
 void DefaultSolver::processReaction(const CollisionManifold& man, float bounce, float sfric, float dfric) {
     processReaction(man.r1pos, *man.r1, man.r1->material, man.r2pos, *man.r2, man.r2->material, bounce, sfric, dfric, man.cn, man.cps);

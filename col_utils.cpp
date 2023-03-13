@@ -1,7 +1,9 @@
 #include "col_utils.hpp"
 #include "types.hpp"
 #include <cmath>
+#include <vector>
 namespace EPI_NAMESPACE {
+std::vector<vec2f> g_contacts;
 
 vec2f rotateVec(vec2f vec, float angle) {
     return vec2f(cos(angle) * vec.x - sin(angle) * vec.y,
@@ -121,7 +123,7 @@ vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly) {
     }
     return closest;
 }
-#define VERY_SMALL_AMOUNT 0.001f
+#define VERY_SMALL_AMOUNT 0.005f
 bool nearlyEqual(float a, float b) {
     return abs(a - b) < VERY_SMALL_AMOUNT;
 }
@@ -130,31 +132,54 @@ bool nearlyEqual(vec2f a, vec2f b) {
 }
 std::vector<vec2f> findContactPoints(const Polygon& p1, const Polygon& p2) {
     std::vector<vec2f> cps;
-    Polygon const* poly1 = &p1;
-    Polygon const* poly2 = &p2;
-    float closest_dist = INFINITY;
-    for(int j = 0; j< 2; j++) {
-        if(j == 1){ 
-            poly1 = &p2;
-            poly2 = &p1;
+    vec2f contact1;
+    vec2f contact2;
+    int contactCount = 0;
+
+    float minDistSq = INFINITY;
+    auto vertsA = p1.getVertecies();
+    auto vertsB = p2.getVertecies();
+
+    for(int switcheroo = 0; switcheroo < 2; switcheroo++) {
+        if(switcheroo == 1) {
+            std::swap(vertsA, vertsB);
         }
-        for(size_t i = 0; i < poly1->getVertecies().size(); i++) {
-            vec2f a1 = poly1->getVertecies()[i];
-            vec2f b1 = poly1->getVertecies()[(i + 1) % poly1->getVertecies().size()];
-            for(size_t ii = 0; ii < poly2->getVertecies().size(); ii++) {
-                vec2f t = poly2->getVertecies()[ii];
-                vec2f closest = findClosestPointOnRay(a1, b1 - a1, t);
-                float dist = qlen(t - closest);
-                if(nearlyEqual(dist, closest_dist)) {
-                    if(!(nearlyEqual(cps.front(), a1) || nearlyEqual(cps.front(), b1)))
-                        cps.push_back(t);
-                }else if(dist < closest_dist) {
-                    closest_dist = dist;
-                    cps = {t};
+        for(int i = 0; i < vertsA.size(); i++)
+        {
+            vec2f p = vertsA[i];
+
+            for(int j = 0; j < vertsB.size(); j++)
+            {
+                vec2f va = vertsB[j];
+                vec2f vb = vertsB[(j + 1) % vertsB.size()];
+
+                auto cp = findClosestPointOnRay(va, vb - va, p);
+                auto distSquared = qlen(cp - p);
+
+                if(nearlyEqual(distSquared, minDistSq))
+                {
+                    if (!nearlyEqual(cp, contact1) &&
+                        !nearlyEqual(cp, contact2))
+                    {
+                        contact2 = cp;
+                        contactCount = 2;
+                        if(cps.size() == 1)
+                            cps.push_back(cp);
+                        else
+                            cps[1] = cp;
+                    }
+                }
+                else if(distSquared < minDistSq)
+                {
+                    minDistSq = distSquared;
+                    contactCount = 1;
+                    cps = {cp};
                 }
             }
         }
     }
+    g_contacts = cps;
+
     return cps;
 }
 float area(const std::vector<vec2f>& model) {
