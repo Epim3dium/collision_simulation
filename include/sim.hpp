@@ -62,7 +62,7 @@ public:
     std::vector<std::shared_ptr<RigidPolygon>> polys;
     std::vector<std::shared_ptr<RigidCircle>> circs;
     std::set<Rigidbody*> rigidbodies;
-    std::vector<std::shared_ptr<RestraintInterface>> restraints;
+    std::vector<std::shared_ptr<RestraintPoint>> restraints;
 
     void createRigidbody(const RigidPolygon& poly) {
         polys.push_back(std::make_shared<RigidPolygon>(poly));

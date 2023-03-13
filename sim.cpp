@@ -447,16 +447,12 @@ void Sim::draw() {
     }
 #if DEBUG_DRAW
     for(auto& r : restraints) {
-        auto cons = r->getRestrainedObjects();
-        auto prev = cons.back();
-        for(auto cur : cons) {
-            sf::Vertex vert[2];
-            vert[0].color = Color::Cyan;
-            vert[0].position = prev->getCollider().getPos();
-            vert[1].color = Color::Cyan;
-            vert[1].position = cur->getCollider().getPos();
-            window.draw(vert, 2, sf::Lines);
-        }
+        sf::Vertex vert[2];
+        vert[0].color = Color::Cyan;
+        vert[0].position = r->a->getPos() + rotateVec(r->model_point_a, r->a->getRot());
+        vert[1].color = Color::Cyan;
+        vert[1].position = r->b->getPos() + rotateVec(r->model_point_b, r->b->getRot());
+        window.draw(vert, 2, sf::Lines);
     }
 #endif
     particle_manager.draw(window);

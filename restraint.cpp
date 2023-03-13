@@ -13,17 +13,17 @@ void RestraintPoint::update(float delT) {
 
     auto l = len(diff);
     auto off = (l - dist) / 2.f;
-    float mag = off * off * copysign(1.f, off);
+    float mag = off * off * copysign(1.f, off) * 1.f / delT;
     auto n = diff / l;
 
     vec2f avg_vel = (a->velocity + b->velocity) / 2.f;
 
     if(!b->isStatic) {
-        float b_corr_impulse = -mag * damping_coef * 1.f / delT - dot(-n, b->velocity - avg_vel) * damping_coef;
+        float b_corr_impulse = -mag - dot(-n, b->velocity - avg_vel) * damping_coef;
         b->addForce(-n * b_corr_impulse * delT, bp);
     }
     if(!a->isStatic){
-        float a_corr_impulse = -mag * damping_coef * 1.f / delT - dot(n, a->velocity - avg_vel) * damping_coef;
+        float a_corr_impulse = -mag - dot(n, a->velocity - avg_vel) * damping_coef;
         a->addForce(n * a_corr_impulse * delT, ap);
     }
 }
