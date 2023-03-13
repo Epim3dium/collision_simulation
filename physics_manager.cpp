@@ -6,6 +6,7 @@
 #include "particle_manager.hpp"
 #include "rigidbody.hpp"
 
+#include <cassert>
 #include <cmath>
 #include <cstddef>
 #include <iterator>

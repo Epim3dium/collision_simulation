@@ -90,15 +90,14 @@ public:
 
     struct {
         std::shared_ptr<SelectingTrigger> trigger;
-        bool isMaking = false;
+        bool isCreating = false;
         bool isHolding = false;
-        bool isThrowing = true;
-        float making_time = 0.f;
-        std::map<Rigidbody*, vec2f> offsets;
-        bool isLocking = false;
-        std::set<Rigidbody*> selected;
-        Rigidbody* last_restrain_sel = nullptr;
-        vec2f last_restrain_sel_off;
+        float mouse_held_time = 0.f;
+        std::map<Rigidbody*, vec2f> held_bodies_offsets;
+        bool isLockingRotation = false;
+        std::set<Rigidbody*> selected_bodies;
+        Rigidbody* last_selected_body_to_restrain = nullptr;
+        vec2f last_body_restraint_offset;
 
         vec2f last_mouse_pos;
     }selection;

@@ -1,6 +1,7 @@
 #include "sim.hpp"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/Vertex.hpp"
+#include "SFML/Window/Event.hpp"
 #include "SFML/Window/Keyboard.hpp"
 #include "SFML/Window/Mouse.hpp"
 #include "col_utils.hpp"
@@ -22,7 +23,6 @@
 #define DEBUG_DRAW true 
 
 namespace EPI_NAMESPACE {
-extern std::vector<vec2f> g_contacts;
 void SelectingTrigger::onActivation(Rigidbody* rb, vec2f cn) {
     if(selected.contains(rb))
         return;
@@ -185,108 +185,168 @@ void Sim::setup() {
 
 }
 void Sim::onEvent(const sf::Event &event, float delT) {
-    if (event.type == sf::Event::Closed)
-        window.close();
     if (ImGui::IsAnyItemHovered())
         return;
-    else if(event.type == sf::Event::MouseButtonPressed) {
-        if(event.mouseButton.button == sf::Mouse::Button::Left) {
-            if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
-                Rigidbody* sel = nullptr;
-                auto mpos = (vec2f)sf::Mouse::getPosition(window);
-                //detect the hovered body
-                for(auto r : rigidbodies) {
-                    if(PointVCollider(mpos, r->getCollider())) {
-                        sel = r;
-                        break;
-                    }
-                }
-                //what if last body was already selected
-                if(selection.last_restrain_sel && sel) {
-                    auto selP = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
-                    auto last_selP = selection.last_restrain_sel_off;
-                        
-                    auto res = std::make_shared<RestraintPoint>(RestraintPoint(len(selection.last_mouse_pos - mpos)
-                        , (RigidPolygon*)sel, selP, (RigidPolygon*)selection.last_restrain_sel, last_selP));
-                    res->damping_coef = 0.5f;
-                    restraints.push_back(res);
-                    physics_manager.bind(res);
-                    selection.last_restrain_sel = nullptr;
-                //what if it is the first body selected
-                } else if(sel){
-                    selection.last_mouse_pos = mpos;
-                    selection.last_restrain_sel = sel; 
-                    selection.last_restrain_sel_off = rotateVec(mpos - sel->getCollider().getPos(), -sel->getCollider().getRot());
-
-                }
-            }else {
-                selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
-                for(auto r : rigidbodies) {
-                    if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
-                        if(!selection.selected.contains(r)) {
-                            selection.selected = {r};
+    switch(event.type) 
+    {
+        case sf::Event::Closed: {
+            window.close();
+        }break;
+        case sf::Event::MouseButtonPressed: {
+            switch(event.mouseButton.button) 
+                {
+                case sf::Mouse::Button::Left:{
+                    //holding space aka creating restraint
+                    if(sf::Keyboard::isKeyPressed(sf::Keyboard::Space)) {
+                        Rigidbody* body_hovered_now = nullptr;
+                        auto mouse_pos = (vec2f)sf::Mouse::getPosition(window);
+                        //detect the hovered body
+                        for(auto r : rigidbodies) {
+                            if(PointVCollider(mouse_pos, r->getCollider())) {
+                                body_hovered_now = r;
+                                break;
+                            }
                         }
-                        selection.isHolding = true;
-                        break;
-                    }
-                }
-                if(selection.isHolding) {
-                    for(auto s : selection.selected) {
-                        selection.offsets[s] = s->getCollider().getPos() - selection.last_mouse_pos;
-                        if(selection.isLocking)
-                            s->lockRotation = true;
-                    }
-                }else {
-                    selection.isMaking = true;
-                }
-            }
-        }
-    }
-    else if(event.type == sf::Event::MouseButtonReleased) {
-        if(event.mouseButton.button == sf::Mouse::Button::Left) {
-            if(selection.isHolding) {
-                for(auto s : selection.selected) {
-                    if(selection.isLocking)
-                        s->lockRotation = false;
-                }
-            }
-            else if(selection.making_time < 0.25f && selection.isMaking) {
-                polygon_creation_vec.push_back(selection.last_mouse_pos);
-            }
-            selection.isMaking = false;
-            selection.making_time = 0;
-            selection.isHolding = false;
+                        //what if last body was already selected
+                        if(selection.last_selected_body_to_restrain && body_hovered_now) {
+                            auto selected_offset = rotateVec(mouse_pos - body_hovered_now->getCollider().getPos(), -body_hovered_now->getCollider().getRot());
+                            auto last_selected_offset = selection.last_body_restraint_offset;
+                                
+                            auto restraint = std::make_shared<RestraintPoint>(RestraintPoint(len(selection.last_mouse_pos - mouse_pos)
+                                , (RigidPolygon*)body_hovered_now, selected_offset, (RigidPolygon*)selection.last_selected_body_to_restrain, last_selected_offset));
+                            restraint->damping_coef = 0.5f;
+                            restraints.push_back(restraint);
+                            physics_manager.bind(restraint);
+                            selection.last_selected_body_to_restrain = nullptr;
+                        //what if it is the first body selected
+                        } else if(body_hovered_now){
+                            selection.last_mouse_pos = mouse_pos;
+                            selection.last_selected_body_to_restrain = body_hovered_now; 
+                            selection.last_body_restraint_offset = rotateVec(mouse_pos - body_hovered_now->getCollider().getPos(), -body_hovered_now->getCollider().getRot());
 
-            selection.trigger->setShape({});
-        }
-        else if(event.mouseButton.button == sf::Mouse::Button::Right) {
-        }
-    }
-    else if(event.type == sf::Event::KeyPressed) {
-        if(event.key.control && event.key.code == sf::Keyboard::A) {
-            selection.selected = rigidbodies;
-        } else if(event.key.code == sf::Keyboard::Enter && polygon_creation_vec.size() > 2) {
-            RigidPolygon t(Polygon::CreateFromPoints(polygon_creation_vec));
-            createRigidbody(t);
-            polygon_creation_vec.clear();
-        }else if(event.key.code == sf::Keyboard::X) {
-            for(auto rb : selection.selected) {
-                crumbleSquarely(rb);
+                        }
+                    }else {
+                        selection.last_mouse_pos = (vec2f)sf::Mouse::getPosition(window);
+                        for(auto r : rigidbodies) {
+                            if(PointVCollider(selection.last_mouse_pos, r->getCollider())) {
+                                if(!selection.selected_bodies.contains(r)) {
+                                    selection.selected_bodies = {r};
+                                }
+                                selection.isHolding = true;
+                                break;
+                            }
+                        }
+                        if(selection.isHolding) {
+                            for(auto s : selection.selected_bodies) {
+                                selection.held_bodies_offsets[s] = s->getCollider().getPos() - selection.last_mouse_pos;
+                                if(selection.isLockingRotation)
+                                    s->lockRotation = true;
+                            }
+                        }else {
+                            selection.isCreating = true;
+                        }
+                    }
+                }break;
+                default:{
+                }break;
             }
-            selection.selected.clear();
-            polygon_creation_vec.clear();
-        }else if(event.key.code == sf::Keyboard::R) {
-            selection.selected.clear();
-            polygon_creation_vec.clear();
-            selection.last_restrain_sel = nullptr;
-        }else if (event.key.code == sf::Keyboard::C) {
-            RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
-            createRigidbody(t);
-        }else if (event.key.code == sf::Keyboard::V) {
-            vec2f mpos = (vec2f)sf::Mouse::getPosition(window);
-            RigidPolygon t = Polygon::CreateRegular(mpos, 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
-            createRigidbody(t);
-        }
+
+        }break;
+        case sf::Event::MouseButtonReleased: {
+            switch(event.mouseButton.button) 
+            {
+                case sf::Mouse::Button::Left: {
+                    if(selection.isHolding) {
+                        for(auto s : selection.selected_bodies) {
+                            if(selection.isLockingRotation)
+                                s->lockRotation = false;
+                        }
+                    }
+                    else if(selection.mouse_held_time < 0.25f && selection.isCreating) {
+                        polygon_creation_vec.push_back(selection.last_mouse_pos);
+                    }
+                    selection.isCreating = false;
+                    selection.mouse_held_time = 0;
+                    selection.isHolding = false;
+
+                    selection.trigger->setShape({});
+                }break;
+                default:
+                break;
+            }
+        }break;
+        case sf::Event::KeyPressed: {
+            switch(event.key.code)
+            {
+                case sf::Keyboard::A: {
+                    if(event.key.control) {
+                        selection.selected_bodies = rigidbodies;
+                    }
+                }break;
+                case sf::Keyboard::Enter:{
+                    if(polygon_creation_vec.size() > 2) {
+                        RigidPolygon t(Polygon::CreateFromPoints(polygon_creation_vec));
+                        createRigidbody(t);
+                        polygon_creation_vec.clear();
+                    }
+                }break;
+                case sf::Keyboard::X : {
+                    for(auto rb : selection.selected_bodies) {
+                        crumbleSquarely(rb);
+                    }
+                    selection.selected_bodies.clear();
+                    polygon_creation_vec.clear();
+                }break;
+                case sf::Keyboard::R : {
+                    selection.selected_bodies.clear();
+                    polygon_creation_vec.clear();
+                    selection.last_selected_body_to_restrain = nullptr;
+                }break;
+                case sf::Keyboard::C : {
+                    RigidCircle t((vec2f)sf::Mouse::getPosition(window), default_dynamic_radius);
+                    createRigidbody(t);
+                }break;
+                case sf::Keyboard::V : {
+                    RigidPolygon t = Polygon::CreateRegular((vec2f)sf::Mouse::getPosition(window), 3.141 / 4.f, 4U, default_dynamic_radius * sqrt(2.f));
+                    createRigidbody(t);
+                }break;
+#define LAYER_OR_MASK_ADD(x)\
+for(auto s : selection.selected_bodies) {\
+if(event.key.shift) {\
+    if(s->collision_mask.contains(x)) {\
+        s->collision_mask.erase(x);\
+    } else {\
+        s->collision_mask.insert(x);\
+    }\
+} else {\
+    if(s->collision_layer.contains(x)) {\
+        s->collision_layer.erase(x);\
+    } else {\
+        s->collision_layer.insert(x);\
+    }\
+}\
+}
+                case sf::Keyboard::Num1 : {
+                    LAYER_OR_MASK_ADD(1);
+                }break;
+                case sf::Keyboard::Num2 : {
+                    LAYER_OR_MASK_ADD(2);
+                }break;
+                case sf::Keyboard::Num3 : {
+                    LAYER_OR_MASK_ADD(3);
+                }break;
+                case sf::Keyboard::Num4 : {
+                    LAYER_OR_MASK_ADD(4);
+                }break;
+                case sf::Keyboard::Num5 : {
+                    LAYER_OR_MASK_ADD(5);
+                }break;
+                default:
+                break;
+            }
+        }break;
+        default:
+        break;
     }
 }
 void Sim::update(float delT) {
@@ -308,30 +368,30 @@ void Sim::update(float delT) {
         );
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::Q)) {
-        for(auto s : selection.selected) {
+        for(auto s : selection.selected_bodies) {
             s->angular_velocity += 10.f * delT;
         }
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::E)) {
-        for(auto s : selection.selected) {
+        for(auto s : selection.selected_bodies) {
             s->angular_velocity -= 10.f * delT;
         }
     }
     if(selection.isHolding) {
-        for(auto s : selection.selected) {
+        for(auto s : selection.selected_bodies) {
             if(!s->isStatic) {
-                auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getCollider().getPos();
+                auto d = (vec2f)sf::Mouse::getPosition(window) + selection.held_bodies_offsets[s] - s->getCollider().getPos();
                 s->velocity = d / sqrt(delT);
             } else {
-                s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
+                s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.held_bodies_offsets[s]);
             }
             //s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
         }
     }
     
-    if(selection.isMaking) {
-        selection.making_time += delT;
-        selection.selected = selection.trigger->selected;
+    if(selection.isCreating) {
+        selection.mouse_held_time += delT;
+        selection.selected_bodies = selection.trigger->selected;
         selection.trigger->clear();
         AABB selection_aabb;
         auto mpos = (vec2f)sf::Mouse::getPosition(window);
@@ -354,17 +414,17 @@ void Sim::update(float delT) {
         }
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::BackSpace)) {
-        for(auto s : selection.selected) {
+        for(auto s : selection.selected_bodies) {
             removeRigidbody(s);
         }
-        selection.selected.clear();
+        selection.selected_bodies.clear();
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
-        for(auto s : selection.selected)
+        for(auto s : selection.selected_bodies)
             s->isStatic = true;
     }
     if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
-        for(auto s : selection.selected)
+        for(auto s : selection.selected_bodies)
             s->isStatic = false;
     }
 
@@ -385,7 +445,7 @@ void Sim::update(float delT) {
                     std::swap(gravity, tmp_grav);
                 }
                 if(ImGui::Button("lockRotation held")) {
-                    selection.isLocking = !selection.isLocking;
+                    selection.isLockingRotation = !selection.isLockingRotation;
                 }
                 ImGui::SliderFloat("radius" , &default_dynamic_radius, 1.f, 500.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
@@ -403,8 +463,8 @@ void Sim::update(float delT) {
             static bool open_object = true;
             if(ImGui::BeginTabItem("object settings", &open_object))
             {
-                Rigidbody* hovered_last = *selection.selected.begin();
-                if(selection.selected.size() != 0 && hovered_last) {
+                Rigidbody* hovered_last = *selection.selected_bodies.begin();
+                if(selection.selected_bodies.size() != 0 && hovered_last) {
                     if(ImGui::Button("isStatic")) {
                         hovered_last->isStatic = !hovered_last->isStatic;
                     }
@@ -438,8 +498,8 @@ void Sim::update(float delT) {
         if(!r->isStatic)
             r->velocity += vec2f(0.f, gravity) * delT;
         if(!isOverlappingAABBAABB(aabb_outer, r->getCollider().getAABB())) {
-            if(selection.selected.contains(r))
-                selection.selected.erase(r);
+            if(selection.selected_bodies.contains(r))
+                selection.selected_bodies.erase(r);
             removeRigidbody(r);
             break;
         }
@@ -453,7 +513,7 @@ void Sim::draw() {
     drawFill(window, selection.trigger->getShape(), PastelColor::Purple);
 
     for(auto& r : rigidbodies) {
-        DrawRigidbody(r, selection.selected, window);
+        DrawRigidbody(r, selection.selected_bodies, window);
     }
 #if DEBUG_DRAW
     for(auto& r : restraints) {
@@ -463,13 +523,6 @@ void Sim::draw() {
         vert[1].color = Color::Cyan;
         vert[1].position = r->b->getPos() + rotateVec(r->model_point_b, r->b->getRot());
         window.draw(vert, 2, sf::Lines);
-    }
-    for(auto p : g_contacts) {
-        float r = 2.f;
-        sf::CircleShape c(r);
-        c.setPosition(p - vec2f(r, r));
-        c.setFillColor(PastelColor::Orange);
-        window.draw(c);
     }
 #endif
     particle_manager.draw(window);

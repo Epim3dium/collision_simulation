@@ -136,8 +136,8 @@ struct Material {
 //struct made only to prevent ids from copying
 class Rigidbody : public Transform {
 public:
-    std::set<size_t> collision_mask = {1};
-    std::set<size_t> collision_layer = {1};
+    std::set<size_t> collision_mask;
+    std::set<size_t> collision_layer;
 
     bool isStatic = false;
     bool lockRotation = false;

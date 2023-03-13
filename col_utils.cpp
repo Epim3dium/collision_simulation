@@ -3,7 +3,6 @@
 #include <cmath>
 #include <vector>
 namespace EPI_NAMESPACE {
-std::vector<vec2f> g_contacts;
 
 vec2f rotateVec(vec2f vec, float angle) {
     return vec2f(cos(angle) * vec.x - sin(angle) * vec.y,
@@ -178,7 +177,6 @@ std::vector<vec2f> findContactPoints(const Polygon& p1, const Polygon& p2) {
             }
         }
     }
-    g_contacts = cps;
 
     return cps;
 }
