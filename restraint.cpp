@@ -13,7 +13,7 @@ void RestraintPoint::update(float delT) {
 
     auto l = len(diff);
     auto off = (l - dist) / 2.f;
-    float mag = off * off * copysign(1.f, off) * 1.f / delT;
+    float mag = off * off * off * 1.f / delT;
     auto n = diff / l;
 
     vec2f avg_vel = (a->velocity + b->velocity) / 2.f;

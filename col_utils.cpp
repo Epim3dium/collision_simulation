@@ -121,7 +121,7 @@ vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly) {
     }
     return closest;
 }
-#define VERY_SMALL_AMOUNT 0.0005f
+#define VERY_SMALL_AMOUNT 0.001f
 bool nearlyEqual(float a, float b) {
     return abs(a - b) < VERY_SMALL_AMOUNT;
 }
@@ -145,8 +145,8 @@ std::vector<vec2f> findContactPoints(const Polygon& p1, const Polygon& p2) {
                 vec2f t = poly2->getVertecies()[ii];
                 vec2f closest = findClosestPointOnRay(a1, b1 - a1, t);
                 float dist = qlen(t - closest);
-                if(dist == closest_dist) {
-                    if(!nearlyEqual(cps.front(), a1) && !nearlyEqual(cps.front(), b1))
+                if(nearlyEqual(dist, closest_dist)) {
+                    if(!(nearlyEqual(cps.front(), a1) || nearlyEqual(cps.front(), b1)))
                         cps.push_back(t);
                 }else if(dist < closest_dist) {
                     closest_dist = dist;

@@ -232,7 +232,8 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                 if(selection.isHolding) {
                     for(auto s : selection.selected) {
                         selection.offsets[s] = s->getCollider().getPos() - selection.last_mouse_pos;
-                        s->lockRotation = true;
+                        if(selection.isLocking)
+                            s->lockRotation = true;
                     }
                 }else {
                     selection.isMaking = true;
@@ -244,7 +245,8 @@ void Sim::onEvent(const sf::Event &event, float delT) {
         if(event.mouseButton.button == sf::Mouse::Button::Left) {
             if(selection.isHolding) {
                 for(auto s : selection.selected) {
-                    s->lockRotation = false;
+                    if(selection.isLocking)
+                        s->lockRotation = false;
                 }
             }
             else if(selection.making_time < 0.25f && selection.isMaking) {
@@ -316,8 +318,8 @@ void Sim::update(float delT) {
     }
     if(selection.isHolding) {
         for(auto s : selection.selected) {
-            auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getCollider().getPos();
             if(!s->isStatic) {
+                auto d = (vec2f)sf::Mouse::getPosition(window) + selection.offsets[s] - s->getCollider().getPos();
                 s->velocity = d / sqrt(delT);
             } else {
                 s->getCollider().setPos((vec2f)sf::Mouse::getPosition(window) + selection.offsets[s]);
@@ -377,6 +379,13 @@ void Sim::update(float delT) {
                 ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                 physics_manager.steps = tsteps;
                 ImGui::SliderFloat("change gravity" , &gravity, -3000.f, 3000.f, "%.1f");
+                if(ImGui::Button("toggle gravity")) {
+                    static float tmp_grav = 0.f;
+                    std::swap(gravity, tmp_grav);
+                }
+                if(ImGui::Button("lockRotation held")) {
+                    selection.isLocking = !selection.isLocking;
+                }
                 ImGui::SliderFloat("radius" , &default_dynamic_radius, 1.f, 500.f);
                 const char* select_modes[] = { "Min", "Max", "Avg" };
                 {

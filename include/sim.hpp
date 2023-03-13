@@ -95,6 +95,7 @@ public:
         bool isThrowing = true;
         float making_time = 0.f;
         std::map<Rigidbody*, vec2f> offsets;
+        bool isLocking = false;
         std::set<Rigidbody*> selected;
         Rigidbody* last_restrain_sel = nullptr;
         vec2f last_restrain_sel_off;
