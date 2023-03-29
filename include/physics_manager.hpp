@@ -55,7 +55,7 @@ private:
     void m_processTriggers();
     void m_processParticles(ParticleManager& pm);
 
-    QuadTree<Rigidbody*, std::function<AABB(Rigidbody*)> > m_rigidbodiesQT;
+    QuadTree<Rigidbody, std::function<AABB(Rigidbody*)> > m_rigidbodiesQT;
 
     std::vector<std::shared_ptr<Rigidbody>> m_rigidbodies;
     std::vector<std::shared_ptr<RestraintInterface>> m_restraints;
@@ -69,7 +69,7 @@ private:
 public:
     //number of physics/collision steps per frame
     size_t steps = 2;
-    inline const QuadTree<Rigidbody*, std::function<AABB(Rigidbody*)> >& getQuadTree() {
+    inline const QuadTree<Rigidbody, std::function<AABB(Rigidbody*)> >& getQuadTree() {
         return m_rigidbodiesQT;
     }
 

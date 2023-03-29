@@ -573,7 +573,7 @@ Sim::~Sim() {
     ImGui::SFML::Shutdown(window);
 }
 Sim::Sim(float w, float h)
-      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{-w * 3.f, -h * 3.f}, {w * 3.f, h * 3.f}})
+      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{0, 0}, {w, h}})
 {
 
     ImGui::SFML::Init(window);

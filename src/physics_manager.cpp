@@ -45,7 +45,13 @@ static void checkAndDeleteOrphansFromVec(std::vector<std::shared_ptr<T> >& vec) 
     }
 }
 void PhysicsManager::m_checkAndDeleteOrphans() {
-    checkAndDeleteOrphansFromVec(m_rigidbodies);
+    for(int i = 0; i < m_rigidbodies.size(); i++) {
+        if(m_rigidbodies[i].unique()) {
+            m_rigidbodiesQT.remove(m_rigidbodies[i].get());
+            m_rigidbodies.erase(m_rigidbodies.begin() + i);
+            i--;
+        }
+    }
     checkAndDeleteOrphansFromVec(m_triggers);
     checkAndDeleteOrphansFromVec(m_restraints);
 }
@@ -153,15 +159,15 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     for(auto r : m_rigidbodies) {
         r->pressure = 0.f;
     }
-    //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
-    m_rigidbodiesQT.clear();
     m_checkAndDeleteOrphans();
-    m_rigidbodiesQT.updateLeafes();
-    for(auto r : m_rigidbodies)
-        m_rigidbodiesQT.add(r.get());
+    //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
 
     for(int i = 0; i < steps; i++) {
         m_updatePhysics(deltaStep);
+
+        for(auto r : m_rigidbodies)
+            m_rigidbodiesQT.update(r.get());
+
         auto col_list = processBroadPhase();
         m_updateRestraints(deltaStep);
 
@@ -184,6 +190,7 @@ static void unbind_any(T obj, std::vector<T>& obj_vec) {
         obj_vec.erase(itr);
 }
 void PhysicsManager::unbind(std::shared_ptr<Rigidbody> rb) {
+    m_rigidbodiesQT.remove(rb.get());
     unbind_any(rb, m_rigidbodies);
 }
 void PhysicsManager::unbind(std::shared_ptr<RestraintInterface> res) {
