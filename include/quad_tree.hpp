@@ -58,8 +58,17 @@ public:
     }
         //adds if isnt added yet
     void update(T* value) {
-        remove(value);
-        add(value);
+        auto itr = _locations.find(value);
+        if(itr != _locations.end()) {
+            auto b = itr->second->box;
+            if(AABBcontainsAABB(b, _getBox(value))) 
+                return;
+            remove(value);
+            add(value);
+
+        } else {
+            add(value);
+        }
     }
 
     std::vector<T*> query(const AABB& box) const
