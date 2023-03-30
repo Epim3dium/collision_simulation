@@ -31,8 +31,6 @@ class QuadTree
         AABB box;
 
         Node(AABB b) : box(b) {}
-        ~Node() {
-        }
     };
 public:
 
@@ -242,7 +240,6 @@ private:
             {
                 if(remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value)) {
                     tryMerge(node->children[static_cast<std::size_t>(i)].get());
-                        std::cerr << "merged";
                     return true;
                 }
                 return false;
@@ -263,6 +260,20 @@ private:
         // Swap with the last element and pop back
         *it = std::move(node->values.back());
         node->values.pop_back();
+    }
+    void updateLeafes(Node* node) {
+        if(!isLeaf(node) && !tryMerge(node))
+            for(auto& child : node->children) {
+                if(child)
+                    updateLeafes(child.get());
+            }
+    }
+    void clear(Node* node) {
+        node->values.clear();
+        for(auto& child : node->children) {
+            if(child.get())
+                clear(child.get());
+        }
     }
 
     bool tryMerge(Node* node)

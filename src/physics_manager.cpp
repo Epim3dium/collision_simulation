@@ -127,7 +127,7 @@ void PhysicsManager::m_updateRigidbody(Rigidbody& rb, float delT) {
     if(!rb.lockRotation)
         rb.getCollider().setRot(rb.getCollider().getRot() + rb.angular_velocity * delT);
 }
-void PhysicsManager::m_updatePhysics(float delT) {
+void PhysicsManager::m_updateRigidbodies(float delT) {
     for(auto r : m_rigidbodies) {
         m_updateRigidbody(*r, delT);
     }
@@ -163,9 +163,8 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
 
     for(int i = 0; i < steps; i++) {
-        m_updatePhysics(deltaStep);
-
-        for(auto r : m_rigidbodies)
+        m_updateRigidbodies(deltaStep);
+        for(auto& r : m_rigidbodies)
             m_rigidbodiesQT.update(r.get());
 
         auto col_list = processBroadPhase();

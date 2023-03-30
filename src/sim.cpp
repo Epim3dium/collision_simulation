@@ -214,7 +214,7 @@ void Sim::onEvent(const sf::Event &event, float delT) {
                                 
                             auto restraint = std::make_shared<RestraintPoint>(RestraintPoint(len(selection.last_mouse_pos - mouse_pos)
                                 , (RigidPolygon*)body_hovered_now, selected_offset, (RigidPolygon*)selection.last_selected_body_to_restrain, last_selected_offset));
-                            restraint->damping_coef = 0.5f;
+                            restraint->damping_coef = 0.05f;
                             restraints.push_back(restraint);
                             physics_manager.bind(restraint);
                             selection.last_selected_body_to_restrain = nullptr;
@@ -573,7 +573,7 @@ Sim::~Sim() {
     ImGui::SFML::Shutdown(window);
 }
 Sim::Sim(float w, float h)
-      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{0, 0}, {w, h}})
+      : m_width(w), m_height(h), window(sf::VideoMode(w, h), "collisions"), physics_manager({{-w, -w}, {w * 2, h * 2}})
 {
 
     ImGui::SFML::Init(window);

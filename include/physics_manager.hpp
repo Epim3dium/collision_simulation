@@ -49,7 +49,7 @@ private:
 
     void m_updateRigidbody(Rigidbody& rb, float delT);
 
-    void m_updatePhysics(float delT);
+    void m_updateRigidbodies(float delT);
     void m_updateRestraints(float delT);
 
     void m_processTriggers();
