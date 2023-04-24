@@ -4,6 +4,7 @@
 #include <math.h>
 #include <vector>
 
+#include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/Graphics/RenderWindow.hpp"
 #include "imgui.h"
 #include "imgui-SFML.h"
@@ -11,11 +12,9 @@
 #include "SFML/Graphics.hpp"
 
 #include "transform.hpp"
+#include "game_object.hpp"
 
-#define CONSOLAS_PATH "assets/Consolas.ttf"
-#define EPI_NAMESPACE epi
-
-namespace EPI_NAMESPACE {
+namespace epi {
 
 typedef sf::Vector2f vec2f;
 typedef sf::Vector2i vec2i;
@@ -121,11 +120,12 @@ class Polygon {
     std::vector<vec2f> model;
     float rotation;
     vec2f pos;
+    vec2f scale = {1, 1};
     void m_updatePoints() {
         for(size_t i = 0; i < model.size(); i++) {
             const auto& t = model[i];
-            points[i].x = t.x * cosf(rotation) - t.y * sinf(rotation);
-            points[i].y = t.x * sinf(rotation) + t.y * cosf(rotation);
+            points[i].x = (t.x * cosf(rotation) - t.y * sinf(rotation)) * scale.x;
+            points[i].y = (t.x * sinf(rotation) + t.y * cosf(rotation)) * scale.y;
             points[i] += pos;
         }
     }
@@ -154,14 +154,13 @@ public:
         pos = v;
         m_updatePoints();
     }
-    void scale(vec2f s) {
-        for(auto& m : model) {
-            m.x *= s.x;
-            m.y *= s.y;
-        }
+    void setScale(vec2f s) {
+        scale = s;
         m_updatePoints();
     }
-
+    vec2f getScale() const {
+        return scale;
+    }
     const std::vector<vec2f>& getVertecies() const {
         return points;
     }
@@ -189,8 +188,8 @@ public:
     static Polygon CreateFromPoints(std::vector<vec2f> verticies);
 
     friend void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr);
-    friend void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr);
-    friend void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr);
+    friend void drawFill(sf::RenderTarget& rw, const Polygon& poly, Color clr);
+    friend void drawOutline(sf::RenderTarget& rw, const Polygon& poly, Color clr);
 };
 
 

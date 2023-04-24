@@ -1,0 +1,59 @@
+#ifndef IO_MANAGER_H
+#define IO_MANAGER_H
+#include "SFML/Graphics/RenderTarget.hpp"
+#include "SFML/Graphics/RenderWindow.hpp"
+#include "SFML/Window/Event.hpp"
+#include "SFML/Window/Mouse.hpp"
+#include "SFML/Window/VideoMode.hpp"
+#include "SFML/Window/Window.hpp"
+#include "SFML/Window.hpp"
+
+#include "game_object.hpp"
+#include "types.hpp"
+
+namespace epi {
+/*
+* \brief class managing window input and output, derived from GameObject
+*/
+class IOManager : public GameObject {
+    sf::Event _current_event;
+    sf::RenderWindow _window;
+public:
+    #define IOMANAGER_TYPE (typeid(IOManager).hash_code())
+    Property getPropertyList() const override {
+        return {IOMANAGER_TYPE, "IOmanager"};
+    }
+
+    sf::RenderTarget& getRenderObject() {
+        return _window;
+    }
+    sf::Window& getWindow() {
+        return _window;
+    }
+    const sf::Event& getEvent() const {
+        return _current_event;
+    }
+    vec2i getMousePos() const {
+        return sf::Mouse::getPosition(_window);
+    }
+    void display() {
+        //ImGui::SFML::Update();
+        ImGui::SFML::Render(_window);
+        _window.display();
+    }
+    void pollEvents() {
+        while(_window.pollEvent(_current_event)) {
+            ImGui::SFML::ProcessEvent(_window, _current_event);
+            notify(*this, Signal::EventInput);
+        }
+    }
+    IOManager(vec2i size, std::string title = "demo") : _window(sf::VideoMode(size.x, size.y), title) 
+    { 
+        ImGui::SFML::Init(_window);
+    }
+    ~IOManager() {
+        notify(*this, Signal::EventDestroyed);
+    }
+};
+}
+#endif

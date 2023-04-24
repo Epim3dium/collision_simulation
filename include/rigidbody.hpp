@@ -1,8 +1,13 @@
 #pragma once
 #include "col_utils.hpp"
+#include "game_object_utils.hpp"
 #include "imgui.h"
 #include "transform.hpp"
+#include "collider.hpp"
+#include "material.hpp"
+
 #include "types.hpp"
+
 #include <cmath>
 #include <cstddef>
 #include <iterator>
@@ -10,233 +15,48 @@
 #include <vector>
 #include <set>
 
-namespace EPI_NAMESPACE {
+namespace epi {
 
-enum class eCollisionShape {
-    Polygon,
-    Circle
-};
-struct Rigidbody;
-//calculating inertia of polygon shape
-float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
-
-struct ColliderInterface : public Transform {
-    virtual eCollisionShape getType() const = 0;
-    virtual AABB getAABB() const = 0;
-
-    virtual vec2f getPos() const override = 0;
-    virtual void setPos(vec2f) override = 0;
-
-    virtual vec2f getScale() const override = 0;
-    virtual void setScale(vec2f) override = 0;
-
-    virtual float getRot() const override = 0;
-    virtual void setRot(float) override = 0;
-    virtual float inertia(float mass) const = 0;
-};
-struct ColliderCircle : public ColliderInterface {
-    AABB m_aabb;
-    Circle m_shape;
-    float m_rotation = 0.f;
-    vec2f m_scale = vec2f(1.f, 1.f);
-    public:
-    inline float inertia(float mass) const override {
-        return 0.25f * mass * m_shape.radius * m_shape.radius;
-    }
-
-    virtual vec2f getPos() const override {
-        return m_shape.pos;
-    }
-    void setPos(vec2f p) override {
-        m_shape.pos = p;
-        m_aabb = {p - vec2f(m_shape.radius, m_shape.radius), p + vec2f(m_shape.radius, m_shape.radius) };
-    }
-    float getRot() const override {
-        return m_rotation;
-    }
-    void setRot(float r) override {
-        m_rotation = r;
-    }
-    vec2f getScale() const override {
-        return m_scale;
-    }
-    void setScale(vec2f s) override {
-        m_scale = s;
-    }
-    Circle getShape() const {
-        auto tmp = m_shape;
-        tmp.radius *= std::max(m_scale.x, m_scale.y);
-        return tmp;
-    }
-
-    inline eCollisionShape getType() const  override  {
-        return eCollisionShape::Circle;
-    }
-    AABB getAABB() const override {
-        return m_aabb;
-    }
-    ColliderCircle(const Circle& c) : m_shape(c) { }
-    ColliderCircle(vec2f pos, float radius) : m_shape(pos, radius) { }
-};
-struct ColliderPolygon : public ColliderInterface {
-private:
-    Polygon m_shape;
-    vec2f m_scale = {1.f, 1.f};
+/*
+* a class holding all of tha basic rigidbody properties needed to compute collision response
+*/
+class Rigidbody : public GameObject {
 public:
-    void addVelocity(vec2f dir, vec2f cp);
-    void addForce(vec2f dir, vec2f cp);
-
-    inline float inertia(float mass) const override { 
-        return getInertia(vec2f(0, 0), m_shape.getModelVertecies(), mass); 
-    }
-    virtual vec2f getPos() const override {
-        return m_shape.getPos();
-    }
-    void setPos(vec2f p) override {
-        m_shape.setPos(p);
-    }
-    float getRot() const override {
-        return m_shape.getRot();
-    }
-    void setRot(float r) override {
-        m_shape.setRot(r);
-    }
-    vec2f getScale() const override {
-        return m_scale;
-    }
-    void setScale(vec2f s) override {
-        m_scale = s;
-    }
-    Polygon getShape() const {
-        auto tmp = m_shape;
-        tmp.scale(m_scale);
-        return tmp;
-    }
-
-    inline eCollisionShape getType() const  override  {
-        return eCollisionShape::Polygon;
-    }
-    AABB getAABB() const override {
-        return AABB::CreateFromPolygon(m_shape);
-    }
-
-    ColliderPolygon(const Polygon& poly) : m_shape(poly) { 
-    }
-    ColliderPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : m_shape(pos_, rot_, model_) { 
-    }
-};
-
-struct Material {
-    float restitution = 0.0f;
-    float sfriction = 0.4f;
-    float dfriction = 0.4f;
-    float air_drag = 0.001f;
-};
-
-//struct made only to prevent ids from copying
-class Rigidbody : public Transform {
-public:
-    std::set<size_t> collision_mask;
-    std::set<size_t> collision_layer;
 
     bool isStatic = false;
     bool lockRotation = false;
 
+    vec2f force;
     vec2f velocity;
+    float angular_force = 0.f;
     float angular_velocity = 0.f;
-
     float mass = 1.f;
-    Material material;
+    float inertia = -1.f;
 
-    float pressure = 0.f;
+
     float time_immobile = 0.f;
 
+    #define RIGIDBODY_TYPE (typeid(Collider).hash_code())
+    Property getPropertyList() const override {
+        return {RIGIDBODY_TYPE, "rigidbody"};
+    }
     bool isDormant() const {
         return time_immobile > 1.f || isStatic;
-    }
-
-    virtual ColliderInterface& getCollider() = 0;
-    const ColliderInterface& getCollider() const {
-        return getCollider();
-    }
-
-    float inertia() {
-        return getCollider().inertia(mass);
-    }
-    eCollisionShape getType() const  {
-        return getCollider().getType();
     }
     inline void addForce(vec2f force) {
         velocity += force / mass;
     }
-    void addVelocity(vec2f dir, vec2f cp);
-    void addForce(vec2f dir, vec2f cp);
-    Rigidbody() : Transform() {}
+    void addVelocity(vec2f dir, vec2f rad);
+    void addForce(vec2f dir, vec2f rad);
+    Rigidbody() {}
+    ~Rigidbody() {
+        this->notify(*this, Signal::EventDestroyed);
+    }
 };
-
-
-class RigidPolygon  : public Rigidbody {
-private:
-public:
-    ColliderPolygon collider;
-    ColliderInterface& getCollider() override {
-        return collider;
-    }
-
-    vec2f getPos() const override {
-        return collider.getPos();
-    }
-    void setPos(vec2f v) override {
-        collider.setPos(v);
-    }
-
-    vec2f getScale() const override {
-        return collider.getScale();
-    }
-    void setScale(vec2f v) override {
-        collider.setScale(v);
-    }
-
-    float getRot() const override {
-        return collider.getRot();
-    }
-    void setRot(float r) override {
-        collider.setRot(r);
-    }
-
-    RigidPolygon(const Polygon& poly) : collider(poly) { }
-    RigidPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : collider(pos_, rot_, model_) { }
-};
-struct RigidCircle : public Rigidbody {
-    AABB m_aabb;
-    public:
-    float rot;
-    ColliderCircle collider;
-    ColliderInterface& getCollider() override {
-        return collider;
-    }
-    vec2f getPos() const override {
-        return collider.getPos();
-    }
-    void setPos(vec2f v) override {
-        collider.setPos(v);
-    }
-
-    vec2f getScale() const override {
-        return collider.getScale();
-    }
-    void setScale(vec2f v) override {
-        collider.setScale(v);
-    }
-
-    float getRot() const override {
-        return collider.getRot();
-    }
-    void setRot(float r) override {
-        collider.setRot(r);
-    }
-    RigidCircle(const RigidCircle&) = default;
-    RigidCircle(const Circle& c) : collider(c) {}
-    RigidCircle(vec2f pos, float radius) : collider(pos, radius) {}
+struct RigidManifold {
+    Transform* transform;
+    Collider* collider;
+    Rigidbody* rigidbody;
+    Material* material;
 };
 }

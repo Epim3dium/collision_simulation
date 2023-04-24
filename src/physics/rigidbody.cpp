@@ -2,7 +2,7 @@
 #include "solver.hpp"
 #include "types.hpp"
 
-namespace EPI_NAMESPACE {
+namespace epi {
 //only dynamic objects should be placed as the r1 argument
 //if r2 is static its mass in mat2 should be infinite
 float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
@@ -33,16 +33,16 @@ float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
     }
     return abs(mmoi);
 }
-void Rigidbody::addForce(vec2f force, vec2f cp) {
-    vec2f rad = cp - getCollider().getPos();
-    velocity += force / mass;
+
+//vec2f rad = cp - getCollider().getPos();
+void Rigidbody::addForce(vec2f f, vec2f rad) {
+    this->force += f;
     if(!lockRotation)
-        angular_velocity -= cross(force, rad) / inertia(); 
+        angular_force -= cross(f, rad); 
 }
-void Rigidbody::addVelocity(vec2f vel, vec2f cp) {
+void Rigidbody::addVelocity(vec2f vel, vec2f rad) {
     if(isStatic)
         return;
-    vec2f rad = cp - getCollider().getPos();
     velocity += vel;
     if(!lockRotation)
         angular_velocity -= cross(vel, rad); 

@@ -1,6 +1,6 @@
 #pragma once
 #include "types.hpp"
-namespace EPI_NAMESPACE {
+namespace epi {
 
 //rotates vetor with respect to the theta by angle in radians
 vec2f rotateVec(vec2f vec, float angle);

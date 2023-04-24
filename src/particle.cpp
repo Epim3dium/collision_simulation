@@ -2,7 +2,7 @@
 #include "SFML/Graphics/CircleShape.hpp"
 #include "SFML/Graphics/RectangleShape.hpp"
 #include "types.hpp"
-namespace  EPI_NAMESPACE {
+namespace  epi {
 RNG epi::Particle::s_rng;
 void Particle::PosInit::apply(Particle& p) {
     p.pos.x = s_rng.Random(min.x, max.x);

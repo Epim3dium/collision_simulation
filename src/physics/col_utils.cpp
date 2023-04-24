@@ -2,7 +2,7 @@
 #include "types.hpp"
 #include <cmath>
 #include <vector>
-namespace EPI_NAMESPACE {
+namespace epi {
 
 vec2f rotateVec(vec2f vec, float angle) {
     return vec2f(cos(angle) * vec.x - sin(angle) * vec.y,
@@ -255,15 +255,22 @@ IntersectionPolygonCircleResult intersectCirclePolygon(const Circle &c, const Po
         }
         prev = p;
     }
-    bool isOverlapping = len(closest - c.pos) <= c.radius || isOverlappingPointPoly(c.pos, r);
-    if(!isOverlapping)
+    bool isOverlappingPoint = isOverlappingPointPoly(c.pos, r);
+    bool isOverlapping = qlen(closest - c.pos) <= c.radius * c.radius || isOverlappingPoint;
+    if(!isOverlapping) {
         return {false};
+    }
     cn = norm(c.pos - closest);
-    //correcting normal
-    if(dot(cn, r.getPos() - closest) > 0.f) {
+//    //correcting normal
+//    if(dot(cn, r.getPos() - closest) > 0.f) {
+//        cn *= -1.f;
+//    }
+    float l = len(c.pos - closest);
+    float overlap = c.radius - l;
+    if(isOverlappingPoint) {
+        overlap = l + c.radius;
         cn *= -1.f;
     }
-    float overlap = c.radius - len(c.pos - closest);
     return {true, cn, closest, overlap};
 }
 IntersectionCircleCircleResult intersectCircleCircle(const Circle &c1, const Circle &c2) {

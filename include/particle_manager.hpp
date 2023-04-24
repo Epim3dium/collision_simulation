@@ -4,7 +4,7 @@
 #include <sys/_types/_size_t.h>
 #include <vector>
 
-namespace EPI_NAMESPACE {
+namespace epi {
 struct PhysicsManager;
 class ParticleManager {
     std::vector<Particle> m_particles;

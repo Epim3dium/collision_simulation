@@ -6,7 +6,7 @@
 #include <functional>
 #include <vector>
 
-namespace EPI_NAMESPACE {
+namespace epi {
 //default return functions for particle
 namespace helper {
 static inline float return_const_float(float val, float time) {
@@ -18,6 +18,7 @@ static inline vec2f return_const_vec2f(vec2f val, float time) {
 static inline Color return_const_color(Color val, float time) {
     return val;
 }
+
 }
 
 class Particle {

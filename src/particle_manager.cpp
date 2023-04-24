@@ -1,7 +1,7 @@
 #include "particle_manager.hpp"
 #include <cstddef>
 
-namespace EPI_NAMESPACE {
+namespace epi {
 size_t ParticleManager::findNextInactive() {
     size_t total_searches = 0;
     while(total_searches < m_particles.size()) {

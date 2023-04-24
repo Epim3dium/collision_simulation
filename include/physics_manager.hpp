@@ -1,9 +1,11 @@
 #pragma once
+#include "game_object_utils.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"
 #include "restraint.hpp"
 #include "quad_tree.hpp"
+#include "game_object.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -13,11 +15,16 @@
 #include <set>
 
 
-namespace EPI_NAMESPACE {
+namespace epi {
 
 struct ParticleManager;
 
-class PhysicsManager {
+/*
+ * \brief used to process collision detection and resolution as well as restraints on rigidbodies
+ * every Solver, RigidManifold and Trigger have to be bound to be processed, and unbound to stop processing
+ * when destroyed all objects will be automaticly unbound
+ */
+class PhysicsManager : public GameObject, Signal::Observer {
 public:
     enum class eSelectMode {
         Min,
@@ -36,40 +43,44 @@ private:
                 return std::max(a, b);
         }
     }
+    typedef std::pair<RigidManifold, RigidManifold> ColInfo;
     enum class eColType {
         CircCirc,
         PolyPoly,
         CircPoly
     };
-    typedef std::pair<Rigidbody*, Rigidbody*> ColInfo;
+
+    QuadTree<RigidManifold, std::function<AABB(RigidManifold)> > m_rigidbodiesQT;
+
+    std::vector<RigidManifold> m_rigidbodies;
+    std::vector<Restraint*> m_restraints;
+    std::vector<TriggerInterface*> m_triggers;
+
+    SolverInterface* m_solver = new DefaultSolver();
 
     std::vector<ColInfo> processBroadPhase();
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
-    void processNarrowRange(std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator begining,std::vector<std::pair<Rigidbody*, Rigidbody*>>::const_iterator ending);
 
-    void m_updateRigidbody(Rigidbody& rb, float delT);
+    void m_wakeUpAround(const RigidManifold& man);
+    void m_updateRigidObj(RigidManifold& man, float delT);
 
     void m_updateRigidbodies(float delT);
     void m_updateRestraints(float delT);
 
     void m_processTriggers();
     void m_processParticles(ParticleManager& pm);
-
-    QuadTree<Rigidbody, std::function<AABB(Rigidbody*)> > m_rigidbodiesQT;
-
-    std::vector<std::shared_ptr<Rigidbody>> m_rigidbodies;
-    std::vector<std::shared_ptr<RestraintInterface>> m_restraints;
-    std::vector<std::shared_ptr<TriggerInterface>> m_triggers;
-    void m_checkAndDeleteOrphans();
-
-    std::shared_ptr<SolverInterface> m_solver = std::make_shared<DefaultSolver>(DefaultSolver());
-    static AABB getAABBfromRigidbody(Rigidbody* rb) {
-        return rb->getCollider().getAABB();
+    static AABB getAABBfromRigidbody(RigidManifold man) {
+        return man.collider->getAABB();
     }
 public:
     //number of physics/collision steps per frame
     size_t steps = 2;
-    inline const QuadTree<Rigidbody, std::function<AABB(Rigidbody*)> >& getQuadTree() {
+    #define PHYSICS_MANAGER_TYPE (typeid(PhysicsManager).hash_code())
+    Property getPropertyList() const override {
+        return {PHYSICS_MANAGER_TYPE, "physicsmanager"};
+    }
+    void onNotify(const GameObject& obj, Signal::Event event) override;
+    inline const decltype(m_rigidbodiesQT)& getQuadTree() {
         return m_rigidbodiesQT;
     }
 
@@ -86,43 +97,26 @@ public:
 
 
     //used to add any rigidbody
-    inline void bind(std::shared_ptr<Rigidbody> rb) {
-        m_rigidbodies.push_back(rb);
-    }
+    void bind(RigidManifold man);
     //used to add solver that is used to resolve collisions
-    inline void bind(std::shared_ptr<SolverInterface> solver) {
+    inline void bind(SolverInterface* solver) {
         m_solver = solver;
     }
     //used to add restraints applied on rigidbodies bound
-    inline void bind(std::shared_ptr<RestraintInterface> restraint) {
-        m_restraints.push_back(restraint);
-    }
+    void bind(Restraint* restraint);
     //used to add triggers that will detect rigidbodies bound
-    inline void bind(std::shared_ptr<TriggerInterface> trigger) {
-        m_triggers.push_back(trigger);
-    }
-    template<class T>
-    inline void bind(std::shared_ptr<T> obj) {
-        if(dynamic_cast<Rigidbody*>(obj.get())) {
-            bind(std::dynamic_pointer_cast<Rigidbody>(obj));
-        } else if(dynamic_cast<SolverInterface*>(obj.get())) {
-            bind(std::dynamic_pointer_cast<SolverInterface>(obj));
-        } else if(dynamic_cast<RestraintInterface*>(obj.get())) {
-            bind(std::dynamic_pointer_cast<RestraintInterface>(obj));
-        } else if(dynamic_cast<TriggerInterface*>(obj.get())) {
-            bind(std::dynamic_pointer_cast<TriggerInterface>(obj));
-        } else {
-            throw std::invalid_argument("attemted to bind invalid object");
-        }
-    }
+    void bind(TriggerInterface* trigger);
     //removes rigidbody from manager
-    void unbind(std::shared_ptr<Rigidbody> rb);
+    void unbind(const Rigidbody* rb);
     //removes restraint from manager
-    void unbind(std::shared_ptr<RestraintInterface> restriant);
+    void unbind(const Restraint* restriant);
     //removes trigger from manager
-    void unbind(std::shared_ptr<TriggerInterface> trigger);
+    void unbind(const TriggerInterface* trigger);
 
     //size should be max simulated size
     PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
+    ~PhysicsManager() {
+        notify(*this, Signal::EventDestroyed);
+    }
 };
 }

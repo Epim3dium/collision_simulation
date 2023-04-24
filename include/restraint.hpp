@@ -1,67 +1,47 @@
 #pragma once
 #include "col_utils.hpp"
+#include "game_object.hpp"
+#include "game_object_utils.hpp"
 #include "rigidbody.hpp"
+#include "transform.hpp"
 #include <vector>
 
-namespace EPI_NAMESPACE {
+namespace epi {
 
-struct RestraintInterface {
+struct Restraint : public GameObject {
+    #define RESTRAINT_TYPE (typeid(Restraint).hash_code())
+    Property getPropertyList() const override {
+        return {RESTRAINT_TYPE, "restraint"};
+    }
     virtual void update(float delT) = 0;
-    virtual std::vector<Rigidbody*> getRestrainedObjects() const = 0;
-    virtual ~RestraintInterface() {}
+    virtual ~Restraint() {
+        notify(*this, Signal::EventDestroyed);
+    }
 };
 
-struct RestraintDistance : public RestraintInterface {
-    float damping_coef= 0.8f;
+struct RestraintPointTrans : public Restraint {
+    float damping_coef= 0.02f;
 
-    Rigidbody* a;
-    Rigidbody* b;
+    RigidManifold a;
+    Transform* trans;
+    vec2f model_point_a;
+    vec2f model_point_trans;
     float dist = 0.f;
     void update(float delT) override;
-    std::vector<Rigidbody*> getRestrainedObjects() const override {
-        return {a, b};
-    }
-
-    RestraintDistance(float distance, Rigidbody* r1, Rigidbody* r2) : a(r1), b(r2), dist(distance) { }
+    RestraintPointTrans(RigidManifold m1, vec2f model_point, Transform* parent, vec2f model_parent)
+        : a(m1), model_point_a(model_point), trans(parent), model_point_trans(model_parent) { }
 };
-struct RestraintPoint : public RestraintInterface {
-    float damping_coef= 0.8f;
+struct RestraintRigidRigid: public Restraint {
+    float damping_coef= 0.02f;
 
-    Rigidbody* a;
+    RigidManifold a;
+    RigidManifold b;
     vec2f model_point_a;
-    Rigidbody* b;
     vec2f model_point_b;
     float dist = 0.f;
     void update(float delT) override;
-    std::vector<Rigidbody*> getRestrainedObjects() const override {
-        return {(Rigidbody*)a, (Rigidbody*)b};
-    }
-    RestraintPoint(float distance, Rigidbody* r1, vec2f model_pa, Rigidbody* r2, vec2f model_pb)
-        : a(r1), model_point_a(model_pa), b(r2), model_point_b(model_pb), dist(distance) { }
-};
-struct RestraintRotation : public RestraintInterface {
-    Rigidbody* a;
-    float dist;
-    Rigidbody* b;
-    float a_angle;
-    float b_angle;
-    float con_angle;
-
-    void update(float delT) override;
-    std::vector<Rigidbody*> getRestrainedObjects() const override {
-        return {a, b};
-    }
-    RestraintRotation(Rigidbody* r1, Rigidbody* r2) : a(r1), b(r2) {
-        auto dir = b->getCollider().getPos() - a->getCollider().getPos();
-        dist = len(dir);
-        con_angle = atan2(dir.y, dir.x);
-        a_angle = con_angle - a->getCollider().getRot();
-        a_angle = fmod( a_angle, M_PI * 2.f);
-        b_angle = con_angle - b->getCollider().getRot();
-        b_angle = fmod( b_angle, M_PI * 2.f);
-        std::cerr << a_angle << "\n";
-        std::cerr << b_angle << "\n";
-    };
+    RestraintRigidRigid(RigidManifold m1, vec2f model_point1, RigidManifold m2, vec2f model_point2)
+        : a(m1), model_point_a(model_point1), b(m2), model_point_b(model_point2) { }
 };
 
 }

@@ -1,11 +1,12 @@
 #include "types.hpp"
 #include "SFML/Graphics/PrimitiveType.hpp"
+#include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/System/Vector3.hpp"
 #include <cmath>
 #include <math.h>
 #include <numeric>
 #include <vector>
-namespace EPI_NAMESPACE {
+namespace epi {
 vec2f norm(vec2f v) {
     float l = len(v);
     if(l == 0.f)
@@ -89,7 +90,7 @@ void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
         rw.draw(t, 2, sf::Lines);
     }
 }
-void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
+void drawFill(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         sf::Vertex t[3];
         t[0].color = clr;
@@ -105,7 +106,7 @@ void drawFill(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
         rw.draw(t, 3, sf::Triangles);
     }
 }
-void drawOutline(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
+void drawOutline(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         sf::Vertex t[2];
         t[0].color = clr;
