@@ -136,13 +136,12 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
 void PhysicsManager::update(float delT, ParticleManager* pm ) {
     float deltaStep = delT / (float)steps;
     //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
-    m_rigidbodiesQT.clear();
-    m_rigidbodiesQT.updateLeafes();
-    for(auto r : m_rigidbodies)
-        m_rigidbodiesQT.add(r);
 
     for(int i = 0; i < steps; i++) {
         m_updateRigidbodies(deltaStep);
+        for(auto r : m_rigidbodies) {
+            m_rigidbodiesQT.update(r);
+        }
         auto col_list = processBroadPhase();
         m_updateRestraints(deltaStep);
 

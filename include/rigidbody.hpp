@@ -58,5 +58,11 @@ struct RigidManifold {
     Collider* collider;
     Rigidbody* rigidbody;
     Material* material;
+    bool operator<(const RigidManifold& other) const {
+        return transform > other.transform;
+    }
+    bool operator==(const RigidManifold& other) const {
+        return transform == other.transform;
+    }
 };
 }

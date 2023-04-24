@@ -27,17 +27,13 @@ class QuadTree : public GameObject
     static_assert(std::is_arithmetic_v<Float>);
 
 public:
-    struct Location {
-        typename std::vector<T>::iterator itr;
-        std::vector<T>* container;
-    };
     #define QUAD_TREE_TYPE (typeid(QuadTree).hash_code())
     Property getPropertyList() const override {
         return {QUAD_TREE_TYPE, "quadtree"};
     }
     QuadTree(const Box& box, const GetBox& getBox = GetBox(),
         const Equal& equal = Equal()) :
-        mBox(box), mRoot(std::make_unique<Node>()), mGetBox(getBox), mEqual(equal)
+        _box(box), _root(std::make_unique<Node>(box)), _getBox(getBox), mEqual(equal)
     {
 
     }
@@ -45,39 +41,57 @@ public:
         notify(*this, Signal::EventDestroyed);
     }
 
-    Location add(const T& value)
+    void add(const T& value)
     {
-        return add(mRoot.get(), 0, mBox, value);
+        _locations[value] = add(_root.get(), 0, _box, value);
     }
 
     void remove(const T& value)
     {
-        remove(mRoot.get(), mBox, value);
+        auto itr = _locations.find(value);
+        if(itr == _locations.end()) 
+            return;
+        removeValue(itr->second, value);
+        _locations.erase(itr);
     }
 
     std::vector<T> query(const Box& box) const
     {
         auto values = std::vector<T>();
-        query(mRoot.get(), mBox, box, values);
+        query(_root.get(), _box, box, values);
         return values;
     }
+    void update(T value) {
+        auto itr = _locations.find(value);
+        if(itr != _locations.end()) {
+            auto b = itr->second->box;
+            if(AABBcontainsAABB(b, _getBox(value))) 
+                return;
+            remove(value);
+            add(value);
+
+        } else {
+            add(value);
+        }
+    }
+
 
     std::vector<std::pair<T, T>> findAllIntersections() const
     {
         auto intersections = std::vector<std::pair<T, T>>();
-        findAllIntersections(mRoot.get(), intersections);
+        findAllIntersections(_root.get(), intersections);
         return intersections;
     }
 
     Box getBox() const 
     {
-        return mBox;
+        return _box;
     }
     void updateLeafes() {
-        updateLeafes(mRoot.get());
+        updateLeafes(_root.get());
     }
     void clear() {
-        clear(mRoot.get());
+        clear(_root.get());
 
     }
     
@@ -89,11 +103,15 @@ private:
     {
         std::array<std::unique_ptr<Node>, 4> children;
         std::vector<T> values;
+        AABB box;
+
+        Node(AABB b) : box(b) {}
     };
 
-    Box mBox;
-    std::unique_ptr<Node> mRoot;
-    GetBox mGetBox;
+    std::map<T, Node*> _locations;
+    Box _box;
+    std::unique_ptr<Node> _root;
+    GetBox _getBox;
     Equal mEqual;
 
     bool isLeaf(const Node* node) const
@@ -159,16 +177,16 @@ private:
             return -1;
     }
 
-    Location add(Node* node, std::size_t depth, const Box& box, const T& value)
+    Node* add(Node* node, std::size_t depth, const Box& box, const T& value)
     {
         assert(node != nullptr);
-        assert(AABBcontainsAABB(box, mGetBox(value)));
+        assert(AABBcontainsAABB(box, _getBox(value)));
         if (isLeaf(node))
         {
             // Insert the value in this node if possible
             if (depth >= MaxDepth || node->values.size() < Threshold) {
                 node->values.push_back(value);
-                return {std::prev(node->values.end()), &node->values};
+                return node;
             } else {
                 split(node, box);
                 return add(node, depth, box, value);
@@ -176,13 +194,14 @@ private:
         }
         else
         {
-            auto i = getQuadrant(box, mGetBox(value));
+            auto i = getQuadrant(box, _getBox(value));
             // Add the value in a child if the value is entirely contained in it
             if (i != -1) {
+                _locations[value] = node->children[static_cast<std::size_t>(i)].get();
                 return add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
             } else {
                 node->values.push_back(value);
-                return {std::prev(node->values.end()), &node->values};
+                return node;
             }
         }
     }
@@ -192,13 +211,14 @@ private:
         assert(node != nullptr);
         assert(isLeaf(node) && "Only leaves can be split");
         // Create children
+        int quad = 0;
         for (auto& child : node->children)
-            child = std::make_unique<Node>();
+            child = std::make_unique<Node>(computeBox(node->box, quad++));
         // Assign values to children
         auto newValues = std::vector<T>(); // New values for this node
         for (const auto& value : node->values)
         {
-            auto i = getQuadrant(box, mGetBox(value));
+            auto i = getQuadrant(box, _getBox(value));
             if (i != -1)
                 node->children[static_cast<std::size_t>(i)]->values.push_back(value);
             else
@@ -210,7 +230,7 @@ private:
     bool remove(Node* node, const Box& box, const T& value)
     {
         assert(node != nullptr);
-        assert(AABBcontainsAABB(box, mGetBox(value)));
+        assert(AABBcontainsAABB(box, _getBox(value)));
         if (isLeaf(node))
         {
             // Remove the value from node
@@ -220,7 +240,7 @@ private:
         else
         {
             // Remove the value in a child if the value is entirely contained in it
-            auto i = getQuadrant(box, mGetBox(value));
+            auto i = getQuadrant(box, _getBox(value));
             if (i != -1)
             {
                 return remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
@@ -260,8 +280,10 @@ private:
             // Merge the values of all the children
             for (const auto& child : node->children)
             {
-                for (const auto& value : child->values)
+                for (const auto& value : child->values) {
+                    _locations[value] = node;
                     node->values.push_back(value);
+                }
             }
             // Remove the children
             for (auto& child : node->children)
@@ -293,7 +315,7 @@ private:
             return;
         }
         for (const auto& value : node->values) {
-            if (isOverlappingAABBAABB(queryBox, mGetBox(value)))
+            if (isOverlappingAABBAABB(queryBox, _getBox(value)))
                 values.push_back(value);
         }
         if (!isLeaf(node)) {
@@ -310,7 +332,7 @@ private:
         // Make sure to not report the same intersection twice
         for (auto i = std::size_t(0); i < node->values.size(); ++i) {
             for (auto j = std::size_t(0); j < i; ++j) {
-                if (isOverlappingAABBAABB(mGetBox(node->values[i]), mGetBox(node->values[j])))
+                if (isOverlappingAABBAABB(_getBox(node->values[i]), _getBox(node->values[j])))
                     intersections.emplace_back(node->values[i], node->values[j]);
             }
         }
@@ -329,7 +351,7 @@ private:
     void findIntersectionsInDescendants(Node* node, const T& value, std::vector<std::pair<T, T>>& intersections) const {
         // Test against the values stored in this node
         for (const auto& other : node->values) {
-            if (isOverlappingAABBAABB(mGetBox(value), mGetBox(other)) )
+            if (isOverlappingAABBAABB(_getBox(value), _getBox(other)) )
                 intersections.emplace_back(value, other);
         }
         // Test against values stored into descendants of this node
