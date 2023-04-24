@@ -255,8 +255,9 @@ protected:
                                 [&](const std::unique_ptr<DemoObject>& obj) {
                                     return obj.get() == objptr;
                                 });
-                            if(itr != demo_objects.end())
+                            if(itr != demo_objects.end()) {
                                 demo_objects.erase(itr);
+                            }
                             objptr = findHovered();
                         }while(objptr != nullptr);
                         opts.selection.object = nullptr;
@@ -306,7 +307,6 @@ protected:
 
         for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
             if(!isOverlappingPointAABB(it->get()->transform->getPos(), sim_window)) {
-                std::cerr << "!";
                 demo_objects.erase(it);
                 break;
             }

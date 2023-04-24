@@ -19,8 +19,7 @@ namespace epi {
 template<typename T, typename GetBox, typename Equal = std::equal_to<T>, typename Float = float>
 class QuadTree : public GameObject
 {
-    typedef AABB Box;
-    static_assert(std::is_convertible_v<std::invoke_result_t<GetBox, const T&>, Box>,
+    static_assert(std::is_convertible_v<std::invoke_result_t<GetBox, const T&>, AABB>,
         "GetBox must be a callable of signature Box<Float>(const T&)");
     static_assert(std::is_convertible_v<std::invoke_result_t<Equal, const T&, const T&>, bool>,
         "Equal must be a callable of signature bool(const T&, const T&)");
@@ -31,7 +30,7 @@ public:
     Property getPropertyList() const override {
         return {QUAD_TREE_TYPE, "quadtree"};
     }
-    QuadTree(const Box& box, const GetBox& getBox = GetBox(),
+    QuadTree(const AABB& box, const GetBox& getBox = GetBox(),
         const Equal& equal = Equal()) :
         _box(box), _root(std::make_unique<Node>(box)), _getBox(getBox), mEqual(equal)
     {
@@ -55,12 +54,6 @@ public:
         _locations.erase(itr);
     }
 
-    std::vector<T> query(const Box& box) const
-    {
-        auto values = std::vector<T>();
-        query(_root.get(), _box, box, values);
-        return values;
-    }
     void update(T value) {
         auto itr = _locations.find(value);
         if(itr != _locations.end()) {
@@ -74,6 +67,12 @@ public:
             add(value);
         }
     }
+    std::vector<T> query(const AABB& box) const
+    {
+        auto values = std::vector<T>();
+        query(_root.get(), _box, box, values);
+        return values;
+    }
 
 
     std::vector<std::pair<T, T>> findAllIntersections() const
@@ -83,7 +82,7 @@ public:
         return intersections;
     }
 
-    Box getBox() const 
+    AABB getBox() const 
     {
         return _box;
     }
@@ -109,7 +108,7 @@ private:
     };
 
     std::map<T, Node*> _locations;
-    Box _box;
+    AABB _box;
     std::unique_ptr<Node> _root;
     GetBox _getBox;
     Equal mEqual;
@@ -119,7 +118,7 @@ private:
         return !static_cast<bool>(node->children[0]);
     }
 
-    Box computeBox(const Box& box, int i) const
+    AABB computeBox(const AABB& box, int i) const
     {
         auto origin = box.min;
         auto childSize = box.size() / static_cast<Float>(2);
@@ -139,11 +138,11 @@ private:
                 return AABB::CreateMinSize(origin + childSize, childSize);
             default:
                 assert(false && "Invalid child index");
-                return Box();
+                return AABB();
         }
     }
 
-    int getQuadrant(const Box& nodeBox, const Box& valueBox) const
+    int getQuadrant(const AABB& nodeBox, const AABB& valueBox) const
     {
         auto center = nodeBox.center();
         // West
@@ -177,7 +176,7 @@ private:
             return -1;
     }
 
-    Node* add(Node* node, std::size_t depth, const Box& box, const T& value)
+    Node* add(Node* node, std::size_t depth, const AABB& box, const T& value)
     {
         assert(node != nullptr);
         assert(AABBcontainsAABB(box, _getBox(value)));
@@ -205,7 +204,7 @@ private:
         }
     }
 
-    void split(Node* node, const Box& box)
+    void split(Node* node, const AABB& box)
     {
         assert(node != nullptr);
         assert(isLeaf(node) && "Only leaves can be split");
@@ -228,7 +227,7 @@ private:
         node->values = std::move(newValues);
     }
 
-    bool remove(Node* node, const Box& box, const T& value)
+    bool removeManually(Node* node, const AABB& box, const T& value)
     {
         assert(node != nullptr);
         assert(AABBcontainsAABB(box, _getBox(value)));
@@ -244,7 +243,10 @@ private:
             auto i = getQuadrant(box, _getBox(value));
             if (i != -1)
             {
-                return remove(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value);
+                if(removeManually(node->children[static_cast<std::size_t>(i)].get(), computeBox(box, i), value)) {
+                    tryMerge(node->children[static_cast<std::size_t>(i)].get());
+                    return true;
+                }
             }
             // Otherwise, we remove the value from the current node
             else
@@ -279,8 +281,7 @@ private:
         {
             node->values.reserve(nbValues);
             // Merge the values of all the children
-            for (const auto& child : node->children)
-            {
+            for (const auto& child : node->children) {
                 for (const auto& value : child->values) {
                     _locations[value] = node;
                     node->values.push_back(value);
@@ -309,7 +310,7 @@ private:
         }
     }
 
-    void query(Node* node, const Box& box, const Box& queryBox, std::vector<T>& values) const
+    void query(Node* node, const AABB& box, const AABB& queryBox, std::vector<T>& values) const
     {
         assert(node != nullptr);
         if(!isOverlappingAABBAABB(queryBox, box)) {

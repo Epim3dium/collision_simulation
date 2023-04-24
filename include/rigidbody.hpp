@@ -54,15 +54,17 @@ public:
     }
 };
 struct RigidManifold {
+private:
+public:
     Transform* transform;
     Collider* collider;
     Rigidbody* rigidbody;
     Material* material;
     bool operator<(const RigidManifold& other) const {
-        return transform > other.transform;
+        return rigidbody > other.rigidbody;
     }
     bool operator==(const RigidManifold& other) const {
-        return transform == other.transform;
+        return rigidbody == other.rigidbody;
     }
 };
 }
