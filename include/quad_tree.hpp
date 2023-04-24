@@ -197,7 +197,6 @@ private:
             auto i = getQuadrant(box, _getBox(value));
             // Add the value in a child if the value is entirely contained in it
             if (i != -1) {
-                _locations[value] = node->children[static_cast<std::size_t>(i)].get();
                 return add(node->children[static_cast<std::size_t>(i)].get(), depth + 1, computeBox(box, i), value);
             } else {
                 node->values.push_back(value);
@@ -219,10 +218,12 @@ private:
         for (const auto& value : node->values)
         {
             auto i = getQuadrant(box, _getBox(value));
-            if (i != -1)
+            if (i != -1) {
+                _locations[value] = node->children[static_cast<std::size_t>(i)].get();
                 node->children[static_cast<std::size_t>(i)]->values.push_back(value);
-            else
+            } else {
                 newValues.push_back(value);
+            }
         }
         node->values = std::move(newValues);
     }

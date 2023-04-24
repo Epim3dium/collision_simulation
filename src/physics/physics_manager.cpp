@@ -139,9 +139,9 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
 
     for(int i = 0; i < steps; i++) {
         m_updateRigidbodies(deltaStep);
-        for(auto r : m_rigidbodies) {
+        for(auto& r : m_rigidbodies)
             m_rigidbodiesQT.update(r);
-        }
+
         auto col_list = processBroadPhase();
         m_updateRestraints(deltaStep);
 
@@ -189,6 +189,7 @@ void PhysicsManager::unbind(const Rigidbody* rb) {
     if(itr != m_rigidbodies.end()) {
         m_wakeUpAround(*itr);
         m_rigidbodies.erase(itr);
+        m_rigidbodiesQT.remove(*itr);
     }
 }
 template<class T>
