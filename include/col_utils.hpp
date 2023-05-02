@@ -1,5 +1,6 @@
 #pragma once
 #include "types.hpp"
+#include <cmath>
 namespace epi {
 
 //rotates vetor with respect to the theta by angle in radians
@@ -73,6 +74,16 @@ struct IntersectionRayRayResult {
  */
 IntersectionRayRayResult intersectRayRay(vec2f ray0_origin, vec2f ray0_dir, vec2f ray1_origin, vec2f ray1_dir);
 
+struct IntersectionRayPolygonResult {
+    bool detected;
+    //contact normals from polygon
+    vec2f contact_normal_near;
+    float t_hit_near;
+    //contact normals from polygon
+    vec2f contact_normal_far;
+    float t_hit_far = INFINITY;
+};
+IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const Polygon& poly);
 /**
  * structure containing all info returned by Polygon intersection
  *

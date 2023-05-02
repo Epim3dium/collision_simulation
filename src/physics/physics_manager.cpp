@@ -8,6 +8,7 @@
 #include "solver.hpp"
 #include "particle_manager.hpp"
 #include "rigidbody.hpp"
+#include "transform.hpp"
 #include "trigger.hpp"
 
 #include <cassert>
@@ -18,6 +19,7 @@
 #include <mutex>
 #include <memory>
 #include <set>
+#include <stdexcept>
 #include <sys/_types/_size_t.h>
 #include <vector>
 #include <thread>
@@ -129,6 +131,9 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
                     if(isOverlappingPointPoly(p.pos, ((PolygonCollider*)o.collider)->getShape()))
                         p.isActive = false;
                 break;
+                default:
+                    throw std::invalid_argument("not implemeted yet");
+                break;
             }
         }
     }
@@ -138,7 +143,6 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
 
     for(auto& r : m_rigidbodies) {
-        Collider* ptr = r.collider;
         m_rigidbodiesQT.update(r);
     }
     for(int i = 0; i < steps; i++) {

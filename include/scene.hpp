@@ -62,7 +62,8 @@ public:
     void update(sf::Time delT) override {
         _io_manager->pollEvents();
         ImGui::SFML::Update(_io_manager->getWindow(), _io_manager->getRenderObject(), delT);
-        onUpdate(delT.asSeconds());
+        auto delTsec = std::clamp(delT.asSeconds(), 0.f, 1.f);
+        onUpdate(delTsec);
         onRender(_io_manager->getRenderObject());
         _io_manager->display();
     }

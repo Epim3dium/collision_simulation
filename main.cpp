@@ -5,6 +5,7 @@
 
 #include "SFML/Graphics/CircleShape.hpp"
 #include "SFML/Graphics/Color.hpp"
+#include "SFML/Graphics/PrimitiveType.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/System/Time.hpp"
 #include "SFML/Window/Event.hpp"
@@ -27,10 +28,7 @@
 
 using namespace epi;
 
-bool InputText(const char* label, std::string* str)
-{
-    return ImGui::InputText(label, (char*)str->c_str(), str->capacity() + 1);
-}
+    
 
 static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = PastelColor::bg1) {
     //if(selection.contains(rb))
@@ -50,6 +48,15 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             drawFill(rw, ((PolygonCollider&)col).getShape(), color);
             drawOutline(rw, ((PolygonCollider&)col).getShape(), sf::Color::Black);
         break;
+        case epi::eCollisionShape::Ray: {
+            Ray t = ((RayCollider&)col).getShape();
+            sf::Vertex verts[2] ;
+            verts[0].position = t.pos;
+            verts[1].position = t.pos + t.dir;
+            verts[0].color = sf::Color::White;
+            verts[1].color = sf::Color::White;
+            rw.draw(verts, 2, sf::Lines);
+        } break;
     }
 #if DEBUG_DRAW
     AABB t = rb->getCollider().getAABB();
@@ -101,6 +108,14 @@ public:
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
     }
+    DemoObject(Ray ray) {
+        transform = std::unique_ptr<Transform>(new Transform());
+        transform->setPos(ray.pos);
+        collider = std::unique_ptr<Collider>(new RayCollider(transform.get(), ray));
+        rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
+        rigidbody->isStatic = true;
+        material = std::unique_ptr<Material>(new Material());
+    }
     ~DemoObject() {
         notify(*this, Signal::EventDestroyed);
     }
@@ -144,6 +159,12 @@ protected:
                     if(isOverlappingPointPoly(mouse_pos, polygon)) {
                         return r.get();
                     }
+                }break;
+                case eCollisionShape::Ray: {
+                    Ray t = cast<RayCollider>(*r->collider).getShape();
+                    auto closest = findClosestPointOnRay(t.pos, t.dir, mouse_pos);
+                    if(len(closest - mouse_pos) < 10.f)
+                        return r.get();
                 }break;
             }
         }
@@ -232,21 +253,27 @@ protected:
                 {
                     case sf::Keyboard::C: {
                         Circle t((vec2f)_io_manager->getMousePos(), r);
-                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
-                        _physics_manager->bind(demo_objects.back().get()->getManifold());\
+                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
+                        _physics_manager->bind(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
                         Polygon t = Polygon::CreateRegular((vec2f)_io_manager->getMousePos(), M_PI/side_count, side_count, r * sqrt(2.f));
-                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
-                        _physics_manager->bind(demo_objects.back().get()->getManifold());\
+                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
+                        _physics_manager->bind(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::Enter: {
-                        if(opts.poly_creation.size() <= 2)
+                        if(opts.poly_creation.size() < 2) {
                             break;
-                        Polygon t = Polygon::CreateFromPoints(opts.poly_creation);
-                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
-                        _physics_manager->bind(demo_objects.back().get()->getManifold());\
+                        }else if(opts.poly_creation.size() == 2) {
+                            Ray t = Ray::CreatePoints(opts.poly_creation.front(), opts.poly_creation.back());
+                            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
+                        } else {
+                            Polygon t = Polygon::CreateFromPoints(opts.poly_creation);
+                            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
+                        }
+                        _physics_manager->bind(demo_objects.back().get()->getManifold());
+                        opts.selection.object = demo_objects.back().get();
                     }break;
                     case sf::Keyboard::BackSpace: {
                         DemoObject* objptr = opts.selection.object;
@@ -373,9 +400,7 @@ protected:
                             }
                         }
                         static std::string input_tag;
-                        InputText("add_field_tag", &input_tag);
-                        ImGui::SameLine();
-                        if(ImGui::Button("add_tag")) {
+                        if(ImGui::InputText("add_field_tag", (char*)input_tag.c_str(), input_tag.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue)) {
                             obj->collider->tag.add(input_tag.c_str());
                             input_tag = "";
                         }
@@ -392,9 +417,7 @@ protected:
                             }
                         }
                         static std::string input_mask;
-                        InputText("add_field_mask", &input_mask);
-                        ImGui::SameLine();
-                        if(ImGui::Button("add_mask")) {
+                        if(ImGui::InputText("add_field_mask", (char*)input_mask.c_str(), input_tag.capacity() + 1, ImGuiInputTextFlags_EnterReturnsTrue)) {
                             obj->collider->mask.add(input_mask.c_str());
                             input_mask = "";
                         }
@@ -404,6 +427,7 @@ protected:
             }
             ImGui::Text("total bodies: %d", int(demo_objects.size()));
             ImGui::Text("delta time: %f", delT);
+            ImGui::Text("FPS: %f", 1.f / delT);
             if(delT > 1.0 / 60.0) {
                 ImGui::SameLine();
                 ImGui::Text("BAD FRAMES");

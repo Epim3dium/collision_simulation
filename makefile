@@ -18,7 +18,7 @@ main: $(OBJ_FILES) $(SFML_OBJ)
 	$(CC) -o main.exe main.cpp $^ $(CFLAGS) -framework openGL
 
 collision.a: $(OBJ_FILES) $(SFML_OBJ)
-	ar -rcs collision.a *.o
+	ar -rcs collision.a $(OBJ_FILES)
 
 
 clean:

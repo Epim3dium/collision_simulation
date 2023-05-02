@@ -1,4 +1,5 @@
 #include "solver.hpp"
+#include "col_utils.hpp"
 #include "collider.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"
@@ -8,11 +9,35 @@
 #include <random>
 #include <cmath>
 #include <numeric>
+#include <stdexcept>
 #include <vector>
 
 
 namespace epi {
 
+CollisionInfo detectOverlap(PolygonCollider& c1, RayCollider& c2) {
+    auto ray = c2.getShape();
+    auto intersection = intersectRayPolygon(ray.pos, ray.dir, c1.getShape()); 
+    if(intersection.detected) {
+        auto cp1 = ray.pos + ray.dir * intersection.t_hit_near;
+        auto cp2 = ray.pos + ray.dir * intersection.t_hit_far;
+        auto mid = (cp1 + cp2) / 2.f;
+        auto closest = findClosestPointOnEdge(mid, c1.getShape());
+        return {true, intersection.contact_normal_near, {cp1, cp2}, len(closest - mid)};
+    }
+    return {false};
+}
+CollisionInfo detectOverlap(CircleCollider& c1, RayCollider& c2) {
+    auto ray = c2.getShape();
+    auto circle = c1.getShape();
+    auto closest = findClosestPointOnRay(ray.pos, ray.dir, circle.pos);
+    auto l = len(closest - circle.pos);
+    bool detected = (l < circle.radius);
+    if(detected) {
+        return {true, norm(closest - circle.pos), {closest}, l - circle.radius};
+    }
+    return {false};
+}
 CollisionInfo detectOverlap(CircleCollider& c1, PolygonCollider& c2) {
 
     auto intersection = intersectCirclePolygon(c1.getShape(), c2.getShape());
@@ -170,6 +195,9 @@ CollisionInfo DefaultSolver::detect(Collider* col1, Collider* col2) {
                     man = detectOverlap(*(CircleCollider*)col2, *(PolygonCollider*)col1);
                     man.swapped = true;
                 break;
+                case eCollisionShape::Ray:
+                    man = detectOverlap(*(PolygonCollider*)col1, *(RayCollider*)col2);
+                break;
             }
         break;
         case eCollisionShape::Circle:
@@ -180,8 +208,26 @@ CollisionInfo DefaultSolver::detect(Collider* col1, Collider* col2) {
                 case eCollisionShape::Circle:
                     man = detectOverlap(*(CircleCollider*)col1, *(CircleCollider*)col2);
                 break;
+                case eCollisionShape::Ray:
+                    man = detectOverlap(*(CircleCollider*)col1, *(RayCollider*)col2);
+                break;
             }
         break;
+        case eCollisionShape::Ray: {
+            switch (col2->getType()) {
+                case eCollisionShape::Polygon:
+                    man = detectOverlap(*(PolygonCollider*)col2, *(RayCollider*)col1);
+                    man.swapped = true;
+                break;
+                case eCollisionShape::Circle:
+                    man = detectOverlap(*(CircleCollider*)col2, *(RayCollider*)col1);
+                    man.swapped = true;
+                break;
+                case eCollisionShape::Ray:
+                    throw std::invalid_argument("ray shouldn't be a dynamic object");
+                break;
+            }
+        }break;
     }
     return man;
 }

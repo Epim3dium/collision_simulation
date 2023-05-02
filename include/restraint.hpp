@@ -20,7 +20,7 @@ struct Restraint : public GameObject {
 };
 
 struct RestraintPointTrans : public Restraint {
-    float damping_coef= 0.02f;
+    float damping_coef= 0.03f;
 
     RigidManifold a;
     Transform* trans;
@@ -32,7 +32,7 @@ struct RestraintPointTrans : public Restraint {
         : a(m1), model_point_a(model_point), trans(parent), model_point_trans(model_parent) { }
 };
 struct RestraintRigidRigid: public Restraint {
-    float damping_coef= 0.02f;
+    float damping_coef= 0.03f;
 
     RigidManifold a;
     RigidManifold b;

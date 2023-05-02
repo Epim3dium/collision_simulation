@@ -13,7 +13,7 @@ void RestraintPointTrans::update(float delT) {
     vec2f transp = trans->getPos() + rotateVec(model_point_trans, trans->getRot());
 
     auto c = ap - transp;
-    if(nearlyEqual(qlen(c), 0.f)) {
+    if(qlen(c) <= 1.f) {
         return;
     }
     vec2f radperp(-r.y, r.x);
@@ -55,7 +55,7 @@ void RestraintRigidRigid::update(float delT) {
     auto rel_velA = a.rigidbody->velocity - avg_vel;
     auto rel_velB = b.rigidbody->velocity - avg_vel;
 
-    if(nearlyEqual(qlen(cA), 0.f) || nearlyEqual(qlen(cB), 0.f)) {
+    if(qlen(cA) == 0.f) {
         return;
     }
 
