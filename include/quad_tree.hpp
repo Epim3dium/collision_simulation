@@ -1,5 +1,7 @@
 #pragma once
 #include "SFML/Graphics/PrimitiveType.hpp"
+#include "SFML/Graphics/RenderTarget.hpp"
+
 #include "col_utils.hpp"
 #include "game_object_utils.hpp"
 #include "rigidbody.hpp"
@@ -13,6 +15,7 @@
 #include <vector>
 #include <array>
 #include <list>
+#include <stack>
 
 namespace epi {
 //object responsible for spacial particioning
@@ -51,6 +54,10 @@ public:
         if(itr == _locations.end()) 
             return;
         removeValue(itr->second, value);
+        Node* parent = itr->second->parent;
+        while(parent && tryMerge(parent)) {
+            parent = parent->parent;
+        }
         _locations.erase(itr);
     }
 
@@ -91,7 +98,6 @@ public:
     }
     void clear() {
         clear(_root.get());
-
     }
     
 private:
@@ -100,11 +106,12 @@ private:
 
     struct Node
     {
+        Node* parent;
         std::array<std::unique_ptr<Node>, 4> children;
         std::vector<T> values;
         AABB box;
 
-        Node(AABB b) : box(b) {}
+        Node(AABB b, Node* p = nullptr) : box(b), parent(p) {}
     };
 
     std::map<T, Node*> _locations;
@@ -211,7 +218,7 @@ private:
         // Create children
         int quad = 0;
         for (auto& child : node->children)
-            child = std::make_unique<Node>(computeBox(node->box, quad++));
+            child = std::make_unique<Node>(Node(computeBox(node->box, quad++), node));
         // Assign values to children
         auto newValues = std::vector<T>(); // New values for this node
         for (const auto& value : node->values)
@@ -362,6 +369,21 @@ private:
                 findIntersectionsInDescendants(child.get(), value, intersections);
         }
     }
+#if _DEBUG
+    static void debugDrawHelperNodeRek(Node* node, sf::RenderTarget& rw, Color clr) {
+        drawOutline(rw, node->box, clr);
+        for(auto& ch : node->children) {
+            if(ch.get() != nullptr) {
+                debugDrawHelperNodeRek(ch.get(), rw, clr);
+            }
+        }
+    }
+public:
+    friend void debugDraw(sf::RenderTarget& rw, const QuadTree<T, GetBox, Equal, Float>& qt) {
+        debugDrawHelperNodeRek(qt._root.get(), rw, Color::Red);
+    }
+#endif
 };
+
 }
 

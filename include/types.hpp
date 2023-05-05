@@ -93,6 +93,10 @@ struct AABB {
         min = t - s / 2.f;
         max = t + s / 2.f;
     }
+    friend void draw(sf::RenderWindow& rw, const AABB& aabb, Color clr);
+    friend void drawFill(sf::RenderTarget& rw, const AABB& aabb, Color clr);
+    friend void drawOutline(sf::RenderTarget& rw, const AABB& aabb, Color clr);
+
     static AABB CreateMinMax(vec2f min, vec2f max);
     static AABB CreateCenterSize(vec2f center, vec2f size);
     static AABB CreateMinSize(vec2f min, vec2f size);

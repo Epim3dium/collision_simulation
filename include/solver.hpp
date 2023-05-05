@@ -3,6 +3,7 @@
 
 #include "collider.hpp"
 #include "rigidbody.hpp"
+#include "transform.hpp"
 #include "trigger.hpp"
 
 #include "types.hpp"
@@ -21,7 +22,7 @@ struct CollisionInfo {
 };
 class SolverInterface {
 public:
-    virtual CollisionInfo detect(Collider* col1, Collider* col2) = 0;
+    virtual CollisionInfo detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) = 0;
     virtual CollisionInfo solve(RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) = 0;
 };
 class DefaultSolver : public SolverInterface {
@@ -35,7 +36,7 @@ private:
            const RigidManifold& rb2,float bounce, float sfric, float dfric);
 public:
 
-    CollisionInfo detect(Collider* col1, Collider* col2) override;
+    CollisionInfo detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) override;
     CollisionInfo solve(RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) override;
 };
 

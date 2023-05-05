@@ -52,21 +52,11 @@ void PhysicsManager::m_updateRestraints(float delT) {
         r->update(delT);
 }
 void PhysicsManager::m_processTriggers() {
-    for(auto& t : m_triggers) {
-        if(t->getCollider().getAABB().min == t->getCollider().getAABB().max)
-            continue;
-        auto possible = m_rigidbodiesQT.query(t->getCollider().getAABB());
-        for(auto& r : possible) {
-            auto man = m_solver->detect(r.collider, &t->getCollider());
-            if(man.detected) {
-                t->onActivation(r.rigidbody, man.cn);
-            }
-        }
-    }
+    //todo
 }
 
 void PhysicsManager::m_wakeUpAround(const RigidManifold& man) {
-    auto area = man.collider->getAABB();
+    auto area = man.collider->getAABB(*man.transform);
     area.setSize(area.size() * 2.f);
     for(auto& r : m_rigidbodiesQT.query(area))
         r.rigidbody->time_immobile = 0.f;
@@ -111,7 +101,6 @@ void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
 void PhysicsManager::m_updateRigidbodies(float delT) {
     for(auto r : m_rigidbodies) {
         m_updateRigidObj(r, delT);
-        m_rigidbodiesQT.update(r);
     }
 }
 void PhysicsManager::m_processParticles(ParticleManager& pm) {
@@ -124,12 +113,12 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
         for(auto& o : open) {
             switch(o.collider->getType()) {
                 case eCollisionShape::Circle:
-                    if(isOverlappingPointCircle(p.pos, ((CircleCollider*)o.collider)->getShape())) {
+                    if(isOverlappingPointCircle(p.pos, ((CircleCollider*)o.collider)->getShape(*o.transform))) {
                         p.isActive = false;
                     }
                 break;
                 case eCollisionShape::Polygon:
-                    if(isOverlappingPointPoly(p.pos, ((PolygonCollider*)o.collider)->getShape()))
+                    if(isOverlappingPointPoly(p.pos, ((PolygonCollider*)o.collider)->getShape(*o.transform)))
                         p.isActive = false;
                 break;
                 default:
@@ -144,12 +133,18 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
 
     for(int i = 0; i < steps; i++) {
-        m_updateRestraints(deltaStep);
-        m_updateRigidbodies(deltaStep);
-
         auto col_list = processBroadPhase();
 
+        m_updateRestraints(deltaStep);
+        for(auto r : m_rigidbodies) {
+            m_rigidbodiesQT.remove(r);
+        }
+        m_updateRigidbodies(deltaStep);
+
         processNarrowPhase(col_list);
+        for(auto r : m_rigidbodies) {
+            m_rigidbodiesQT.add(r);
+        }
     }
 
     for(auto r : m_rigidbodies) {

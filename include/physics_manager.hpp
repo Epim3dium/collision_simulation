@@ -70,7 +70,7 @@ private:
     void m_processTriggers();
     void m_processParticles(ParticleManager& pm);
     static AABB getAABBfromRigidbody(RigidManifold man) {
-        return man.collider->getAABB();
+        return man.collider->getAABB(*man.transform);
     }
 public:
     //number of physics/collision steps per frame

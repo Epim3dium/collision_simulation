@@ -22,13 +22,13 @@ struct TriggerCircleInterface : public TriggerInterface, public CircleCollider {
     Collider& getCollider() override {
         return *this;
     }
-    TriggerCircleInterface(const Circle& shape, Transform* trans) : TriggerInterface(trans), CircleCollider(trans, shape) {}
+    TriggerCircleInterface(const Circle& shape, Transform* trans) : TriggerInterface(trans), CircleCollider( shape) {}
 };
 struct TriggerPolygonInterface : public TriggerInterface, public PolygonCollider {
     Collider& getCollider() override {
         return *this;
     } 
-    TriggerPolygonInterface(const Polygon& shape, Transform* trans) : TriggerInterface(trans),PolygonCollider(trans, shape) {}
+    TriggerPolygonInterface(const Polygon& shape, Transform* trans) : TriggerInterface(trans),PolygonCollider( shape) {}
 };
 
 }

@@ -38,20 +38,21 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
     auto& col = *man.collider;
     switch(col.getType()) {
         case eCollisionShape::Circle: {
-            CircleCollider& c = (CircleCollider&)col;
-            sf::CircleShape cs(c.getShape().radius);
-            cs.setPosition(man.transform->getPos() - vec2f(c.getShape().radius, c.getShape().radius));
+            CircleCollider& tmp = (CircleCollider&)col;
+            auto c = tmp.getShape(*man.transform);
+            sf::CircleShape cs(c.radius);
+            cs.setPosition(man.transform->getPos() - vec2f(c.radius, c.radius));
             cs.setFillColor(color);
             cs.setOutlineColor(Color::Black);
             cs.setOutlineThickness(1.f);
             rw.draw(cs);
         }break;
         case eCollisionShape::Polygon:
-            drawFill(rw, ((PolygonCollider&)col).getShape(), color);
-            drawOutline(rw, ((PolygonCollider&)col).getShape(), sf::Color::Black);
+            drawFill(rw, ((PolygonCollider&)col).getShape(*man.transform), color);
+            drawOutline(rw, ((PolygonCollider&)col).getShape(*man.transform), sf::Color::Black);
         break;
         case epi::eCollisionShape::Ray: {
-            Ray t = ((RayCollider&)col).getShape();
+            Ray t = ((RayCollider&)col).getShape(*man.transform);
             sf::Vertex verts[2] ;
             verts[0].position = t.pos;
             verts[1].position = t.pos + t.dir;
@@ -99,21 +100,21 @@ public:
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(poly.getPos());
         transform->setRot(poly.getRot());
-        collider = std::unique_ptr<Collider>(new PolygonCollider(transform.get(), poly));
+        collider = std::unique_ptr<Collider>(new PolygonCollider(poly));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
     }
     DemoObject(Circle circ) {
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(circ.pos);
-        collider = std::unique_ptr<Collider>(new CircleCollider(transform.get(), circ));
+        collider = std::unique_ptr<Collider>(new CircleCollider(circ));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
     }
     DemoObject(Ray ray) {
         transform = std::unique_ptr<Transform>(new Transform());
-        transform->setPos(ray.pos);
-        collider = std::unique_ptr<Collider>(new RayCollider(transform.get(), ray));
+        transform->setPos(ray.pos + ray.dir / 2.f);
+        collider = std::unique_ptr<Collider>(new RayCollider(ray));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         rigidbody->isStatic = true;
         material = std::unique_ptr<Material>(new Material());
@@ -150,20 +151,20 @@ protected:
             switch(r->collider->getType()) {
                 case eCollisionShape::Circle: {
                     CircleCollider& ref = cast<CircleCollider>(*r->collider);
-                    Circle shape = ref.getShape();
+                    Circle shape = ref.getShape(*r->transform);
                     if(isOverlappingPointCircle(mouse_pos, shape)) {
                         return r.get();
                     }
                 } break;
                 case eCollisionShape::Polygon: {
                     PolygonCollider& ref = cast<PolygonCollider>(*r->collider);
-                    Polygon polygon = ref.getShape();
+                    Polygon polygon = ref.getShape(*r->transform);
                     if(isOverlappingPointPoly(mouse_pos, polygon)) {
                         return r.get();
                     }
                 }break;
                 case eCollisionShape::Ray: {
-                    Ray t = cast<RayCollider>(*r->collider).getShape();
+                    Ray t = cast<RayCollider>(*r->collider).getShape(*r->transform);
                     auto closest = findClosestPointOnRay(t.pos, t.dir, mouse_pos);
                     if(len(closest - mouse_pos) < 10.f)
                         return r.get();
@@ -261,7 +262,8 @@ protected:
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
                         Polygon t = Polygon::CreateRegular((vec2f)_io_manager->getMousePos(), M_PI/side_count, side_count, r * sqrt(2.f));
-                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
+                        auto ptr = new DemoObject(t);
+                        demo_objects.push_back(std::unique_ptr<DemoObject>(ptr));
                         _physics_manager->bind(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::Enter: {
@@ -356,7 +358,7 @@ protected:
                     ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                     _physics_manager->steps = tsteps;
                     ImGui::SliderFloat("change gravity" , &opts.gravity, -3000.f, 3000.f, "%.1f");
-                    ImGui::SliderFloat("radius" , &opts.default_radius, 20.f, 100.f);
+                    ImGui::SliderFloat("radius" , &opts.default_radius, 5.f, 100.f);
                     ImGui::SliderFloat("radius_deviation" , &opts.radius_dev, 0.f, 1.f);
                     ImGui::Text("poly_sides range:");
                     ImGui::SliderInt("poly_sides_min", &opts.poly_sides_count.min, 3, 10);
@@ -466,6 +468,7 @@ protected:
             c.setFillColor(PastelColor::Red);
             target.draw(c);
         }
+        //debugDraw(target, _physics_manager->getQuadTree());
     }
 public:
     Demo(vec2i s = {1500, 1500}) : DefaultScene(s) {}

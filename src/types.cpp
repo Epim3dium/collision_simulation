@@ -93,6 +93,27 @@ void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
         rw.draw(t, 2, sf::Lines);
     }
 }
+void drawOutline(sf::RenderTarget& rw, const AABB& aabb, Color clr) {
+    sf::Vertex t[5];
+    vec2f vert[] = {aabb.bl(), aabb.br(), aabb.tr(), aabb.tl(), aabb.bl()};
+    for(int i = 0; i < 5; i++) {
+        t[i].color = clr;
+        t[i].position = vert[i];
+    }
+    rw.draw(&t[0], 2, sf::Lines);
+    rw.draw(&t[1], 2, sf::Lines);
+    rw.draw(&t[2], 2, sf::Lines);
+    rw.draw(&t[3], 2, sf::Lines);
+}
+void drawFill(sf::RenderTarget& rw, const AABB& aabb, Color clr) {
+    sf::Vertex t[4];
+    vec2f vert[] = {aabb.bl(), aabb.br(), aabb.tr(), aabb.tl()};
+    for(int i = 0; i < 4; i++) {
+        t[i].color = clr;
+        t[i].position = vert[i];
+    }
+    rw.draw(t, 4, sf::Quads);
+}
 void drawFill(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         sf::Vertex t[3];
