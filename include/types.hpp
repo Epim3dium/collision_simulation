@@ -1,4 +1,5 @@
 #pragma once
+#define NDEBUG
 #include <cmath>
 #include <iostream>
 #include <math.h>

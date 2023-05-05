@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <sys/signal.h>
 #include <vector>
 #include <numeric>
 
@@ -13,6 +14,7 @@
 #include "SFML/Window/Mouse.hpp"
 #include "imgui-SFML.h"
 
+#include "types.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
 #include "game_object.hpp"
@@ -23,7 +25,6 @@
 #include "scene.hpp"
 #include "transform.hpp"
 #include "trigger.hpp"
-#include "types.hpp"
 #include "RNG.h"
 
 using namespace epi;
