@@ -51,6 +51,8 @@ CollisionInfo detectOverlap(PolygonCollider& c1, PolygonCollider& c2) {
     if(intersection.detected) {
         std::vector<vec2f> cps;
         cps = findContactPoints(c1.getShape(), c2.getShape());
+        if(cps.size() ==0)
+            return {false};
         return {true, intersection.contact_normal, cps , intersection.overlap};
     }
     return {false};
@@ -81,6 +83,8 @@ void handleOverlap(RigidManifold& m1, RigidManifold& m2, const CollisionInfo& ma
 void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifold& m1, 
        const RigidManifold& m2,float bounce, float sfric, float dfric)
 {
+    auto cp = std::reduce(info.cps.begin(), info.cps.end()) / (float)info.cps.size();
+
     auto& rb1 = *m1.rigidbody;
     auto& rb2 = *m2.rigidbody;
 
@@ -89,58 +93,44 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
     float inv_inertia1 = (rb1.isStatic || rb1.lockRotation) ? INFINITY : m1.collider->calcInertia(rb1.mass);
     float inv_inertia2 = (rb2.isStatic || rb2.lockRotation) ? INFINITY : m2.collider->calcInertia(rb2.mass);
 
-    if(inv_inertia1 != 0.f)
-        inv_inertia1 = 1.f / inv_inertia1;
-    if(inv_inertia2 != 0.f)
-        inv_inertia2 = 1.f / inv_inertia2;
-
+    inv_inertia1 = 1.f / inv_inertia1;
+    inv_inertia2 = 1.f / inv_inertia2;
 
     vec2f impulse (0, 0);
-    vec2f additional_rb1vel(0, 0); float additional_rb1ang_vel = 0.f;
-    vec2f additional_rb2vel(0, 0); float additional_rb2ang_vel = 0.f;
 
-    for(auto& cp : info.cps) {
-        vec2f rad1 = cp - m1.transform->getPos();
-        vec2f rad2 = cp - m2.transform->getPos();
+    vec2f rad1 = cp - m1.transform->getPos();
+    vec2f rad2 = cp - m2.transform->getPos();
 
-        vec2f rad1perp(-rad1.y, rad1.x);
-        vec2f rad2perp(-rad2.y, rad2.x);
+    vec2f rad1perp(-rad1.y, rad1.x);
+    vec2f rad2perp(-rad2.y, rad2.x);
 
-        vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * rb1.angular_velocity;
-        vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * rb2.angular_velocity;
+    vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * rb1.angular_velocity;
+    vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * rb2.angular_velocity;
 
-        vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : rb1.velocity + p1ang_vel_lin;
-        vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : rb2.velocity + p2ang_vel_lin;
+    vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : rb1.velocity + p1ang_vel_lin;
+    vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : rb2.velocity + p2ang_vel_lin;
 
-        //calculate relative velocity
-        vec2f rel_vel = vel_sum2 - vel_sum1;
+    //calculate relative velocity
+    vec2f rel_vel = vel_sum2 - vel_sum1;
 
-        float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
-        vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
-        impulse += info.cn * j - fj;
+    float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
+    vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
+    impulse += info.cn * j - fj;
 
-        if(!rb1.isStatic) {
-            additional_rb1vel -= impulse / rb1.mass;
-            if(!rb1.lockRotation)
-                additional_rb1ang_vel += cross(impulse, rad1) * inv_inertia1;
-        }
-        if(!rb2.isStatic) {
-            additional_rb2vel += impulse / rb2.mass;
-            if(!rb2.lockRotation)
-                additional_rb2ang_vel -= cross(impulse, rad2) * inv_inertia2;
-        }
+    if(!rb1.isStatic) {
+        rb1.velocity -= impulse / rb1.mass;
+        if(!rb1.lockRotation)
+            rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
     }
-    float cps_count = info.cps.size();
-    rb1.velocity         += additional_rb1vel / cps_count;
-    rb1.angular_velocity += additional_rb1ang_vel / cps_count;
-    rb2.velocity         += additional_rb2vel / cps_count;
-    rb2.angular_velocity += additional_rb2ang_vel / cps_count;
+    if(!rb2.isStatic) {
+        rb2.velocity += impulse / rb2.mass;
+        if(!rb2.lockRotation)
+            rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
+    }
 }
 float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia, float mass1, const vec2f& rad2perp, float p2inv_inertia, float mass2, 
         float restitution, const vec2f& rel_vel, vec2f cn) {
     float contact_vel_mag = dot(rel_vel, cn);
-    if(contact_vel_mag < 0.f)
-        return 0.f;
     //equation from net
     float r1perp_dotN = dot(rad1perp, cn);
     float r2perp_dotN = dot(rad2perp, cn);

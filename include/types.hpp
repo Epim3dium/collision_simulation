@@ -41,6 +41,7 @@ float len(vec2f);
 vec2f norm(vec2f);
 float qlen(vec2f);
 float dot(vec2f, vec2f);
+vec2f proj(vec2f, vec2f);
 float cross(vec2f, vec2f);
 vec2f sign(vec2f);
 

@@ -22,6 +22,9 @@ float qlen(vec2f v) {
 float dot(vec2f a, vec2f b) {
     return a.x * b.x + a.y * b.y;
 }
+vec2f proj(vec2f a, vec2f plane_norm) {
+    return (dot(a, plane_norm) / dot(plane_norm, plane_norm)) * plane_norm;
+}
 float cross(vec2f a, vec2f b) {
     return a.x * b.y - b.x * a.y;
 }

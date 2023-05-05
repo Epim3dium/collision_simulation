@@ -78,7 +78,7 @@ void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
     if(rb.inertia == -1.f)
         rb.inertia = man.collider->calcInertia(rb.mass);
     //processing dormants
-    if(qlen(rb.velocity) < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
+    if(qlen(rb.velocity) + len(rb.force) * delT < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
         rb.time_immobile += delT;
     }else {
         //wake up all objects around it

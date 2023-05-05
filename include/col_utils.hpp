@@ -64,6 +64,7 @@ IntersectionRayAABBResult intersectRayAABB(vec2f ray_origin, vec2f ray_dir,
  */
 struct IntersectionRayRayResult {
     bool detected;
+    bool nearParallel;
     vec2f contact_point;
     float t_hit_near0;
     float t_hit_near1;

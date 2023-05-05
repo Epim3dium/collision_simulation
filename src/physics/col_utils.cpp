@@ -85,19 +85,17 @@ IntersectionRayRayResult intersectRayRay(vec2f ray0_origin, vec2f ray0_dir,
     vec2f ray1_origin, vec2f ray1_dir)
 {
     if (ray0_origin == ray1_origin) {
-        return {true, ray0_origin, 0.f, 0.f};
+        return {true, false, ray0_origin, 0.f, 0.f};
     }
     auto dx = ray1_origin.x - ray0_origin.x;
     auto dy = ray1_origin.y - ray0_origin.y;
-    auto det = ray1_dir.x * ray0_dir.y - ray1_dir.y * ray0_dir.x;
+    float det = ray1_dir.x * ray0_dir.y - ray1_dir.y * ray0_dir.x;
     if (det != 0) { // near parallel line will yield noisy results
         float u = (dy * ray1_dir.x - dx * ray1_dir.y) / det;
         float v = (dy * ray0_dir.x - dx * ray0_dir.y) / det;
-        if (u >= 0 && v >= 0) {
-            return {true, ray0_origin + ray0_dir * u, u, v};
-        }
+        return {u >= 0 && v >= 0 && u <= 1.f && v <= 1.f, false, ray0_origin + ray0_dir * u, u, v};
     }
-    return {false};
+    return {false, true};
 }
 /*
     bool detected;
@@ -172,56 +170,59 @@ bool nearlyEqual(float a, float b) {
 bool nearlyEqual(vec2f a, vec2f b) {
     return nearlyEqual(a.x, b.x) && nearlyEqual(a.y, b.y);
 }
-std::vector<vec2f> findContactPoints(const Polygon& p1, const Polygon& p2) {
-    std::vector<vec2f> cps;
-    vec2f contact1;
-    vec2f contact2;
-    int contactCount = 0;
 
-    float minDistSq = INFINITY;
-    auto vertsA = p1.getVertecies();
-    auto vertsB = p2.getVertecies();
-
-    for(int switcheroo = 0; switcheroo < 2; switcheroo++) {
-        if(switcheroo == 1) {
-            std::swap(vertsA, vertsB);
-        }
-        for(int i = 0; i < vertsA.size(); i++)
-        {
-            vec2f p = vertsA[i];
-
-            for(int j = 0; j < vertsB.size(); j++)
-            {
-                vec2f va = vertsB[j];
-                vec2f vb = vertsB[(j + 1) % vertsB.size()];
-
-                auto cp = findClosestPointOnRay(va, vb - va, p);
-                auto distSquared = qlen(cp - p);
-
-                if(nearlyEqual(distSquared, minDistSq))
-                {
-                    if (!nearlyEqual(cp, contact1) &&
-                        !nearlyEqual(cp, contact2))
-                    {
-                        contact2 = cp;
-                        contactCount = 2;
-                        if(cps.size() == 1)
-                            cps.push_back(cp);
-                        else
-                            cps[1] = cp;
-                    }
-                }
-                else if(distSquared < minDistSq)
-                {
-                    minDistSq = distSquared;
-                    contactCount = 1;
-                    cps = {cp};
-                }
-            }
+std::vector<vec2f> findContactPoints(const Polygon& p0, const Polygon& p1) {
+    std::vector<vec2f> result;
+    const Polygon* poly[] = {&p0, &p1};
+    struct Seg {
+        char polyID;
+        float x_pos;
+        size_t segID;
+        bool isEnding;
+        //if isEnding then x_start_pos is the beggining of ray else ray is the struct
+        Ray ray;
+    };
+    std::vector<Seg> all;
+    std::vector<Seg> open[2];
+    all.reserve(p1.getVertecies().size() * 2 + p0.getVertecies().size() * 2 );
+    open[0].reserve(p0.getVertecies().size());
+    open[1].reserve(p1.getVertecies().size());
+    size_t cur_id = 0;
+    for(char i = 0; i < 2; i++) {
+        auto prev = poly[i]->getVertecies().back();
+        for(auto p : poly[i]->getVertecies()) {
+            auto mi = std::min(prev.x, p.x);
+            auto mx = std::max(prev.x, p.x);
+            all.push_back({i, mi, cur_id, false, Ray::CreatePoints(prev, p)});
+            all.push_back({i, mx, cur_id, true, Ray::CreatePoints(prev, p)});
+            cur_id += 1;
+            prev = p;
         }
     }
-
-    return cps;
+    std::sort(all.begin(), all.end(), 
+        [&](const Seg& s1, const Seg& s2)->bool {
+            return s1.x_pos < s2.x_pos;
+        });
+    for(auto a : all) {
+        if(!a.isEnding) {
+            for(auto p : open[!a.polyID]) {
+                auto intersection = intersectRayRay(p.ray.pos, p.ray.dir, a.ray.pos, a.ray.dir);
+                if(intersection.detected) {
+                    result.push_back(intersection.contact_point);
+                }
+            }
+            open[a.polyID].push_back(a);
+        }else {
+            auto itr = std::find_if(open[a.polyID].begin(), open[a.polyID].end(),
+                [&](const Seg& s1) {
+                    return s1.segID == a.segID;
+            });
+            if(itr == open[a.polyID].end())
+                throw std::logic_error("segment that is closing should be open");
+            open[a.polyID].erase(itr);
+        }
+    }
+    return result;
 }
 float area(const std::vector<vec2f>& model) {
     double area = 0.0;
