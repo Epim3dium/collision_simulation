@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <sys/_types/_size_t.h>
 #include <sys/signal.h>
 #include <vector>
 #include <numeric>
@@ -347,6 +348,10 @@ protected:
                 static bool open_global = true;
                 if(ImGui::BeginTabItem("global settings", &open_global))
                 {
+                    static int framerate_max = 0xffffff;
+                    ImGui::SliderInt("change max fps" , &framerate_max, 1, 1000);
+                    this->_io_manager->getWindow().setFramerateLimit(framerate_max);
+
                     static int tsteps = 5;
                     ImGui::SliderInt("change step count" , &tsteps, 1, 50);
                     _physics_manager->steps = tsteps;

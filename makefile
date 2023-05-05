@@ -6,10 +6,10 @@ DEPS=$(wildcard include/*.h) $(wildcard include/*.hpp)
 CFLAGS=@compile_flags.txt
 DEBUG_CFLAGS=-D_DEBUG=1 -glldb -O0
 RELEASE_CFLAGS=-D_DEBUG=0 -O3
-ifeq ($(MAKECMDGOALS),debug)
-	ADDITIONAL_CFLAGS=$(DEBUG_CFLAGS)
-else
+ifeq ($(MAKECMDGOALS),release)
 	ADDITIONAL_CFLAGS=$(RELEASE_CFLAGS)
+else
+	ADDITIONAL_CFLAGS=$(DEBUG_CFLAGS)
 endif
 
 
@@ -24,13 +24,9 @@ $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp $(DEPS)
 
 SFML_OBJ=vendor/imgui/imguilib.a
 
+debug: $(OBJ_FILES) $(SFML_OBJ) main 
+release: $(OBJ_FILES) $(SFML_OBJ) main 
 main: $(OBJ_FILES) $(SFML_OBJ)
-	$(CC) -o main.exe main.cpp $^ $(CFLAGS) -framework openGL
-
-
-release: $(OBJ_FILES) $(SFML_OBJ)
-	$(CC) -o main.exe main.cpp $^ $(CFLAGS) $(ADDITIONAL_CFLAGS) -framework openGL
-debug: $(OBJ_FILES) $(SFML_OBJ)
 	$(CC) -o main.exe main.cpp $^ $(CFLAGS) $(ADDITIONAL_CFLAGS) -framework openGL
 
 collision.a: $(OBJ_FILES) $(SFML_OBJ)
