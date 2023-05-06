@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <exception>
+#include <memory>
 #include <random>
 #include <cmath>
 #include <numeric>
@@ -16,13 +17,10 @@
 namespace epi {
 
 CollisionInfo detectOverlap(const Polygon& poly, const Ray& ray) {
+    assert(false);
     auto intersection = intersectRayPolygon(ray.pos, ray.dir, poly); 
     if(intersection.detected) {
-        auto cp1 = ray.pos + ray.dir * intersection.t_hit_near;
-        auto cp2 = ray.pos + ray.dir * intersection.t_hit_far;
-        auto mid = (cp1 + cp2) / 2.f;
-        auto closest = findClosestPointOnEdge(mid, poly);
-        return {true, intersection.contact_normal_near, {cp1, cp2}, len(closest - mid)};
+        return {true, intersection.contact_normal_near, {}, 10.f};
     }
     return {false};
 }
@@ -80,49 +78,54 @@ void handleOverlap(RigidManifold& m1, RigidManifold& m2, const CollisionInfo& ma
 void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifold& m1, 
        const RigidManifold& m2,float bounce, float sfric, float dfric)
 {
-    auto cp = std::reduce(info.cps.begin(), info.cps.end()) / (float)info.cps.size();
+    //auto cp = std::reduce(info.cps.begin(), info.cps.end()) / (float)info.cps.size();
 
     auto& rb1 = *m1.rigidbody;
     auto& rb2 = *m2.rigidbody;
 
     float mass1 = rb1.isStatic ? INFINITY : rb1.mass;
     float mass2 = rb2.isStatic ? INFINITY : rb2.mass;
-    float inv_inertia1 = (rb1.isStatic || rb1.lockRotation) ? INFINITY : m1.collider->calcInertia(rb1.mass);
-    float inv_inertia2 = (rb2.isStatic || rb2.lockRotation) ? INFINITY : m2.collider->calcInertia(rb2.mass);
+    float inv_inertia1 = 1.f / ((rb1.isStatic || rb1.lockRotation) ? INFINITY : m1.collider->calcInertia(rb1.mass));
+    float inv_inertia2 = 1.f / ((rb2.isStatic || rb2.lockRotation) ? INFINITY : m2.collider->calcInertia(rb2.mass));
+    vec2f vel1 = rb1.velocity;
+    vec2f vel2 = rb2.velocity;
+    float ang_vel1 = rb1.angular_velocity;
+    float ang_vel2 = rb2.angular_velocity;
 
-    inv_inertia1 = 1.f / inv_inertia1;
-    inv_inertia2 = 1.f / inv_inertia2;
 
-    vec2f impulse (0, 0);
+    for(auto cp : info.cps) {
+        vec2f impulse (0, 0);
 
-    vec2f rad1 = cp - m1.transform->getPos();
-    vec2f rad2 = cp - m2.transform->getPos();
+        vec2f rad1 = cp - m1.transform->getPos();
+        vec2f rad2 = cp - m2.transform->getPos();
 
-    vec2f rad1perp(-rad1.y, rad1.x);
-    vec2f rad2perp(-rad2.y, rad2.x);
+        vec2f rad1perp(-rad1.y, rad1.x);
+        vec2f rad2perp(-rad2.y, rad2.x);
 
-    vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * rb1.angular_velocity;
-    vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * rb2.angular_velocity;
+        vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * ang_vel1;
+        vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * ang_vel2;
 
-    vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : rb1.velocity + p1ang_vel_lin;
-    vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : rb2.velocity + p2ang_vel_lin;
+        vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : vel1 + p1ang_vel_lin;
+        vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : vel2 + p2ang_vel_lin;
 
-    //calculate relative velocity
-    vec2f rel_vel = vel_sum2 - vel_sum1;
+        //calculate relative velocity
+        vec2f rel_vel = vel_sum2 - vel_sum1;
 
-    float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
-    vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
-    impulse += info.cn * j - fj;
+        float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
+        vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
+        impulse += info.cn * j - fj;
 
-    if(!rb1.isStatic) {
-        rb1.velocity -= impulse / rb1.mass;
-        if(!rb1.lockRotation)
-            rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
-    }
-    if(!rb2.isStatic) {
-        rb2.velocity += impulse / rb2.mass;
-        if(!rb2.lockRotation)
-            rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
+        float cps_ctr = (float)info.cps.size();
+        if(!rb1.isStatic) {
+            rb1.velocity -= impulse / rb1.mass / cps_ctr;
+            if(!rb1.lockRotation)
+                rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1 / cps_ctr;
+        }
+        if(!rb2.isStatic) {
+            rb2.velocity += impulse / rb2.mass / cps_ctr;
+            if(!rb2.lockRotation)
+                rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2 / cps_ctr;
+        }
     }
 }
 float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia, float mass1, const vec2f& rad2perp, float p2inv_inertia, float mass2, 
@@ -180,27 +183,27 @@ CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform
         case eCollisionShape::Polygon:
             switch(col2->getType()) {
                 case eCollisionShape::Polygon:
-                    man = getCollisionInfo<PolygonCollider, PolygonCollider>(trans1, (PolygonCollider*)col1, trans2, (PolygonCollider*)col2);
+                    man = getCollisionInfo(trans1, (PolygonCollider*)col1, trans2, (PolygonCollider*)col2);
                 break;
                 case eCollisionShape::Circle:
-                    man = getCollisionInfo<CircleCollider, PolygonCollider>(trans2, (CircleCollider*)col2, trans1,  (PolygonCollider*)col1);
+                    man = getCollisionInfo(trans2, (CircleCollider*)col2, trans1,  (PolygonCollider*)col1);
                     man.swapped = true;
                 break;
                 case eCollisionShape::Ray:
-                    man = getCollisionInfo<PolygonCollider, RayCollider>(trans1, (PolygonCollider*)col1, trans2, (RayCollider*)col2);
+                    man = getCollisionInfo(trans1, (PolygonCollider*)col1, trans2, (RayCollider*)col2);
                 break;
             }
         break;
         case eCollisionShape::Circle:
             switch(col2->getType()) {
                 case eCollisionShape::Polygon:
-                    man = getCollisionInfo<CircleCollider, PolygonCollider>(trans1, (CircleCollider*)col1, trans2, (PolygonCollider*)col2);
+                    man = getCollisionInfo(trans1, (CircleCollider*)col1, trans2, (PolygonCollider*)col2);
                 break;
                 case eCollisionShape::Circle:
-                    man = getCollisionInfo<CircleCollider, CircleCollider>(trans1, (CircleCollider*)col1, trans2, (CircleCollider*)col2);
+                    man = getCollisionInfo(trans1, (CircleCollider*)col1, trans2, (CircleCollider*)col2);
                 break;
                 case eCollisionShape::Ray:
-                    man = getCollisionInfo<CircleCollider, RayCollider>(trans1, (CircleCollider*)col1, trans2, (RayCollider*)col2);
+                    man = getCollisionInfo(trans1, (CircleCollider*)col1, trans2, (RayCollider*)col2);
                 break;
             }
         break;

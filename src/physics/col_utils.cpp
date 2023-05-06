@@ -125,7 +125,7 @@ IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir
         case 0:
             return {false};
         case 1:
-            return {true, cn[0], t[0]};
+            return {true, cn[0], t[0], {}, -1.f};
         case 2: {
             if(t[0] > t[1]) {
                 std::swap(t[0], t[1]);
@@ -149,16 +149,17 @@ vec2f findClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point) {
     return seg_v_unit * proj + ray_origin;
 }
 vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly) {
-    const vec2f& pos = poly.getPos();
-    auto dir = norm(point - pos);
     vec2f closest(INFINITY, INFINITY);
+    float closest_dist = INFINITY;
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         vec2f a = poly.getVertecies()[i];
         vec2f b = poly.getVertecies()[(i + 1) % poly.getVertecies().size()];
         vec2f adir = b - a;
-        auto intersection = intersectRayRay(a, adir, pos, dir);
-        if(intersection.detected && intersection.t_hit_near0 < 1.f && qlen(intersection.contact_point - pos) < qlen(closest - pos) ) {
-            closest = intersection.contact_point;
+        vec2f t = findClosestPointOnRay(a, adir, point);
+        float dist = len(t - point);
+        if(dist < closest_dist) {
+            closest_dist = dist;
+            closest = t;
         }
     }
     return closest;
