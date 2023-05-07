@@ -1,6 +1,7 @@
 #include "solver.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
+#include "debug.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"
 
@@ -85,15 +86,15 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
 
     float mass1 = rb1.isStatic ? INFINITY : rb1.mass;
     float mass2 = rb2.isStatic ? INFINITY : rb2.mass;
-    float inv_inertia1 = 1.f / ((rb1.isStatic || rb1.lockRotation) ? INFINITY : m1.collider->calcInertia(rb1.mass));
-    float inv_inertia2 = 1.f / ((rb2.isStatic || rb2.lockRotation) ? INFINITY : m2.collider->calcInertia(rb2.mass));
+    float inv_inertia1 = 1.f / ((rb1.isStatic || rb1.lockRotation) ? INFINITY : m1.collider->getInertia(rb1.mass));
+    float inv_inertia2 = 1.f / ((rb2.isStatic || rb2.lockRotation) ? INFINITY : m2.collider->getInertia(rb2.mass));
     vec2f vel1 = rb1.velocity;
     vec2f vel2 = rb2.velocity;
     float ang_vel1 = rb1.angular_velocity;
     float ang_vel2 = rb2.angular_velocity;
 
 
-    for(auto cp : info.cps) {
+    auto cp = std::reduce(info.cps.begin(), info.cps.end()) / (float)info.cps.size();
         vec2f impulse (0, 0);
 
         vec2f rad1 = cp - m1.transform->getPos();
@@ -117,16 +118,15 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
 
         float cps_ctr = (float)info.cps.size();
         if(!rb1.isStatic) {
-            rb1.velocity -= impulse / rb1.mass / cps_ctr;
+            rb1.velocity -= impulse / rb1.mass;
             if(!rb1.lockRotation)
-                rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1 / cps_ctr;
+                rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
         }
         if(!rb2.isStatic) {
-            rb2.velocity += impulse / rb2.mass / cps_ctr;
+            rb2.velocity += impulse / rb2.mass;
             if(!rb2.lockRotation)
-                rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2 / cps_ctr;
+                rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
         }
-    }
 }
 float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia, float mass1, const vec2f& rad2perp, float p2inv_inertia, float mass2, 
         float restitution, const vec2f& rel_vel, vec2f cn) {
@@ -218,7 +218,7 @@ CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform
                     man.swapped = true;
                 break;
                 case eCollisionShape::Ray:
-                    throw std::invalid_argument("ray shouldn't be a dynamic object");
+                    Log(LogLevel::ERROR) << "ray and ray should not be colliding";
                 break;
             }
         }break;

@@ -7,6 +7,7 @@ void RestraintPointTrans::update(float delT) {
     if(a.rigidbody->isStatic)
         return;
     auto& rb = *a.rigidbody;
+    float inertia = a.collider->getInertia(rb.mass);
 
     auto r = rotateVec(model_point_a, a.transform->getRot());
     vec2f ap = a.transform->getPos() + r;
@@ -23,7 +24,7 @@ void RestraintPointTrans::update(float delT) {
     auto corr = -cVel - (damping_coef / delT ) * c;
     float rperp_dotN = dot(radperp, norm(c));
     float denom = 1.f / rb.mass +
-        (rperp_dotN * rperp_dotN) / rb.inertia;
+        (rperp_dotN * rperp_dotN) / inertia;
     corr /= denom;
 
     auto lambda = dot(-rb.force, c) + rb.mass * dot(rb.velocity, rb.velocity);
@@ -31,10 +32,12 @@ void RestraintPointTrans::update(float delT) {
 
     rb.force += lambda * c;
     rb.velocity += corr / rb.mass; 
-    rb.angular_velocity -= cross(corr, r) / rb.inertia;
+    rb.angular_velocity -= cross(corr, r) / inertia;
     rb.angular_force -= cross(lambda * c, r);
 }
 void RestraintRigidRigid::update(float delT) {
+    float inertiaA = a.collider->getInertia(a.rigidbody->mass);
+    float inertiaB = b.collider->getInertia(b.rigidbody->mass);
     auto ra = rotateVec(model_point_a, a.transform->getRot());
     vec2f ap = a.transform->getPos() + ra;
 
@@ -66,8 +69,8 @@ void RestraintRigidRigid::update(float delT) {
     float rperp_dotNA = dot(radperpA, norm(corrA));
     float rperp_dotNB = dot(radperpB, norm(corrB));
     float denom = 1.f / a.rigidbody->mass + 1.f / b.rigidbody->mass +
-        (rperp_dotNB * rperp_dotNB) / b.rigidbody->inertia+
-        (rperp_dotNA * rperp_dotNA) / a.rigidbody->inertia;
+        (rperp_dotNB * rperp_dotNB) / inertiaB+
+        (rperp_dotNA * rperp_dotNA) / inertiaA;
     corrA /= denom;
     corrB /= denom;
 
@@ -84,7 +87,7 @@ void RestraintRigidRigid::update(float delT) {
         a.rigidbody->velocity += corrA / a.rigidbody->mass;
         if(!a.rigidbody->lockRotation) {
             a.rigidbody->angular_force -= cross(lambdaA * cA, ra);
-            a.rigidbody->angular_velocity -= cross(corrA, ra) / a.rigidbody->inertia;
+            a.rigidbody->angular_velocity -= cross(corrA, ra) / inertiaA;
         }
     }
 
@@ -93,7 +96,7 @@ void RestraintRigidRigid::update(float delT) {
         b.rigidbody->velocity += corrB / b.rigidbody->mass;
         if(!b.rigidbody->lockRotation) {
             b.rigidbody->angular_force -= cross(lambdaB * cB, rb);
-            b.rigidbody->angular_velocity -= cross(corrB, rb) / b.rigidbody->inertia;
+            b.rigidbody->angular_velocity -= cross(corrB, rb) / inertiaB;
         }
     }
 }

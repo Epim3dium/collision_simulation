@@ -5,7 +5,7 @@
 namespace epi {
 //only dynamic objects should be placed as the r1 argument
 //if r2 is static its mass in mat2 should be infinite
-float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
+float calculateInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
     float area = 0;
     vec2f center = pos;
     float mmoi = 0;

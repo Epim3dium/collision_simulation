@@ -1,4 +1,5 @@
 #include "col_utils.hpp"
+#include "debug.hpp"
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -134,8 +135,8 @@ IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir
             return {true, cn[0], t[0], cn[1], t[1]};
         }break;
         default:
-            throw std::logic_error("only 2 contact points should be possible");
-        
+            Log(LogLevel::WARNING) << "error occured in function for findint point of collision";
+            return {false};
     }
 }
 vec2f findClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point) {
@@ -218,8 +219,9 @@ std::vector<vec2f> findContactPoints(const Polygon& p0, const Polygon& p1) {
                 [&](const Seg& s1) {
                     return s1.segID == a.segID;
             });
-            if(itr == open[a.polyID].end())
-                throw std::logic_error("segment that is closing should be open");
+            if(itr == open[a.polyID].end()) {
+                Log(LogLevel::WARNING) << "tried to find a line segment that is not present";
+            }
             open[a.polyID].erase(itr);
         }
     }

@@ -11,6 +11,6 @@ struct Material : public GameObject {
     float restitution = 0.0f;
     float sfriction = 0.8f;
     float dfriction = 0.4f;
-    float air_drag = 0.001f;
+    float air_drag = 0.0001f;
 };
 }

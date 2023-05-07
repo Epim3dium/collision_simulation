@@ -31,8 +31,6 @@ public:
     float angular_force = 0.f;
     float angular_velocity = 0.f;
     float mass = 1.f;
-    float inertia = -1.f;
-
 
     float time_immobile = 0.f;
 

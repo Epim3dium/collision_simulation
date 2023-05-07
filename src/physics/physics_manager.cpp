@@ -1,6 +1,7 @@
 #include "physics_manager.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
+#include "debug.hpp"
 #include "game_object_utils.hpp"
 #include "imgui.h"
 
@@ -65,8 +66,6 @@ void PhysicsManager::m_wakeUpAround(const RigidManifold& man) {
 #define DORMANT_MIN_ANGULAR_VELOCITY 0.1f
 void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
     auto& rb = *man.rigidbody;
-    if(rb.inertia == -1.f)
-        rb.inertia = man.collider->calcInertia(rb.mass);
     //processing dormants
     if(qlen(rb.velocity) + len(rb.force) * delT < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
         rb.time_immobile += delT;
@@ -91,7 +90,7 @@ void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * man.material->air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
     rb.velocity += rb.force / rb.mass * delT;
-    rb.angular_velocity += rb.angular_force / rb.inertia * delT;
+    rb.angular_velocity += rb.angular_force / man.collider->getInertia(rb.mass) * delT;
     auto p = man.transform->getPos();
     man.transform->setPos(p + rb.velocity * delT);
 
@@ -122,7 +121,7 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
                         p.isActive = false;
                 break;
                 default:
-                    throw std::invalid_argument("not implemeted yet");
+                    Log(LogLevel::WARNING) << "for type: " << (int)o.collider->getType() << ", particle collision is not available";
                 break;
             }
         }

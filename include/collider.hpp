@@ -22,7 +22,7 @@ enum class eCollisionShape {
 };
 struct Rigidbody;
 //calculating inertia of polygon shape
-float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
+float calculateInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
 
 /*
 * \brief Interface Class for creating collider classes , an extension of GAMEOBJECT
@@ -35,7 +35,9 @@ float getInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
 *Collider(Transform* trans)
 */
 struct Collider : public GameObject {
+    float m_inertia_dev_mass = -1.f;
 protected:
+    virtual float calcInertia(float mass) const = 0;
 public:
     //if nothing is in collision_mask then it can collide with anything
     Tag mask;
@@ -47,7 +49,12 @@ public:
 
 
     virtual AABB getAABB(Transform& trans) const = 0;
-    virtual float calcInertia(float mass) const = 0;
+    float getInertia(float mass) {
+        if(m_inertia_dev_mass == -1.f) {
+            m_inertia_dev_mass = calcInertia(mass) / mass;
+        }
+        return m_inertia_dev_mass * mass;
+    }
 
     Collider() {
     }
@@ -105,7 +112,7 @@ public:
     }
 
     inline float calcInertia(float mass) const override { 
-        return getInertia(vec2f(0, 0), m_shape.getModelVertecies(), mass); 
+        return calculateInertia(vec2f(0, 0), m_shape.getModelVertecies(), mass); 
     }
     Polygon getShape(Transform& trans) const {
         auto t = m_shape;

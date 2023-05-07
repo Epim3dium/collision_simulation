@@ -13,6 +13,7 @@
 #include "SFML/Window/Event.hpp"
 #include "SFML/Window/Keyboard.hpp"
 #include "SFML/Window/Mouse.hpp"
+#include "debug.hpp"
 #include "imgui-SFML.h"
 
 #include "types.hpp"
@@ -44,12 +45,23 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             cs.setPosition(man.transform->getPos() - vec2f(c.radius, c.radius));
             cs.setFillColor(color);
             cs.setOutlineColor(Color::Black);
+            DEBUG_CALL(cs.setOutlineColor(Color::Red));
             cs.setOutlineThickness(1.f);
             rw.draw(cs);
+
+            DEBUG_CALL(
+            sf::Vertex verts[2];
+            verts[0].position = c.pos;
+            verts[1].position = c.pos + rotateVec(vec2f(c.radius, 0.f), man.transform->getRot());
+            verts[0].color = Color::Blue;
+            verts[1].color = Color::Blue;
+            rw.draw(verts, 2, sf::Lines);
+            )
         }break;
         case eCollisionShape::Polygon:
             drawFill(rw, ((PolygonCollider&)col).getShape(*man.transform), color);
             drawOutline(rw, ((PolygonCollider&)col).getShape(*man.transform), sf::Color::Black);
+            DEBUG_CALL(drawOutline(rw, ((PolygonCollider&)col).getShape(*man.transform), sf::Color::Red));
         break;
         case epi::eCollisionShape::Ray: {
             Ray t = ((RayCollider&)col).getShape(*man.transform);
@@ -61,10 +73,6 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             rw.draw(verts, 2, sf::Lines);
         } break;
     }
-#if DEBUG_DRAW
-    AABB t = rb->getCollider().getAABB();
-    drawOutline(rw, Polygon::CreateFromAABB(t), PastelColor::Purple);
-#endif
 }
 #define CONSOLAS_PATH "assets/Consolas.ttf"
 static void setupImGuiFont() {
@@ -468,15 +476,15 @@ protected:
             c.setFillColor(PastelColor::Red);
             target.draw(c);
         }
-        //debugDraw(target, _physics_manager->getQuadTree());
+        DEBUG_CALL(debugDraw(target, _physics_manager->getQuadTree(), Color::Magenta));
     }
 public:
     Demo(vec2i s = {1500, 1500}) : DefaultScene(s) {}
 };
 
 int main() {
+    DEBUG_CALL(Log(LogLevel::DEBUG) << "debug build running");
     Demo demo;
-    std::cerr << "running . . . \n";
     run(demo);
     return 0;
 }

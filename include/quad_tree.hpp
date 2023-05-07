@@ -7,6 +7,7 @@
 #include "rigidbody.hpp"
 #include "types.hpp"
 #include "game_object.hpp"
+#include "debug.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -101,7 +102,7 @@ public:
     }
     
 private:
-    static constexpr auto Threshold = std::size_t(16);
+    static constexpr auto Threshold = std::size_t(8);
     static constexpr auto MaxDepth = std::size_t(8);
 
     struct Node
@@ -120,7 +121,7 @@ private:
     GetBox _getBox;
     Equal mEqual;
 
-    bool isLeaf(const Node* node) const
+    static bool isLeaf(const Node* node)
     {
         return !static_cast<bool>(node->children[0]);
     }
@@ -369,20 +370,26 @@ private:
                 findIntersectionsInDescendants(child.get(), value, intersections);
         }
     }
-#if _DEBUG
-    static void debugDrawHelperNodeRek(Node* node, sf::RenderTarget& rw, Color clr) {
-        drawOutline(rw, node->box, clr);
+DEBUG_CALL(
+    static void debugDrawHelperNodeRek(Node* node, sf::RenderTarget& rw, Color clr, GetBox getbox) {
+        if(isLeaf(node))
+            drawOutline(rw, node->box, clr);
+        for (const auto& value : node->values) {
+            drawOutline(rw, getbox(value), clr);
+        }
         for(auto& ch : node->children) {
             if(ch.get() != nullptr) {
-                debugDrawHelperNodeRek(ch.get(), rw, clr);
+                debugDrawHelperNodeRek(ch.get(), rw, clr, getbox);
             }
         }
     }
 public:
-    friend void debugDraw(sf::RenderTarget& rw, const QuadTree<T, GetBox, Equal, Float>& qt) {
-        debugDrawHelperNodeRek(qt._root.get(), rw, Color::Red);
+    friend void debugDraw(sf::RenderTarget& rw, const QuadTree<T, GetBox, Equal, Float>& qt, Color clr) {
+        clr.a /= 2.f;
+        debugDrawHelperNodeRek(qt._root.get(), rw, clr, qt._getBox);
     }
-#endif
+)
+
 };
 
 }
