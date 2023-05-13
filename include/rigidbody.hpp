@@ -1,6 +1,5 @@
 #pragma once
 #include "col_utils.hpp"
-#include "game_object_utils.hpp"
 #include "imgui.h"
 #include "transform.hpp"
 #include "collider.hpp"
@@ -20,7 +19,7 @@ namespace epi {
 /*
 * a class holding all of tha basic rigidbody properties needed to compute collision response
 */
-class Rigidbody : public GameObject {
+class Rigidbody {
 public:
 
     bool isStatic = false;
@@ -34,10 +33,6 @@ public:
 
     float time_immobile = 0.f;
 
-    #define RIGIDBODY_TYPE (typeid(Collider).hash_code())
-    Property getPropertyList() const override {
-        return {RIGIDBODY_TYPE, "rigidbody"};
-    }
     bool isDormant() const {
         return time_immobile > 1.f || isStatic;
     }
@@ -48,7 +43,6 @@ public:
     void addForce(vec2f dir, vec2f rad);
     Rigidbody() {}
     ~Rigidbody() {
-        this->notify(*this, Signal::EventDestroyed);
     }
 };
 struct RigidManifold {

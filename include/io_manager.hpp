@@ -8,21 +8,16 @@
 #include "SFML/Window/Window.hpp"
 #include "SFML/Window.hpp"
 
-#include "game_object.hpp"
 #include "types.hpp"
 
 namespace epi {
 /*
 * \brief class managing window input and output, derived from GameObject
 */
-class IOManager : public GameObject {
+class IOManager : public Signal::Subject {
     sf::Event _current_event;
     sf::RenderWindow _window;
 public:
-    #define IOMANAGER_TYPE (typeid(IOManager).hash_code())
-    Property getPropertyList() const override {
-        return {IOMANAGER_TYPE, "IOmanager"};
-    }
 
     sf::RenderTarget& getRenderObject() {
         return _window;

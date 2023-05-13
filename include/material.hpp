@@ -1,13 +1,7 @@
-
 #include "types.hpp"
-
 namespace epi {
 // basic class to store physical material properties
-struct Material : public GameObject {
-    #define MATERIAL_TYPE (typeid(Material).hash_code())
-    Property getPropertyList() const override {
-        return {MATERIAL_TYPE, "material"};
-    }
+struct Material {
     float restitution = 0.0f;
     float sfriction = 0.8f;
     float dfriction = 0.4f;

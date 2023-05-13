@@ -2,7 +2,6 @@
 #include "col_utils.hpp"
 #include "collider.hpp"
 #include "debug.hpp"
-#include "game_object_utils.hpp"
 #include "imgui.h"
 
 #include "restraint.hpp"
@@ -155,28 +154,14 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
         m_processParticles(*pm);
     }
 }
-void PhysicsManager::onNotify(const GameObject& obj, Signal::Event event)  {
-    if(event != Signal::EventDestroyed)
-        return;
-    if(obj.getPropertyList().type_hashed == RIGIDBODY_TYPE) {
-        unbind(safeCast<Rigidbody>(&obj));
-    }else if(obj.getPropertyList().type_hashed == TRIGGER_TYPE) {
-        unbind(safeCast<TriggerInterface>(&obj));
-    }else if(obj.getPropertyList().type_hashed == RESTRAINT_TYPE) {
-        unbind(safeCast<Restraint>(&obj));
-    }
-}
 void PhysicsManager::bind(RigidManifold man) {
     m_rigidbodies.push_back(man);
-    man.rigidbody->addObserver(this);
 }
 void PhysicsManager::bind(Restraint* restraint) {
     m_restraints.push_back(restraint);
-    restraint->addObserver(this);
 }
 void PhysicsManager::bind(TriggerInterface* trigger) {
     m_triggers.push_back(trigger);
-    trigger->addObserver(this);
 }
 void PhysicsManager::unbind(const Rigidbody* rb) {
     auto itr = m_rigidbodies.begin();

@@ -27,17 +27,25 @@ enum class LogLevel {
     INFO,
     DEBUG,
 };
+#if _DEBUG
+
 #define Log1(loglevel) LogIt(loglevel)
-
 #define Log2(loglevel, duration) Log3Helper(loglevel, duration, __LINE__)
-
 #define Log3Helper(loglevel, duration, line) Log3(loglevel, duration, line)
+
 #define Log3(loglevel, duration, line)\
 static auto epi_time_at##line= std::chrono::steady_clock::now();\
 bool result##line = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - epi_time_at##line).count() > duration * 1000.0;\
 if(result##line) epi_time_at##line= std::chrono::steady_clock::now();\
 if(result##line)\
 LogIt(loglevel)
+
+#else
+
+#define Log1(loglevel) if(false)LogIt(loglevel)
+#define Log2(loglevel, duration) if(false)LogIt(loglevel)
+#endif
+
 
 
 #define GET_MACRO(_0, _1, _2, NAME, ...) NAME

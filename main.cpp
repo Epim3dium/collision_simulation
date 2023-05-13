@@ -19,8 +19,6 @@
 #include "types.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
-#include "game_object.hpp"
-#include "game_object_utils.hpp"
 #include "imgui.h"
 #include "restraint.hpp"
 #include "rigidbody.hpp"
@@ -92,15 +90,12 @@ static void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 
-class DemoObject : GameObject {
+class DemoObject {
 public:
     std::unique_ptr<Transform> transform;
     std::unique_ptr<Collider> collider;
     std::unique_ptr<Rigidbody> rigidbody;
     std::unique_ptr<Material> material;
-    Property getPropertyList() const override {
-        return {typeid(DemoObject).hash_code(), "demoObject"};
-    }
     RigidManifold getManifold() const {
         return {transform.get(), collider.get(), rigidbody.get(), material.get()};
     }
@@ -128,7 +123,6 @@ public:
         material = std::unique_ptr<Material>(new Material());
     }
     ~DemoObject() {
-        notify(*this, Signal::EventDestroyed);
     }
 };
 class Demo : public DefaultScene {
@@ -154,25 +148,26 @@ protected:
     }opts;
     DemoObject* findHovered() {
         DemoObject* result;
-        auto mouse_pos = (vec2f)_io_manager->getMousePos();
+        auto mouse_pos = (vec2f)io_manager.getMousePos();
         for(auto& r : demo_objects) {
             switch(r->collider->getType()) {
                 case eCollisionShape::Circle: {
-                    CircleCollider& ref = cast<CircleCollider>(*r->collider);
+                    CircleCollider& ref = (CircleCollider&)(*r->collider);
                     Circle shape = ref.getShape(*r->transform);
                     if(isOverlappingPointCircle(mouse_pos, shape)) {
                         return r.get();
                     }
                 } break;
                 case eCollisionShape::Polygon: {
-                    PolygonCollider& ref = cast<PolygonCollider>(*r->collider);
+                    PolygonCollider& ref = (PolygonCollider&)(*r->collider);
                     Polygon polygon = ref.getShape(*r->transform);
                     if(isOverlappingPointPoly(mouse_pos, polygon)) {
                         return r.get();
                     }
                 }break;
                 case eCollisionShape::Ray: {
-                    Ray t = cast<RayCollider>(*r->collider).getShape(*r->transform);
+                    auto ref = (RayCollider&)(*r->collider);
+                    Ray t = ref.getShape(*r->transform);
                     auto closest = findClosestPointOnRay(t.pos, t.dir, mouse_pos);
                     if(len(closest - mouse_pos) < 10.f)
                         return r.get();
@@ -184,9 +179,9 @@ protected:
 
     void onSetup() override {
         setupImGuiFont();
-        _physics_manager->steps = 5;
-        _physics_manager->bounciness_select = PhysicsManager::eSelectMode::Max;
-        _physics_manager->friction_select = PhysicsManager::eSelectMode::Max;
+        physics_manager.steps = 5;
+        physics_manager.bounciness_select = PhysicsManager::eSelectMode::Max;
+        physics_manager.friction_select = PhysicsManager::eSelectMode::Max;
 
         auto aabb_outer = sim_window;
         auto aabb_inner = sim_window;
@@ -211,7 +206,7 @@ protected:
             demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
             demo_objects.back().get()->rigidbody->isStatic = true;\
             demo_objects.back().get()->collider->tag.add("ground");\
-            _physics_manager->bind(demo_objects.back().get()->getManifold());\
+            physics_manager.bind(demo_objects.back().get()->getManifold());\
         }
 
         ADD_SIDE(min.x, min.y, min.x, max.y);
@@ -228,13 +223,13 @@ protected:
                     auto hovered = findHovered();
                     if(hovered) {
                         //opts.selection.isHolding = true;
-                        opts.selection.pinch_point = rotateVec((vec2f)_io_manager->getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
+                        opts.selection.pinch_point = rotateVec((vec2f)io_manager.getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
                         opts.selection.res = new RestraintPointTrans( hovered->getManifold(), opts.selection.pinch_point, opts.selection.mouse_trans, vec2f());
-                        _physics_manager->bind(opts.selection.res);
+                        physics_manager.bind(opts.selection.res);
                         opts.selection.object = hovered;
                         opts.selection.isHolding = true;
                     }else {
-                        opts.poly_creation.push_back((vec2f)_io_manager->getMousePos());
+                        opts.poly_creation.push_back((vec2f)io_manager.getMousePos());
                     }
                 } else if(event.mouseButton.button == sf::Mouse::Right) {
                     auto hovered = findHovered();
@@ -243,9 +238,9 @@ protected:
                         auto a = opts.selection.object;
                         auto ap = opts.selection.pinch_point;
                         auto b = hovered;
-                        auto bp = rotateVec((vec2f)_io_manager->getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
+                        auto bp = rotateVec((vec2f)io_manager.getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
                         auto res = new RestraintRigidRigid(b->getManifold(), bp, a->getManifold(), ap);
-                        _physics_manager->bind(res);
+                        physics_manager.bind(res);
                     }
                 }
             }break;
@@ -263,16 +258,16 @@ protected:
                 switch(event.key.code)
                 {
                     case sf::Keyboard::C: {
-                        Circle t((vec2f)_io_manager->getMousePos(), r);
+                        Circle t((vec2f)io_manager.getMousePos(), r);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
-                        _physics_manager->bind(demo_objects.back().get()->getManifold());
+                        physics_manager.bind(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
-                        Polygon t = Polygon::CreateRegular((vec2f)_io_manager->getMousePos(), M_PI/side_count, side_count, r * sqrt(2.f));
+                        Polygon t = Polygon::CreateRegular((vec2f)io_manager.getMousePos(), M_PI/side_count, side_count, r * sqrt(2.f));
                         auto ptr = new DemoObject(t);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(ptr));
-                        _physics_manager->bind(demo_objects.back().get()->getManifold());
+                        physics_manager.bind(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::Enter: {
                         if(opts.poly_creation.size() < 2) {
@@ -284,7 +279,7 @@ protected:
                             Polygon t = Polygon::CreateFromPoints(opts.poly_creation);
                             demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
                         }
-                        _physics_manager->bind(demo_objects.back().get()->getManifold());
+                        physics_manager.bind(demo_objects.back().get()->getManifold());
                         opts.selection.object = demo_objects.back().get();
                     }break;
                     case sf::Keyboard::BackSpace: {
@@ -296,6 +291,7 @@ protected:
                                 });
                             if(itr != demo_objects.end()) {
                                 demo_objects.erase(itr);
+                                //physics_manager.unbind(itr.base()->get()->rigidbody);
                             }
                             objptr = findHovered();
                         }while(objptr != nullptr);
@@ -320,33 +316,34 @@ protected:
             break;
         }
     }
-    void onNotify(const GameObject& obj, Signal::Event event) override {
-        if(obj.getPropertyList().type_hashed == IOMANAGER_TYPE && event == Signal::EventInput) {
-            auto event = cast<IOManager>(obj).getEvent();
-            if(event.type == sf::Event::Closed) {
+    void onNotify(const Signal::Subject& obj, Signal::Event event) override {
+        if(event == Signal::EventInput) {
+            auto e = ((IOManager&)(obj)).getEvent();
+            if(e.type == sf::Event::Closed) {
                 bail("window closed");
             }
             //demo
             if (!ImGui::IsAnyItemHovered()) {
-                onEvent(event);
+                onEvent(e);
             }
         }
     }
 
     void onUpdate(float delT) override {
-        opts.selection.mouse_trans->setPos((vec2f)_io_manager->getMousePos());
+        opts.selection.mouse_trans->setPos((vec2f)io_manager.getMousePos());
         if(opts.selection.isHolding && opts.selection.object && opts.selection.object->rigidbody->isStatic) {
-            opts.selection.object->transform->setPos((vec2f)_io_manager->getMousePos() - rotateVec(opts.selection.pinch_point, opts.selection.object->transform->getRot()));
+            opts.selection.object->transform->setPos((vec2f)io_manager.getMousePos() - rotateVec(opts.selection.pinch_point, opts.selection.object->transform->getRot()));
         }
         for(auto& r : demo_objects) {
             if(!r.get()->rigidbody->isStatic)
                 r.get()->rigidbody->force += vec2f(0, opts.gravity) * r->rigidbody->mass;
         }
-        _physics_manager->update(delT);
+        physics_manager.update(delT);
 
         for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
             if(!isOverlappingPointAABB(it->get()->transform->getPos(), sim_window)) {
                 demo_objects.erase(it);
+                //physics_manager.unbind(itr.base()->get()->rigidbody);
                 break;
             }
         }
@@ -360,11 +357,11 @@ protected:
                 {
                     static int framerate_max = 0xffffff;
                     ImGui::SliderInt("change max fps" , &framerate_max, 1, 1000);
-                    this->_io_manager->getWindow().setFramerateLimit(framerate_max);
+                    this->io_manager.getWindow().setFramerateLimit(framerate_max);
 
                     static int tsteps = 5;
                     ImGui::SliderInt("change step count" , &tsteps, 1, 50);
-                    _physics_manager->steps = tsteps;
+                    physics_manager.steps = tsteps;
                     ImGui::SliderFloat("change gravity" , &opts.gravity, -3000.f, 3000.f, "%.1f");
                     ImGui::SliderFloat("radius" , &opts.default_radius, 5.f, 100.f);
                     ImGui::SliderFloat("radius_deviation" , &opts.radius_dev, 0.f, 1.f);
@@ -378,12 +375,12 @@ protected:
                     {
                         static int cur_choice_friction = 2;
                         ImGui::ListBox("choose mode friction", &cur_choice_friction, select_modes, 3);
-                        _physics_manager->friction_select = (PhysicsManager::eSelectMode)cur_choice_friction;
+                        physics_manager.friction_select = (PhysicsManager::eSelectMode)cur_choice_friction;
                     }
                     {
                         static int cur_choice_bounce = 2;
                         ImGui::ListBox("choose mode bounce", &cur_choice_bounce, select_modes, 3);
-                        _physics_manager->bounciness_select = (PhysicsManager::eSelectMode)cur_choice_bounce;
+                        physics_manager.bounciness_select = (PhysicsManager::eSelectMode)cur_choice_bounce;
                     }ImGui::EndTabItem();
                 } 
             }
@@ -476,7 +473,7 @@ protected:
             c.setFillColor(PastelColor::Red);
             target.draw(c);
         }
-        DEBUG_CALL(debugDraw(target, _physics_manager->getQuadTree(), Color::Magenta));
+        DEBUG_CALL(debugDraw(target, physics_manager.getQuadTree(), Color::Magenta));
     }
 public:
     Demo(vec2i s = {1500, 1500}) : DefaultScene(s) {}

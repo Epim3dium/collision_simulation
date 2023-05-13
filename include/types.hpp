@@ -3,6 +3,7 @@
 #include <iostream>
 #include <math.h>
 #include <vector>
+#include <set>
 
 #include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/Graphics/RenderWindow.hpp"
@@ -12,7 +13,6 @@
 #include "SFML/Graphics.hpp"
 
 #include "transform.hpp"
-#include "game_object.hpp"
 
 namespace epi {
 
@@ -201,4 +201,66 @@ public:
 // hue: 0-360°; sat: 0.f-1.f; val: 0.f-1.f
 
 vec2f operator* (vec2f a, vec2f b);
+class Tag {
+    std::set<std::string> _tags;
+public:
+    inline std::vector<std::string> getList() const {
+        return std::vector<std::string>(_tags.begin(), _tags.end());
+    }
+    inline void add(std::string t) {
+        _tags.insert(t);
+    }
+    inline void remove(std::string t) {
+        _tags.erase(t);
+    }
+    inline bool contains(std::string t) const {
+        return _tags.contains(t);
+    }
+    inline bool operator==(std::string t) const {
+        return contains(t);
+    }
+    inline bool operator==(const Tag& t) const {
+        std::vector<std::string> common_data;
+        set_intersection(_tags.begin(), _tags.end(), t._tags.begin(), t._tags.end(), std::back_inserter(common_data));
+        return common_data.size() != 0;
+    }
+    inline bool operator!=(const char* t) const {
+        return !(*this == t);
+    }
+    inline size_t size() const { return _tags.size(); };
+    Tag() {}
+    Tag(std::initializer_list<std::string> inits) : _tags(inits) {}
+};
+namespace Signal {
+//base data that is being sent between Subject and Observer
+typedef std::string Event;
+
+static constexpr const char* EventDestroyed = "destroyed";
+static constexpr const char* EventChanged   = "changed";
+static constexpr const char* EventInput   = "input";
+
+struct Subject;
+
+//abstract class used for listening to Subject's signals
+class Observer {
+    std::vector<Subject*> _subjects_observed;
+    void _removeSubject(const Subject*);
+public:
+    virtual void onNotify(const Subject& obj, Event event) = 0;
+    virtual ~Observer();
+    friend Subject;
+};
+
+//class used for being able to notify other observers
+class Subject {
+private:
+    std::vector<Observer*> _observers;
+public:
+    void addObserver(Observer* observer);
+    void removeObserver(Observer* observer);
+
+    void notify(const Subject& entity, Event event);
+    virtual ~Subject();
+};
+}
 }

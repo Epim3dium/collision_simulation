@@ -1,7 +1,5 @@
 #pragma once
 #include "col_utils.hpp"
-#include "game_object.hpp"
-#include "game_object_utils.hpp"
 #include "imgui.h"
 #include "transform.hpp"
 #include "types.hpp"
@@ -34,17 +32,14 @@ float calculateInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
 *   float calcInertia()
 *Collider(Transform* trans)
 */
-struct Collider : public GameObject {
+struct Collider {
     float m_inertia_dev_mass = -1.f;
 protected:
     virtual float calcInertia(float mass) const = 0;
 public:
+    Tag tag;
     //if nothing is in collision_mask then it can collide with anything
     Tag mask;
-    #define COLLIDER_TYPE (typeid(Collider).hash_code())
-    Property getPropertyList() const override {
-        return {COLLIDER_TYPE, "collider"};
-    }
     virtual eCollisionShape getType() const = 0;
 
 
@@ -59,7 +54,6 @@ public:
     Collider() {
     }
     virtual ~Collider() {
-        notify(*this, Signal::EventDestroyed);
     }
 };
 

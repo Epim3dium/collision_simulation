@@ -3,10 +3,8 @@
 #include "SFML/Graphics/RenderTarget.hpp"
 
 #include "col_utils.hpp"
-#include "game_object_utils.hpp"
 #include "rigidbody.hpp"
 #include "types.hpp"
-#include "game_object.hpp"
 #include "debug.hpp"
 
 #include <algorithm>
@@ -21,7 +19,7 @@
 namespace epi {
 //object responsible for spacial particioning
 template<typename T, typename GetBox, typename Equal = std::equal_to<T>, typename Float = float>
-class QuadTree : public GameObject
+class QuadTree
 {
     static_assert(std::is_convertible_v<std::invoke_result_t<GetBox, const T&>, AABB>,
         "GetBox must be a callable of signature Box<Float>(const T&)");
@@ -30,10 +28,6 @@ class QuadTree : public GameObject
     static_assert(std::is_arithmetic_v<Float>);
 
 public:
-    #define QUAD_TREE_TYPE (typeid(QuadTree).hash_code())
-    Property getPropertyList() const override {
-        return {QUAD_TREE_TYPE, "quadtree"};
-    }
     QuadTree(const AABB& box, const GetBox& getBox = GetBox(),
         const Equal& equal = Equal()) :
         _box(box), _root(std::make_unique<Node>(box)), _getBox(getBox), mEqual(equal)
@@ -41,7 +35,6 @@ public:
 
     }
     ~QuadTree() {
-        notify(*this, Signal::EventDestroyed);
     }
 
     void add(const T& value)

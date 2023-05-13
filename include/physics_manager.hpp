@@ -1,11 +1,9 @@
 #pragma once
-#include "game_object_utils.hpp"
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include "trigger.hpp"
 #include "restraint.hpp"
 #include "quad_tree.hpp"
-#include "game_object.hpp"
 
 #include <algorithm>
 #include <functional>
@@ -24,7 +22,7 @@ struct ParticleManager;
  * every Solver, RigidManifold and Trigger have to be bound to be processed, and unbound to stop processing
  * when destroyed all objects will be automaticly unbound
  */
-class PhysicsManager : public GameObject, Signal::Observer {
+class PhysicsManager {
 public:
     enum class eSelectMode {
         Min,
@@ -75,11 +73,6 @@ private:
 public:
     //number of physics/collision steps per frame
     size_t steps = 2;
-    #define PHYSICS_MANAGER_TYPE (typeid(PhysicsManager).hash_code())
-    Property getPropertyList() const override {
-        return {PHYSICS_MANAGER_TYPE, "physicsmanager"};
-    }
-    void onNotify(const GameObject& obj, Signal::Event event) override;
     inline const decltype(m_rigidbodiesQT)& getQuadTree() {
         return m_rigidbodiesQT;
     }
@@ -116,7 +109,6 @@ public:
     //size should be max simulated size
     PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
     ~PhysicsManager() {
-        notify(*this, Signal::EventDestroyed);
     }
 };
 }

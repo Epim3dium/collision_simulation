@@ -1,21 +1,14 @@
 #pragma once
 #include "col_utils.hpp"
-#include "game_object.hpp"
-#include "game_object_utils.hpp"
 #include "rigidbody.hpp"
 #include "transform.hpp"
 #include <vector>
 
 namespace epi {
 
-struct Restraint : public GameObject {
-    #define RESTRAINT_TYPE (typeid(Restraint).hash_code())
-    Property getPropertyList() const override {
-        return {RESTRAINT_TYPE, "restraint"};
-    }
+struct Restraint {
     virtual void update(float delT) = 0;
     virtual ~Restraint() {
-        notify(*this, Signal::EventDestroyed);
     }
 };
 
