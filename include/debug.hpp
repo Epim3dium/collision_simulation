@@ -28,7 +28,17 @@ enum class LogLevel {
     DEBUG,
 };
 #define Log1(loglevel) LogIt(loglevel)
-#define Log2(loglevel, duration) LogIt(loglevel, duration, __LINE__, __FILE_NAME__)
+
+#define Log2(loglevel, duration) Log3Helper(loglevel, duration, __LINE__)
+
+#define Log3Helper(loglevel, duration, line) Log3(loglevel, duration, line)
+#define Log3(loglevel, duration, line)\
+static auto epi_time_at##line= std::chrono::steady_clock::now();\
+bool result##line = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - epi_time_at##line).count() > duration * 1000.0;\
+if(result##line) epi_time_at##line= std::chrono::steady_clock::now();\
+if(result##line)\
+LogIt(loglevel)
+
 
 #define GET_MACRO(_0, _1, _2, NAME, ...) NAME
 #define Log(...) GET_MACRO(_0, ##__VA_ARGS__, Log2, Log1, Log0)(__VA_ARGS__)
@@ -36,25 +46,8 @@ enum class LogLevel {
 
 class LogIt
 {
-        typedef std::chrono::time_point<std::chrono::steady_clock> timePoint;
-        static std::map<size_t, timePoint> _saved_times;
 public:
-    LogIt(LogLevel _loglevel, float time_threshold_sec = -1.f, int line = -1, std::string filename = "") {
-        if(_loglevel > _priority) {
-            _isActive = false;
-            return;
-        }
-        if(time_threshold_sec != -1.f) {
-            auto hash_str = std::hash<std::string>{}(filename) + 0x9e3779b9 + (2137 << 6) + (2137 >> 2);
-            auto hash_line = std::hash<int>{}(line) + 0x9e3779b9 + (2137 << 6) + (2137 >> 2);
-        
-            auto& time = _saved_times[hash_str ^ hash_line];
-            if(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - time).count() < time_threshold_sec * 1000.0) {
-                _isActive = false;
-                return;
-            }
-            time = std::chrono::steady_clock::now();
-        }
+    LogIt(LogLevel _loglevel) {
         switch(_loglevel) {
             case LogLevel::ERROR:
                 _buffer << "\x1B[31m[ERROR]:\x1B[0m\t";
