@@ -35,10 +35,9 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
     //if(selection.contains(rb))
         //color = PastelColor::Red;
     auto& col = *man.collider;
-    switch(col.getType()) {
+    switch(col.type) {
         case eCollisionShape::Circle: {
-            CircleCollider& tmp = (CircleCollider&)col;
-            auto c = tmp.getShape(*man.transform);
+            auto c = col.getCircleShape(*man.transform);
             sf::CircleShape cs(c.radius);
             cs.setPosition(man.transform->getPos() - vec2f(c.radius, c.radius));
             cs.setFillColor(color);
@@ -56,13 +55,14 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             rw.draw(verts, 2, sf::Lines);
             )
         }break;
-        case eCollisionShape::Polygon:
-            drawFill(rw, ((PolygonCollider&)col).getShape(*man.transform), color);
-            drawOutline(rw, ((PolygonCollider&)col).getShape(*man.transform), sf::Color::Black);
-            DEBUG_CALL(drawOutline(rw, ((PolygonCollider&)col).getShape(*man.transform), sf::Color::Red));
-        break;
+        case eCollisionShape::Polygon: {
+            auto p = col.getPolygonShape(*man.transform);
+            drawFill(rw, p, color);
+            drawOutline(rw, p, sf::Color::Black);
+            DEBUG_CALL(drawOutline(rw, p, sf::Color::Red));
+        } break;
         case epi::eCollisionShape::Ray: {
-            Ray t = ((RayCollider&)col).getShape(*man.transform);
+            Ray t = col.getRayShape(*man.transform);
             sf::Vertex verts[2] ;
             verts[0].position = t.pos;
             verts[1].position = t.pos + t.dir;
@@ -103,21 +103,21 @@ public:
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(poly.getPos());
         transform->setRot(poly.getRot());
-        collider = std::unique_ptr<Collider>(new PolygonCollider(poly));
+        collider = std::unique_ptr<Collider>(new Collider(poly));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
     }
     DemoObject(Circle circ) {
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(circ.pos);
-        collider = std::unique_ptr<Collider>(new CircleCollider(circ));
+        collider = std::unique_ptr<Collider>(new Collider(circ));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
     }
     DemoObject(Ray ray) {
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(ray.pos + ray.dir / 2.f);
-        collider = std::unique_ptr<Collider>(new RayCollider(ray));
+        collider = std::unique_ptr<Collider>(new Collider(ray));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         rigidbody->isStatic = true;
         material = std::unique_ptr<Material>(new Material());
@@ -150,24 +150,21 @@ protected:
         DemoObject* result;
         auto mouse_pos = (vec2f)io_manager.getMousePos();
         for(auto& r : demo_objects) {
-            switch(r->collider->getType()) {
+            switch(r->collider->type) {
                 case eCollisionShape::Circle: {
-                    CircleCollider& ref = (CircleCollider&)(*r->collider);
-                    Circle shape = ref.getShape(*r->transform);
+                    Circle shape = r->collider->getCircleShape(*r->transform);
                     if(isOverlappingPointCircle(mouse_pos, shape)) {
                         return r.get();
                     }
                 } break;
                 case eCollisionShape::Polygon: {
-                    PolygonCollider& ref = (PolygonCollider&)(*r->collider);
-                    Polygon polygon = ref.getShape(*r->transform);
+                    Polygon polygon = r->collider->getPolygonShape(*r->transform);
                     if(isOverlappingPointPoly(mouse_pos, polygon)) {
                         return r.get();
                     }
                 }break;
                 case eCollisionShape::Ray: {
-                    auto ref = (RayCollider&)(*r->collider);
-                    Ray t = ref.getShape(*r->transform);
+                    Ray t = r->collider->getRayShape(*r->transform);
                     auto closest = findClosestPointOnRay(t.pos, t.dir, mouse_pos);
                     if(len(closest - mouse_pos) < 10.f)
                         return r.get();

@@ -109,18 +109,18 @@ void PhysicsManager::m_processParticles(ParticleManager& pm) {
             continue; 
         auto open = m_rigidbodiesQT.query({p.pos - vec2f(0.1f, 0.1f), p.pos + vec2f(0.1f, 0.1f)});
         for(auto& o : open) {
-            switch(o.collider->getType()) {
+            switch(o.collider->type) {
                 case eCollisionShape::Circle:
-                    if(isOverlappingPointCircle(p.pos, ((CircleCollider*)o.collider)->getShape(*o.transform))) {
+                    if(isOverlappingPointCircle(p.pos, o.collider->getCircleShape(*o.transform))) {
                         p.isActive = false;
                     }
                 break;
                 case eCollisionShape::Polygon:
-                    if(isOverlappingPointPoly(p.pos, ((PolygonCollider*)o.collider)->getShape(*o.transform)))
+                    if(isOverlappingPointPoly(p.pos, o.collider->getPolygonShape(*o.transform)))
                         p.isActive = false;
                 break;
                 default:
-                    Log(LogLevel::WARNING) << "for type: " << (int)o.collider->getType() << ", particle collision is not available";
+                    Log(LogLevel::WARNING) << "for type: " << (int)o.collider->type << ", particle collision is not available";
                 break;
             }
         }
