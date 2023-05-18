@@ -470,7 +470,7 @@ protected:
             c.setFillColor(PastelColor::Red);
             target.draw(c);
         }
-        DEBUG_CALL(debugDraw(target, physics_manager.getQuadTree(), Color::Magenta));
+        //DEBUG_CALL(debugDraw(target, _physics_manager->getQuadTree(), Color::Magenta));
     }
 public:
     Demo(vec2i s = {1500, 1500}) : DefaultScene(s) {}

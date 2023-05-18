@@ -48,7 +48,6 @@ private:
         CircPoly
     };
 
-    QuadTree<RigidManifold, std::function<AABB(RigidManifold)> > m_rigidbodiesQT;
 
     std::vector<RigidManifold> m_rigidbodies;
     std::vector<Restraint*> m_restraints;
@@ -73,9 +72,6 @@ private:
 public:
     //number of physics/collision steps per frame
     size_t steps = 2;
-    inline const decltype(m_rigidbodiesQT)& getQuadTree() {
-        return m_rigidbodiesQT;
-    }
 
     /*
     * updates all rigidbodies bound applying their velocities and resoving collisions
@@ -107,7 +103,7 @@ public:
     void unbind(const TriggerInterface* trigger);
 
     //size should be max simulated size
-    PhysicsManager(AABB size) : m_rigidbodiesQT(size, getAABBfromRigidbody) {}
+    PhysicsManager(AABB size) {}
     ~PhysicsManager() {
     }
 };
