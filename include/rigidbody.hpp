@@ -39,8 +39,6 @@ public:
     inline void addForce(vec2f force) {
         velocity += force / mass;
     }
-    void addVelocity(vec2f dir, vec2f rad);
-    void addForce(vec2f dir, vec2f rad);
     Rigidbody() {}
     ~Rigidbody() {
     }

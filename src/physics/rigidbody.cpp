@@ -35,17 +35,17 @@ float calculateInertia(vec2f pos, const std::vector<vec2f>& model, float mass) {
 }
 
 //vec2f rad = cp - getCollider().getPos();
-void Rigidbody::addForce(vec2f f, vec2f rad) {
-    this->force += f;
-    if(!lockRotation)
-        angular_force -= cross(f, rad); 
-}
-void Rigidbody::addVelocity(vec2f vel, vec2f rad) {
-    if(isStatic)
-        return;
-    velocity += vel;
-    if(!lockRotation)
-        angular_velocity -= cross(vel, rad); 
-}
+//void Rigidbody::addForce(vec2f f, vec2f rad) {
+//    this->force += f;
+//    if(!lockRotation)
+//        angular_force -= cross(f, rad); 
+//}
+//void Rigidbody::addVelocity(vec2f vel, vec2f rad) {
+//    if(isStatic)
+//        return;
+//    velocity += vel;
+//    if(!lockRotation)
+//        angular_velocity -= cross(vel, rad); 
+//}
 
 }
