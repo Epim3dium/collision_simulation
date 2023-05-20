@@ -25,7 +25,6 @@
 #include "rigidbody.hpp"
 #include "scene.hpp"
 #include "transform.hpp"
-#include "trigger.hpp"
 #include "RNG.h"
 
 using namespace epi;

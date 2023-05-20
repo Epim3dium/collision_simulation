@@ -4,7 +4,6 @@
 #include "collider.hpp"
 #include "rigidbody.hpp"
 #include "transform.hpp"
-#include "trigger.hpp"
 
 #include "types.hpp"
 #include <cmath>

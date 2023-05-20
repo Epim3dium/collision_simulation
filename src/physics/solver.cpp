@@ -3,7 +3,6 @@
 #include "collider.hpp"
 #include "debug.hpp"
 #include "rigidbody.hpp"
-#include "trigger.hpp"
 
 #include <algorithm>
 #include <exception>

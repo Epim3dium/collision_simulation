@@ -9,7 +9,6 @@
 #include "particle_manager.hpp"
 #include "rigidbody.hpp"
 #include "transform.hpp"
-#include "trigger.hpp"
 
 #include <cassert>
 #include <cmath>
@@ -81,10 +80,6 @@ void PhysicsManager::updateRestraints(float delT) {
     for(auto& r : _restraints)
         r->update(delT);
 }
-void PhysicsManager::processTriggers() {
-    //todo
-}
-
 void PhysicsManager::wakeUpAround(const RigidManifold& man) {
     auto area = man.collider->getAABB(*man.transform);
     area.setSize(area.size() * 2.f);
@@ -135,10 +130,8 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     float deltaStep = delT / (float)steps;
     auto col_list = processBroadPhase();
     for(int i = 0; i < steps; i++) {
-
         updateRestraints(deltaStep);
         updateRigidbodies(deltaStep);
-
         processNarrowPhase(col_list);
     }
 
@@ -146,7 +139,6 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
         r.rigidbody->force = {0.f, 0.f};
         r.rigidbody->angular_force = 0.f;
     }
-    processTriggers();
     if(pm){
         processParticles(*pm);
     }
@@ -156,9 +148,6 @@ void PhysicsManager::bind(RigidManifold man) {
 }
 void PhysicsManager::bind(Restraint* restraint) {
     _restraints.push_back(restraint);
-}
-void PhysicsManager::bind(TriggerInterface* trigger) {
-    _triggers.push_back(trigger);
 }
 void PhysicsManager::unbind(const Rigidbody* rb) {
     auto itr = _rigidbodies.begin();
@@ -183,9 +172,6 @@ static void unbind_any(const T* obj, std::vector<T*>& obj_vec) {
 }
 void PhysicsManager::unbind(const Restraint* res) {
     unbind_any(res, _restraints);
-}
-void PhysicsManager::unbind(const TriggerInterface* trigger) {
-    unbind_any(trigger, _triggers);
 }
 
 }

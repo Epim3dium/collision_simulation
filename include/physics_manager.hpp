@@ -1,7 +1,6 @@
 #pragma once
 #include "solver.hpp"
 #include "rigidbody.hpp"
-#include "trigger.hpp"
 #include "restraint.hpp"
 #include "quad_tree.hpp"
 
@@ -50,7 +49,6 @@ private:
 
     std::vector<RigidManifold> _rigidbodies;
     std::vector<Restraint*> _restraints;
-    std::vector<TriggerInterface*> _triggers;
 
     SolverInterface* _solver = new DefaultSolver();
 
@@ -63,7 +61,6 @@ private:
     void updateRigidbodies(float delT);
     void updateRestraints(float delT);
 
-    void processTriggers();
     void processParticles(ParticleManager& pm);
     static AABB getAABBfromRigidbody(RigidManifold man) {
         return man.collider->getAABB(*man.transform);
@@ -92,14 +89,10 @@ public:
     }
     //used to add restraints applied on rigidbodies bound
     void bind(Restraint* restraint);
-    //used to add triggers that will detect rigidbodies bound
-    void bind(TriggerInterface* trigger);
     //removes rigidbody from manager
     void unbind(const Rigidbody* rb);
     //removes restraint from manager
     void unbind(const Restraint* restriant);
-    //removes trigger from manager
-    void unbind(const TriggerInterface* trigger);
 
     //size should be max simulated size
     PhysicsManager(AABB size) {}
