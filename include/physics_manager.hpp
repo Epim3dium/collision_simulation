@@ -16,7 +16,6 @@
 namespace epi {
 
 struct ParticleManager;
-
 /*
  * \brief used to process collision detection and resolution as well as restraints on rigidbodies
  * every Solver, RigidManifold and Trigger have to be bound to be processed, and unbound to stop processing
@@ -31,7 +30,7 @@ public:
     };
 private:
     template<class T>
-    static T m_selectFrom(T a, T b, eSelectMode mode) {
+    static T selectFrom(T a, T b, eSelectMode mode) {
         switch(mode) {
             case eSelectMode::Avg:
                 return (a + b) / 2.f;
@@ -49,23 +48,23 @@ private:
     };
 
 
-    std::vector<RigidManifold> m_rigidbodies;
-    std::vector<Restraint*> m_restraints;
-    std::vector<TriggerInterface*> m_triggers;
+    std::vector<RigidManifold> _rigidbodies;
+    std::vector<Restraint*> _restraints;
+    std::vector<TriggerInterface*> _triggers;
 
-    SolverInterface* m_solver = new DefaultSolver();
+    SolverInterface* _solver = new DefaultSolver();
 
     std::vector<ColInfo> processBroadPhase();
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
 
-    void m_wakeUpAround(const RigidManifold& man);
-    void m_updateRigidObj(RigidManifold& man, float delT);
+    void wakeUpAround(const RigidManifold& man);
+    void updateRigidObj(RigidManifold& man, float delT);
 
-    void m_updateRigidbodies(float delT);
-    void m_updateRestraints(float delT);
+    void updateRigidbodies(float delT);
+    void updateRestraints(float delT);
 
-    void m_processTriggers();
-    void m_processParticles(ParticleManager& pm);
+    void processTriggers();
+    void processParticles(ParticleManager& pm);
     static AABB getAABBfromRigidbody(RigidManifold man) {
         return man.collider->getAABB(*man.transform);
     }
@@ -89,7 +88,7 @@ public:
     void bind(RigidManifold man);
     //used to add solver that is used to resolve collisions
     inline void bind(SolverInterface* solver) {
-        m_solver = solver;
+        _solver = solver;
     }
     //used to add restraints applied on rigidbodies bound
     void bind(Restraint* restraint);
@@ -104,7 +103,6 @@ public:
 
     //size should be max simulated size
     PhysicsManager(AABB size) {}
-    ~PhysicsManager() {
-    }
+    ~PhysicsManager() {}
 };
 }

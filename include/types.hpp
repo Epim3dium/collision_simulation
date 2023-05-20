@@ -198,8 +198,6 @@ public:
 };
 
 
-// hue: 0-360°; sat: 0.f-1.f; val: 0.f-1.f
-
 vec2f operator* (vec2f a, vec2f b);
 class Tag {
     std::set<std::string> _tags;

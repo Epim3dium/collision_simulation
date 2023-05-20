@@ -36,7 +36,7 @@ static bool areCompatible(RigidManifold r1, RigidManifold r2) {
 std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
     std::vector<PhysicsManager::ColInfo> result;
     std::vector<std::pair<float, RigidManifold>> all;
-    for(auto& c : m_rigidbodies) {
+    for(auto& c : _rigidbodies) {
         auto aabb = c.collider->getAABB(*c.transform);
         all.push_back({aabb.min.x, c});
         all.push_back({aabb.max.x, c});
@@ -70,28 +70,28 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
     for(auto ci = col_list.begin(); ci != col_list.end(); ci++) {
         if(!areCompatible(ci->first, ci->second))
             continue;
-        float restitution = m_selectFrom(ci->first.material->restitution, ci->second.material->restitution, bounciness_select);
-        float sfriction = m_selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
-        float dfriction = m_selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
+        float restitution = selectFrom(ci->first.material->restitution, ci->second.material->restitution, bounciness_select);
+        float sfriction = selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
+        float dfriction = selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
-        auto result = m_solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
+        auto result = _solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
     }
 }
-void PhysicsManager::m_updateRestraints(float delT) {
-    for(auto& r : m_restraints)
+void PhysicsManager::updateRestraints(float delT) {
+    for(auto& r : _restraints)
         r->update(delT);
 }
-void PhysicsManager::m_processTriggers() {
+void PhysicsManager::processTriggers() {
     //todo
 }
 
-void PhysicsManager::m_wakeUpAround(const RigidManifold& man) {
+void PhysicsManager::wakeUpAround(const RigidManifold& man) {
     auto area = man.collider->getAABB(*man.transform);
     area.setSize(area.size() * 2.f);
 }
 #define DORMANT_MIN_VELOCITY 150.f
 #define DORMANT_MIN_ANGULAR_VELOCITY 0.1f
-void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
+void PhysicsManager::updateRigidObj(RigidManifold& man, float delT) {
     auto& rb = *man.rigidbody;
     //processing dormants
     if(qlen(rb.velocity) + len(rb.force) * delT < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
@@ -99,7 +99,7 @@ void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
     }else {
         //wake up all objects around it
         if(man.rigidbody->isDormant()) {
-            m_wakeUpAround(man);
+            wakeUpAround(man);
         }
         rb.time_immobile = 0.f;
     }
@@ -124,50 +124,48 @@ void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
     man.transform->setPos(man.transform->getPos() + rb.velocity * delT);
     man.transform->setRot(man.transform->getRot() + rb.angular_velocity * delT);
 }
-void PhysicsManager::m_updateRigidbodies(float delT) {
-    for(auto r : m_rigidbodies) {
-        m_updateRigidObj(r, delT);
+void PhysicsManager::updateRigidbodies(float delT) {
+    for(auto r : _rigidbodies) {
+        updateRigidObj(r, delT);
     }
 }
-void PhysicsManager::m_processParticles(ParticleManager& pm) {
+void PhysicsManager::processParticles(ParticleManager& pm) {
 }
 void PhysicsManager::update(float delT, ParticleManager* pm ) {
     float deltaStep = delT / (float)steps;
-    //adding only once per frame since most probably if 2 aabbs dont overlap at the start of the frame they will not overlap at the end and if they do that will be dealt of in the next frame
-
+    auto col_list = processBroadPhase();
     for(int i = 0; i < steps; i++) {
-        auto col_list = processBroadPhase();
 
-        m_updateRestraints(deltaStep);
-        m_updateRigidbodies(deltaStep);
+        updateRestraints(deltaStep);
+        updateRigidbodies(deltaStep);
 
         processNarrowPhase(col_list);
     }
 
-    for(auto r : m_rigidbodies) {
+    for(auto r : _rigidbodies) {
         r.rigidbody->force = {0.f, 0.f};
         r.rigidbody->angular_force = 0.f;
     }
-    m_processTriggers();
+    processTriggers();
     if(pm){
-        m_processParticles(*pm);
+        processParticles(*pm);
     }
 }
 void PhysicsManager::bind(RigidManifold man) {
-    m_rigidbodies.push_back(man);
+    _rigidbodies.push_back(man);
 }
 void PhysicsManager::bind(Restraint* restraint) {
-    m_restraints.push_back(restraint);
+    _restraints.push_back(restraint);
 }
 void PhysicsManager::bind(TriggerInterface* trigger) {
-    m_triggers.push_back(trigger);
+    _triggers.push_back(trigger);
 }
 void PhysicsManager::unbind(const Rigidbody* rb) {
-    auto itr = m_rigidbodies.begin();
-    for(; itr != m_rigidbodies.end(); itr++) {
+    auto itr = _rigidbodies.begin();
+    for(; itr != _rigidbodies.end(); itr++) {
         if(itr->rigidbody == rb) {
-            m_wakeUpAround(*itr);
-            m_rigidbodies.erase(itr);
+            wakeUpAround(*itr);
+            _rigidbodies.erase(itr);
             break;
         }
     }
@@ -184,10 +182,10 @@ static void unbind_any(const T* obj, std::vector<T*>& obj_vec) {
     }
 }
 void PhysicsManager::unbind(const Restraint* res) {
-    unbind_any(res, m_restraints);
+    unbind_any(res, _restraints);
 }
 void PhysicsManager::unbind(const TriggerInterface* trigger) {
-    unbind_any(trigger, m_triggers);
+    unbind_any(trigger, _triggers);
 }
 
 }
