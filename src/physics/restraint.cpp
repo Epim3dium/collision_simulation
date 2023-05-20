@@ -82,22 +82,14 @@ void RestraintRigidRigid::update(float delT) {
         * dot(rel_velB, rel_velB);
     lambdaB /= dot(cB, cB);
 
-    if(!a.rigidbody->isStatic) {
-        a.rigidbody->force += lambdaA * cA;
-        a.rigidbody->velocity += corrA / a.rigidbody->mass;
-        if(!a.rigidbody->lockRotation) {
-            a.rigidbody->angular_force -= cross(lambdaA * cA, ra);
-            a.rigidbody->angular_velocity -= cross(corrA, ra) / inertiaA;
-        }
-    }
+    a.rigidbody->force += lambdaA * cA;
+    a.rigidbody->velocity += corrA / a.rigidbody->mass;
+    a.rigidbody->angular_force -= cross(lambdaA * cA, ra);
+    a.rigidbody->angular_velocity -= cross(corrA, ra) / inertiaA;
 
-    if(!b.rigidbody->isStatic) {
-        b.rigidbody->force += lambdaB * cB;
-        b.rigidbody->velocity += corrB / b.rigidbody->mass;
-        if(!b.rigidbody->lockRotation) {
-            b.rigidbody->angular_force -= cross(lambdaB * cB, rb);
-            b.rigidbody->angular_velocity -= cross(corrB, rb) / inertiaB;
-        }
-    }
+    b.rigidbody->force += lambdaB * cB;
+    b.rigidbody->velocity += corrB / b.rigidbody->mass;
+    b.rigidbody->angular_force -= cross(lambdaB * cB, rb);
+    b.rigidbody->angular_velocity -= cross(corrB, rb) / inertiaB;
 }
 }

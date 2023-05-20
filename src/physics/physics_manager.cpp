@@ -45,11 +45,16 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
         [](const std::pair<float, RigidManifold>& p1, const std::pair<float, RigidManifold>& p2) {
             return p1.first < p2.first;
         });
-    std::map<RigidManifold, AABB> open;
+    std::vector<std::pair<RigidManifold, AABB>> open;
     for(auto i : all) {
         auto idx = i.second;
-        if(open.contains(idx)) {
-            open.erase(idx);
+        auto itr = std::find_if(open.begin(), open.end(), 
+            [&](const std::pair<RigidManifold, AABB>& p) {
+                return p.first == idx;
+            });
+        if(itr != open.end()) {
+            std::swap(*itr, open.back());
+            open.pop_back();
             continue;
         }
         auto aabb = i.second.collider->getAABB(*i.second.transform);
@@ -57,7 +62,7 @@ std::vector<PhysicsManager::ColInfo> PhysicsManager::processBroadPhase() {
             if(isOverlappingAABBAABB(ii.second, aabb))
                 result.push_back({idx, ii.first});
         }
-        open[idx] = aabb;
+        open.push_back({idx, aabb});
     }
     return result;
 }
@@ -101,23 +106,23 @@ void PhysicsManager::m_updateRigidObj(RigidManifold& man, float delT) {
 
     if(rb.isDormant()){
         rb.velocity = vec2f();
+        rb.angular_velocity = 0.f;
         return;
     }
+    if(rb.lockRotation) {
+        rb.angular_velocity = 0.f;
+        rb.angular_force = 0.f;
+    }
 
-    if(rb.isStatic)
-        return;
-    if(qlen(rb.velocity) > 0.001f)
+    if(!nearlyEqual(qlen(rb.velocity), 0.f))
         rb.velocity -= norm(rb.velocity) * std::clamp(qlen(rb.velocity) * man.material->air_drag, 0.f, len(rb.velocity)) * delT;
-    if(abs(rb.angular_velocity) > 0.001f)
+    if(!nearlyEqual(rb.angular_velocity, 0.f))
         rb.angular_velocity -= std::copysign(1.f, rb.angular_velocity) * std::clamp(rb.angular_velocity * rb.angular_velocity * man.material->air_drag, 0.f, abs(rb.angular_velocity)) * delT;
 
     rb.velocity += rb.force / rb.mass * delT;
     rb.angular_velocity += rb.angular_force / man.collider->getInertia(rb.mass) * delT;
-    auto p = man.transform->getPos();
-    man.transform->setPos(p + rb.velocity * delT);
-
-    if(!rb.lockRotation)
-        man.transform->setRot(man.transform->getRot() + rb.angular_velocity * delT);
+    man.transform->setPos(man.transform->getPos() + rb.velocity * delT);
+    man.transform->setRot(man.transform->getRot() + rb.angular_velocity * delT);
 }
 void PhysicsManager::m_updateRigidbodies(float delT) {
     for(auto r : m_rigidbodies) {

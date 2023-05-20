@@ -117,16 +117,10 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
         impulse += info.cn * j - fj;
 
         float cps_ctr = (float)info.cps.size();
-        if(!rb1.isStatic) {
-            rb1.velocity -= impulse / rb1.mass;
-            if(!rb1.lockRotation)
-                rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
-        }
-        if(!rb2.isStatic) {
-            rb2.velocity += impulse / rb2.mass;
-            if(!rb2.lockRotation)
-                rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
-        }
+        rb1.velocity -= impulse / rb1.mass;
+        rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
+        rb2.velocity += impulse / rb2.mass;
+        rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
 }
 float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia, float mass1, const vec2f& rad2perp, float p2inv_inertia, float mass2, 
         float restitution, const vec2f& rel_vel, vec2f cn) {

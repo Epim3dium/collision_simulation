@@ -243,6 +243,7 @@ protected:
             }break;
             case sf::Event::MouseButtonReleased: {
                 if(opts.selection.isHolding && !sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
+                    physics_manager.unbind(opts.selection.res);
                     delete opts.selection.res;
                 }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)){
                     opts.selection.mouse_trans = new Transform();
@@ -287,8 +288,8 @@ protected:
                                     return obj.get() == objptr;
                                 });
                             if(itr != demo_objects.end()) {
+                                physics_manager.unbind(itr.base()->get()->rigidbody.get());
                                 demo_objects.erase(itr);
-                                //physics_manager.unbind(itr.base()->get()->rigidbody);
                             }
                             objptr = findHovered();
                         }while(objptr != nullptr);
