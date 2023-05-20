@@ -16,6 +16,7 @@
 #include "debug.hpp"
 #include "imgui-SFML.h"
 
+#include "io_manager.hpp"
 #include "types.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
@@ -314,16 +315,13 @@ protected:
             break;
         }
     }
-    void onNotify(const Signal::Subject& obj, Signal::Event event) override {
-        if(event == Signal::EventInput) {
-            auto e = ((IOManager&)(obj)).getEvent();
-            if(e.type == sf::Event::Closed) {
-                bail("window closed");
-            }
-            //demo
-            if (!ImGui::IsAnyItemHovered()) {
-                onEvent(e);
-            }
+    void onNotify(IOManagerEvent msg) override {
+        if(msg.event.type == sf::Event::Closed) {
+            bail("window closed");
+        }
+        //demo
+        if (!ImGui::IsAnyItemHovered()) {
+            onEvent(msg.event);
         }
     }
 
@@ -341,7 +339,7 @@ protected:
         for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
             if(!isOverlappingPointAABB(it->get()->transform->getPos(), sim_window)) {
                 demo_objects.erase(it);
-                //physics_manager.unbind(itr.base()->get()->rigidbody);
+                physics_manager.unbind(it->get()->rigidbody.get());
                 break;
             }
         }

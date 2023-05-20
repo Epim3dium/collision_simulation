@@ -14,7 +14,12 @@ namespace epi {
 /*
 * \brief class managing window input and output, derived from GameObject
 */
-class IOManager : public Signal::Subject {
+struct IOManager;
+struct IOManagerEvent {
+    IOManager& manager;
+    sf::Event event;
+};
+class IOManager : public Signal::Subject<IOManagerEvent> {
     sf::Event _current_event;
     sf::RenderWindow _window;
 public:
@@ -39,7 +44,7 @@ public:
     void pollEvents() {
         while(_window.pollEvent(_current_event)) {
             ImGui::SFML::ProcessEvent(_window, _current_event);
-            notify(*this, Signal::EventInput);
+            notify({*this, _current_event});
         }
     }
     IOManager(vec2i size, std::string title = "demo") : _window(sf::VideoMode(size.x, size.y), title) 
@@ -47,7 +52,6 @@ public:
         ImGui::SFML::Init(_window);
     }
     ~IOManager() {
-        notify(*this, Signal::EventDestroyed);
     }
 };
 }

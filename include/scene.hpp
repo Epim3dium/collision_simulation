@@ -13,7 +13,7 @@
 #include <vector>
 
 namespace epi {
-class Scene : Signal::Observer {
+class Scene : Signal::Observer<IOManagerEvent> {
     struct BailException : public std::exception {
         std::string message;
         const char* what() const noexcept override {
