@@ -73,7 +73,8 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         float sfriction = selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
         float dfriction = selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
         //ewewewewewewwwwww pls don, float delTt judge me
-        auto result = _solver->solve(ci->first, ci->second, restitution, sfriction, dfriction);
+        auto col_info = _solver->detect(ci->first.transform, ci->first.collider, ci->second.transform, ci->second.collider);
+        _solver->solve(col_info, ci->first, ci->second, restitution, sfriction, dfriction);
     }
 }
 void PhysicsManager::updateRestraints(float delT) {
@@ -143,24 +144,14 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
         processParticles(*pm);
     }
 }
-void PhysicsManager::bind(RigidManifold man) {
+void PhysicsManager::add(RigidManifold man) {
     _rigidbodies.push_back(man);
 }
-void PhysicsManager::bind(Restraint* restraint) {
+void PhysicsManager::add(Restraint* restraint) {
     _restraints.push_back(restraint);
 }
-void PhysicsManager::unbind(const Rigidbody* rb) {
-    auto itr = _rigidbodies.begin();
-    for(; itr != _rigidbodies.end(); itr++) {
-        if(itr->rigidbody == rb) {
-            wakeUpAround(*itr);
-            _rigidbodies.erase(itr);
-            break;
-        }
-    }
-}
 template<class T>
-static void unbind_any(const T* obj, std::vector<T*>& obj_vec) {
+static void unbind_any(const T obj, std::vector<T>& obj_vec) {
     auto itr = obj_vec.begin();
     for(; itr != obj_vec.end(); itr++) {
         if(*itr == obj)
@@ -170,8 +161,11 @@ static void unbind_any(const T* obj, std::vector<T*>& obj_vec) {
         obj_vec.erase(itr);
     }
 }
-void PhysicsManager::unbind(const Restraint* res) {
-    unbind_any(res, _restraints);
+void PhysicsManager::remove(RigidManifold rb) {
+    unbind_any(rb, _rigidbodies);
+}
+void PhysicsManager::remove(const Restraint* res) {
+    unbind_any<Restraint*>((Restraint*)res, _restraints);
 }
 
 }

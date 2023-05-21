@@ -12,17 +12,10 @@
 #include <vector>
 namespace epi {
 
-struct CollisionInfo {
-    bool detected;
-    vec2f cn;
-    std::vector<vec2f> cps;
-    float overlap;
-    bool swapped = false;
-};
 class SolverInterface {
 public:
     virtual CollisionInfo detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) = 0;
-    virtual CollisionInfo solve(RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) = 0;
+    virtual void solve(CollisionInfo info, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) = 0;
 };
 class DefaultSolver : public SolverInterface {
 private:
@@ -36,7 +29,7 @@ private:
 public:
 
     CollisionInfo detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) override;
-    CollisionInfo solve(RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) override;
+    void solve(CollisionInfo info, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) override;
 };
 
 }

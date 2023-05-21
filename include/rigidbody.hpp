@@ -51,10 +51,10 @@ public:
     Rigidbody* rigidbody;
     Material* material;
     bool operator<(const RigidManifold& other) const {
-        return rigidbody > other.rigidbody;
+        return transform > other.transform;
     }
     bool operator==(const RigidManifold& other) const {
-        return rigidbody == other.rigidbody;
+        return transform == other.transform;
     }
 };
 }

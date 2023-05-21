@@ -82,17 +82,17 @@ public:
 
 
     //used to add any rigidbody
-    void bind(RigidManifold man);
+    void add(RigidManifold man);
     //used to add solver that is used to resolve collisions
     inline void bind(SolverInterface* solver) {
         _solver = solver;
     }
     //used to add restraints applied on rigidbodies bound
-    void bind(Restraint* restraint);
+    void add(Restraint* restraint);
     //removes rigidbody from manager
-    void unbind(const Rigidbody* rb);
+    void remove(RigidManifold rb);
     //removes restraint from manager
-    void unbind(const Restraint* restriant);
+    void remove(const Restraint* restriant);
 
     //size should be max simulated size
     PhysicsManager(AABB size) {}

@@ -13,7 +13,6 @@
 #include <stdexcept>
 #include <vector>
 
-
 namespace epi {
 
 CollisionInfo detectOverlap(const Polygon& poly, const Ray& ray) {
@@ -62,8 +61,6 @@ CollisionInfo detectOverlap(const Circle& c1, const Circle& c2) {
 void handleOverlap(RigidManifold& m1, RigidManifold& m2, const CollisionInfo& man) {
     if(!man.detected)
         return;
-    if(man.swapped)
-        std::swap(m1, m2);
     auto& t1 = *m1.transform;
     auto& t2 = *m2.transform;
     if(m2.rigidbody->isDormant()) {
@@ -176,7 +173,7 @@ CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform
                 break;
                 case eCollisionShape::Circle:
                     man = detectOverlap(col2->getCircleShape(*trans2), col1->getPolygonShape(*trans1));
-                    man.swapped = true;
+                    man.cn *= -1.f;
                 break;
                 case eCollisionShape::Ray:
                     man = detectOverlap(col1->getPolygonShape(*trans1), col2->getRayShape(*trans2));
@@ -200,11 +197,11 @@ CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform
             switch (col2->type) {
                 case eCollisionShape::Polygon:
                     man = detectOverlap(col2->getPolygonShape(*trans2), col1->getRayShape(*trans1));
-                    man.swapped = true;
+                    man.cn *= -1.f;
                 break;
                 case eCollisionShape::Circle:
                     man = detectOverlap(col2->getCircleShape(*trans2), col1->getRayShape(*trans1));
-                    man.swapped = true;
+                    man.cn *= -1.f;
                 break;
                 case eCollisionShape::Ray:
                     Log(LogLevel::ERROR) << "ray and ray should not be colliding";
@@ -214,14 +211,12 @@ CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform
     }
     return man;
 }
-CollisionInfo DefaultSolver::solve(RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction)  {
-    auto man = detect(rb1.transform, rb1.collider, rb2.transform, rb2.collider);
+void DefaultSolver::solve(CollisionInfo man, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction)  {
     if(!man.detected) {
-        return man;
+        return;
     }
     handleOverlap(rb1, rb2, man);
     processReaction(man, rb1, rb2, restitution, sfriction, dfriction);
-    return man;
 }
 
 }

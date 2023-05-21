@@ -12,16 +12,23 @@
 #include <set>
 
 namespace epi {
+struct Rigidbody;
+struct Collider;
+
+struct CollisionInfo {
+    bool detected;
+    vec2f cn;
+    std::vector<vec2f> cps;
+    float overlap;
+};
 //diffrent types of colliders
 enum class eCollisionShape {
     Polygon,
     Circle,
     Ray
 };
-struct Rigidbody;
 //calculating inertia of polygon shape
 float calculateInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
-
 /*
 * \brief Interface Class for creating collider classes , an extension of GAMEOBJECT
 *(has prop list and notifies of death)
@@ -32,7 +39,12 @@ float calculateInertia(vec2f pos, const std::vector<vec2f>& model, float mass);
 *   float calcInertia()
 *Collider(Transform* trans)
 */
-struct Collider {
+struct ColliderEvent {
+    Collider& me;
+    Collider& other;
+    CollisionInfo info;
+};
+struct Collider : Signal::Subject<ColliderEvent> {
     float m_inertia_dev_mass = -1.f;
     union {
         struct {
@@ -51,6 +63,7 @@ struct Collider {
 public:
     Tag tag;
     Tag mask;
+    bool isTrigger = false;
     const eCollisionShape type;
 
     Circle getCircleShape(Transform& trans) const {
@@ -108,7 +121,7 @@ public:
             case eCollisionShape::Polygon:
                 return calculateInertia(vec2f(0, 0), _polygon.shape.getModelVertecies(), mass); 
             case eCollisionShape::Ray:
-                return 1.f / 12.f * mass * qlen(_ray.shape.dir); 
+                return 0.08333f * mass * qlen(_ray.shape.dir); 
         }
     }
     float getInertia(float mass) {

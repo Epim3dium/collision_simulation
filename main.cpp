@@ -29,11 +29,7 @@
 
 using namespace epi;
 
-    
-
 static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = PastelColor::bg1) {
-    //if(selection.contains(rb))
-        //color = PastelColor::Red;
     auto& col = *man.collider;
     switch(col.type) {
         case eCollisionShape::Circle: {
@@ -189,7 +185,7 @@ protected:
             AABB trigger = aabb_inner;
             trigger.setCenter({10000.f, 10000.f});
             //selection.trigger = std::make_unique<SelectingTrigger>(SelectingTrigger(Polygon::CreateFromAABB(trigger)));
-            //_physics_manager->bind(selection.trigger);
+            //_physics_manager->add(selection.trigger);
         }
         //RigidBody model_poly = Polygon(vec2f(), 0.f, mini_model);
 #define ADD_SIDE(ax, ay, bx, by)\
@@ -203,7 +199,7 @@ protected:
             demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
             demo_objects.back().get()->rigidbody->isStatic = true;\
             demo_objects.back().get()->collider->tag.add("ground");\
-            physics_manager.bind(demo_objects.back().get()->getManifold());\
+            physics_manager.add(demo_objects.back().get()->getManifold());\
         }
 
         ADD_SIDE(min.x, min.y, min.x, max.y);
@@ -222,7 +218,7 @@ protected:
                         //opts.selection.isHolding = true;
                         opts.selection.pinch_point = rotateVec((vec2f)io_manager.getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
                         opts.selection.res = new RestraintPointTrans( hovered->getManifold(), opts.selection.pinch_point, opts.selection.mouse_trans, vec2f());
-                        physics_manager.bind(opts.selection.res);
+                        physics_manager.add(opts.selection.res);
                         opts.selection.object = hovered;
                         opts.selection.isHolding = true;
                     }else {
@@ -237,13 +233,13 @@ protected:
                         auto b = hovered;
                         auto bp = rotateVec((vec2f)io_manager.getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
                         auto res = new RestraintRigidRigid(b->getManifold(), bp, a->getManifold(), ap);
-                        physics_manager.bind(res);
+                        physics_manager.add(res);
                     }
                 }
             }break;
             case sf::Event::MouseButtonReleased: {
                 if(opts.selection.isHolding && !sf::Keyboard::isKeyPressed(sf::Keyboard::X)) {
-                    physics_manager.unbind(opts.selection.res);
+                    physics_manager.remove(opts.selection.res);
                     delete opts.selection.res;
                 }else if(sf::Keyboard::isKeyPressed(sf::Keyboard::X)){
                     opts.selection.mouse_trans = new Transform();
@@ -258,14 +254,14 @@ protected:
                     case sf::Keyboard::C: {
                         Circle t((vec2f)io_manager.getMousePos(), r);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
-                        physics_manager.bind(demo_objects.back().get()->getManifold());
+                        physics_manager.add(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
                         Polygon t = Polygon::CreateRegular((vec2f)io_manager.getMousePos(), M_PI/side_count, side_count, r * sqrt(2.f));
                         auto ptr = new DemoObject(t);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(ptr));
-                        physics_manager.bind(demo_objects.back().get()->getManifold());
+                        physics_manager.add(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::Enter: {
                         if(opts.poly_creation.size() < 2) {
@@ -277,7 +273,7 @@ protected:
                             Polygon t = Polygon::CreateFromPoints(opts.poly_creation);
                             demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
                         }
-                        physics_manager.bind(demo_objects.back().get()->getManifold());
+                        physics_manager.add(demo_objects.back().get()->getManifold());
                         opts.selection.object = demo_objects.back().get();
                     }break;
                     case sf::Keyboard::BackSpace: {
@@ -288,7 +284,7 @@ protected:
                                     return obj.get() == objptr;
                                 });
                             if(itr != demo_objects.end()) {
-                                physics_manager.unbind(itr.base()->get()->rigidbody.get());
+                                physics_manager.remove(itr->get()->getManifold());
                                 demo_objects.erase(itr);
                             }
                             objptr = findHovered();
@@ -338,7 +334,7 @@ protected:
         for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
             if(!isOverlappingPointAABB(it->get()->transform->getPos(), sim_window)) {
                 demo_objects.erase(it);
-                physics_manager.unbind(it->get()->rigidbody.get());
+                physics_manager.remove(it->get()->getManifold());
                 break;
             }
         }
