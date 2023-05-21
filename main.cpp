@@ -230,7 +230,6 @@ protected:
                         opts.selection.res = new RestraintPointTrans( hovered->getManifold(), opts.selection.pinch_point, opts.selection.mouse_trans, vec2f());
                         physics_manager.add(opts.selection.res);
                         opts.selection.object = hovered;
-                        opts.selection.object->collider->addObserver(&opts.selection.logger);
                         opts.selection.isHolding = true;
                     }else {
                         opts.poly_creation.push_back((vec2f)io_manager.getMousePos());
@@ -286,11 +285,8 @@ protected:
                         }
                         physics_manager.add(demo_objects.back().get()->getManifold());
                         opts.selection.object = demo_objects.back().get();
-                        opts.selection.object->collider->addObserver(&opts.selection.logger);
                     }break;
                     case sf::Keyboard::BackSpace: {
-                        if(opts.selection.object)
-                            opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         DemoObject* objptr = opts.selection.object;
                         do {
                             auto itr = std::find_if(demo_objects.begin(), demo_objects.end(), 
@@ -313,8 +309,6 @@ protected:
                     case sf::Keyboard::R: {
                         if(opts.selection.isHolding)
                             delete opts.selection.res;
-                        if(opts.selection.object)
-                            opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         opts.selection.object = nullptr;
                         opts.poly_creation.clear();
                     }break;
@@ -345,7 +339,13 @@ protected:
             if(!r.get()->rigidbody->isStatic)
                 r.get()->rigidbody->force += vec2f(0, opts.gravity) * r->rigidbody->mass;
         }
+        if(opts.selection.object)
+            opts.selection.object->collider->addObserver(&opts.selection.logger);
+
         physics_manager.update(delT);
+
+        if(opts.selection.object)
+            opts.selection.object->collider->removeObserver(&opts.selection.logger);
 
         for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
             if(!isOverlappingPointAABB(it->get()->transform->getPos(), sim_window)) {
@@ -397,6 +397,9 @@ protected:
                     auto obj = opts.selection.object;
         
                     if(!obj) {
+                        if(ImGui::Button("toggle Logging")) {
+                            opts.selection.logger.isLogging = !opts.selection.logger.isLogging;
+                        }
                         ImGui::Text("NO SELECTION");
                     }else {
                         ImGui::SliderFloat("mass: ", &obj->rigidbody->mass, 1.f, 20.f);
