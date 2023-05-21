@@ -14,9 +14,11 @@ void RestraintPointTrans::update(float delT) {
     vec2f transp = trans->getPos() + rotateVec(model_point_trans, trans->getRot());
 
     auto c = ap - transp;
-    if(qlen(c) <= 1.f) {
+
+    if(qlen(c) == 0.f) {
         return;
     }
+
     vec2f radperp(-r.y, r.x);
     vec2f ang_vel_lin = rb.lockRotation ? vec2f(0, 0) : radperp * rb.angular_velocity;
 
@@ -58,10 +60,9 @@ void RestraintRigidRigid::update(float delT) {
     auto rel_velA = a.rigidbody->velocity - avg_vel;
     auto rel_velB = b.rigidbody->velocity - avg_vel;
 
-    if(qlen(cA) == 0.f) {
+    if(qlen(cA) <= 1.f) {
         return;
     }
-
 
     auto corrA = -rel_velA - (damping_coef / delT ) * cA;
     auto corrB = -rel_velB - (damping_coef / delT ) * cB;

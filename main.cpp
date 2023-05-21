@@ -86,10 +86,13 @@ static void setupImGuiFont() {
     ImGui::SFML::UpdateFontTexture();
 }
 struct CollisionLogger : public Signal::Observer<ColliderEvent>  {
+    bool isLogging = false;
     void onNotify(ColliderEvent event) {
         auto cn = event.info.cn;
-        Log(LogLevel::INFO, 0.25f) << &event.me << " collided with " << &event.other <<
-            ", with a collision normal of: " << cn.x << " " << cn.y;
+        if(isLogging){
+            Log(LogLevel::INFO, 0.25f) << &event.me << " collided with " << &event.other <<
+                ", with a collision normal of: " << cn.x << " " << cn.y;
+        }
     }
 };
 class DemoObject {
@@ -286,6 +289,8 @@ protected:
                         opts.selection.object->collider->addObserver(&opts.selection.logger);
                     }break;
                     case sf::Keyboard::BackSpace: {
+                        if(opts.selection.object)
+                            opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         DemoObject* objptr = opts.selection.object;
                         do {
                             auto itr = std::find_if(demo_objects.begin(), demo_objects.end(), 
@@ -298,7 +303,6 @@ protected:
                             }
                             objptr = findHovered();
                         }while(objptr != nullptr);
-                        opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         opts.selection.object = nullptr;
                         opts.selection.isHolding = false;
                     }break;
@@ -309,7 +313,8 @@ protected:
                     case sf::Keyboard::R: {
                         if(opts.selection.isHolding)
                             delete opts.selection.res;
-                        opts.selection.object->collider->removeObserver(&opts.selection.logger);
+                        if(opts.selection.object)
+                            opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         opts.selection.object = nullptr;
                         opts.poly_creation.clear();
                     }break;
@@ -398,6 +403,7 @@ protected:
                         ImGui::SliderFloat("static_fric: ", &obj->material->sfriction, 0.f, 1.f);
                         ImGui::SliderFloat("dynamic_fric: ", &obj->material->dfriction, 0.f, 1.f);
                         ImGui::SliderFloat("bounciness: ", &obj->material->restitution, 0.f, 1.f);
+                        ImGui::SliderFloat("drag: ", &obj->material->air_drag, 0.f, 1.f);
                         if(ImGui::Button("lockRotation"))
                             obj->rigidbody->lockRotation = !obj->rigidbody->lockRotation;
                         if(ImGui::Button("isStatic"))

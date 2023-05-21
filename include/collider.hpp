@@ -65,6 +65,7 @@ public:
     Tag mask;
     bool isTrigger = false;
     const eCollisionShape type;
+    Collider* parent_collider = this;
 
     Circle getCircleShape(Transform& trans) const {
         assert(type == eCollisionShape::Circle);

@@ -54,8 +54,8 @@ private:
 
     std::vector<ColInfo> processBroadPhase();
     void processNarrowPhase(const std::vector<ColInfo>& col_info);
+    void processSleeping();
 
-    void wakeUpAround(const RigidManifold& man);
     void updateRigidObj(RigidManifold& man, float delT);
 
     void updateRigidbodies(float delT);

@@ -26,6 +26,32 @@
 
 
 namespace epi {
+//from 1 to n
+//veci communities(n + 1, -1);
+
+Collider* getHead(Collider* col) {
+    if(col->parent_collider == col)
+        return col;
+    std::vector<Collider*> to_speed;
+    while(col->parent_collider != col) {
+        to_speed.push_back(col);
+        col = col->parent_collider;
+    }
+    for(auto t : to_speed)
+        t->parent_collider = col;
+    return col;
+}
+
+void Merge(Collider* a, Collider* b) {
+    a = getHead(a);
+    b = getHead(b);
+    if(a != b) {
+        b->parent_collider = a;
+    }
+}
+bool Friends(Collider* a, Collider* b) {
+    return getHead(a) == getHead(b);
+}
 
 static bool areCompatible(RigidManifold r1, RigidManifold r2) {
     return (!r1.collider->isTrigger || !r2.collider->isTrigger) &&
@@ -84,15 +110,13 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         float sfriction = selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
         float dfriction = selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
         _solver->solve(col_info, ci->first, ci->second, restitution, sfriction, dfriction);
+        if(!ci->first.rigidbody->isStatic && !ci->second.rigidbody->isStatic)
+            Merge(ci->first.collider, ci->second.collider);
     }
 }
 void PhysicsManager::updateRestraints(float delT) {
     for(auto& r : _restraints)
         r->update(delT);
-}
-void PhysicsManager::wakeUpAround(const RigidManifold& man) {
-    auto area = man.collider->getAABB(*man.transform);
-    area.setSize(area.size() * 2.f);
 }
 #define DORMANT_MIN_VELOCITY 150.f
 #define DORMANT_MIN_ANGULAR_VELOCITY 0.1f
@@ -101,15 +125,11 @@ void PhysicsManager::updateRigidObj(RigidManifold& man, float delT) {
         return;
     auto& rb = *man.rigidbody;
     //processing dormants
-//    if(qlen(rb.velocity) + len(rb.force) * delT < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
-//        rb.time_immobile += delT;
-//    }else {
-//        //wake up all objects around it
-//        if(man.rigidbody->isDormant()) {
-//            wakeUpAround(man);
-//        }
-//        rb.time_immobile = 0.f;
-//    }
+    if(len(rb.velocity) < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
+        rb.time_immobile += delT;
+    }else {
+        rb.time_immobile = 0.f;
+    }
 
     if(rb.isDormant()){
         rb.velocity = vec2f();
@@ -138,8 +158,29 @@ void PhysicsManager::updateRigidbodies(float delT) {
 }
 void PhysicsManager::processParticles(ParticleManager& pm) {
 }
+#define MIN_IMMOBILE_TIME_TO_SLEEP 1.f
+void PhysicsManager::processSleeping() {
+    std::set<Collider*> parent_colliders_woke;
+    for(auto r : _rigidbodies) {
+        if(r.rigidbody->time_immobile < MIN_IMMOBILE_TIME_TO_SLEEP) {
+            parent_colliders_woke.insert(r.collider->parent_collider);
+        }
+    }
+    for(auto r : _rigidbodies) {
+        if(!parent_colliders_woke.contains(r.collider->parent_collider)) {
+            r.rigidbody->isSleeping = true;
+        }else {
+            if(r.rigidbody->isSleeping) {
+                r.rigidbody->isSleeping = false;
+                r.rigidbody->time_immobile = 0.f;
+            }
+            r.collider->parent_collider = r.collider;
+        }
+    }
+}
 void PhysicsManager::update(float delT, ParticleManager* pm ) {
     float deltaStep = delT / (float)steps;
+
     auto col_list = processBroadPhase();
     for(int i = 0; i < steps; i++) {
         updateRestraints(deltaStep);
@@ -147,6 +188,7 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
         processNarrowPhase(col_list);
     }
 
+    processSleeping();
     for(auto r : _rigidbodies) {
         r.rigidbody->force = {0.f, 0.f};
         r.rigidbody->angular_force = 0.f;
