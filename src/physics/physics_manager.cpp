@@ -52,10 +52,13 @@ void Merge(Collider* a, Collider* b) {
 bool Friends(Collider* a, Collider* b) {
     return getHead(a) == getHead(b);
 }
+static bool isDormant(RigidManifold man) {
+    return man.collider->isSleeping || man.rigidbody->isStatic;
+}
 
 static bool areCompatible(RigidManifold r1, RigidManifold r2) {
     return (!r1.collider->isTrigger || !r2.collider->isTrigger) &&
-        !(r1.rigidbody->isDormant() && r2.rigidbody->isDormant()) && 
+        !(isDormant(r1) && isDormant(r2)) && 
         (r2.collider->mask.size() == 0 || r1.collider->tag == r2.collider->mask) && 
         (r1.collider->mask.size() == 0 || r2.collider->tag == r1.collider->mask);
 }
@@ -126,12 +129,12 @@ void PhysicsManager::updateRigidObj(RigidManifold& man, float delT) {
     auto& rb = *man.rigidbody;
     //processing dormants
     if(len(rb.velocity) < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
-        rb.time_immobile += delT;
+        man.collider->time_immobile += delT;
     }else {
-        rb.time_immobile = 0.f;
+        man.collider->time_immobile = 0.f;
     }
 
-    if(rb.isDormant()){
+    if(isDormant(man)){
         rb.velocity = vec2f();
         rb.angular_velocity = 0.f;
         return;
@@ -162,17 +165,26 @@ void PhysicsManager::processParticles(ParticleManager& pm) {
 void PhysicsManager::processSleeping() {
     std::set<Collider*> parent_colliders_woke;
     for(auto r : _rigidbodies) {
-        if(r.rigidbody->time_immobile < MIN_IMMOBILE_TIME_TO_SLEEP) {
+        if(r.collider->isTrigger)
+            continue;
+        if(r.rigidbody->isStatic)
+            continue;
+        if(r.collider->time_immobile < MIN_IMMOBILE_TIME_TO_SLEEP) {
             parent_colliders_woke.insert(r.collider->parent_collider);
         }
     }
     for(auto r : _rigidbodies) {
+        if(r.collider->isTrigger)
+            continue;
+        if(r.rigidbody->isStatic)
+            continue;
+
         if(!parent_colliders_woke.contains(r.collider->parent_collider)) {
-            r.rigidbody->isSleeping = true;
+            r.collider->isSleeping = true;
         }else {
-            if(r.rigidbody->isSleeping) {
-                r.rigidbody->isSleeping = false;
-                r.rigidbody->time_immobile = 0.f;
+            if(r.collider->isSleeping) {
+                r.collider->isSleeping = false;
+                r.collider->time_immobile = 0.f;
             }
             r.collider->parent_collider = r.collider;
         }
@@ -215,6 +227,9 @@ static void unbind_any(const T obj, std::vector<T>& obj_vec) {
     }
 }
 void PhysicsManager::remove(RigidManifold rb) {
+    rb.collider->time_immobile = 0.f;
+    rb.collider->parent_collider->time_immobile = 0.f;
+    processSleeping();
     unbind_any(rb, _rigidbodies);
 }
 void PhysicsManager::remove(const Restraint* res) {

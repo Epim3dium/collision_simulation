@@ -466,7 +466,7 @@ protected:
             if(!rb.isStatic) {
                 color = PastelColor::Aqua;
             }
-            if(rb.isDormant() && !rb.isStatic) {
+            if(r->collider->isSleeping) {
                 color = PastelColor::Yellow;
             }
             if(r.get() == opts.selection.object) {

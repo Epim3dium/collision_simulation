@@ -63,9 +63,9 @@ void handleOverlap(RigidManifold& m1, RigidManifold& m2, const CollisionInfo& ma
         return;
     auto& t1 = *m1.transform;
     auto& t2 = *m2.transform;
-    if(m2.rigidbody->isDormant()) {
+    if(m2.rigidbody->isStatic) {
         t1.setPos(t1.getPos() + man.cn * man.overlap);
-    } else if(m1.rigidbody->isDormant()) {
+    } else if(m1.rigidbody->isStatic) {
         t2.setPos(t2.getPos() - man.cn * man.overlap);
     } else {
         t1.setPos(t1.getPos() + man.cn * man.overlap / 2.f);

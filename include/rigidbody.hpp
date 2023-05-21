@@ -31,12 +31,7 @@ public:
     float angular_velocity = 0.f;
     float mass = 1.f;
 
-    bool isSleeping = false;
-    float time_immobile = 0.f;
 
-    bool isDormant() const {
-        return isSleeping || isStatic;
-    }
     inline void addForce(vec2f force) {
         velocity += force / mass;
     }
