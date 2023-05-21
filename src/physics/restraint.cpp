@@ -15,6 +15,7 @@ void RestraintPointTrans::update(float delT) {
 
     auto c = ap - transp;
 
+    vec2f cn = norm(c);
     if(qlen(c) == 0.f) {
         return;
     }
@@ -24,7 +25,7 @@ void RestraintPointTrans::update(float delT) {
 
     vec2f cVel = rb.isStatic ? vec2f(0, 0) : rb.velocity;
     auto corr = -cVel - (damping_coef / delT ) * c;
-    float rperp_dotN = dot(radperp, norm(c));
+    float rperp_dotN = dot(radperp, cn);
     float denom = 1.f / rb.mass +
         (rperp_dotN * rperp_dotN) / inertia;
     corr /= denom;
@@ -56,19 +57,19 @@ void RestraintRigidRigid::update(float delT) {
     auto avg_force = (a.rigidbody->force + b.rigidbody->force) / 2.f;
     auto cA = ap - bp;
     auto cB = bp - ap;
+    vec2f cn = norm(cA);
+    if(qlen(cA) == 0.f) {
+        return;
+    }
 
     auto rel_velA = a.rigidbody->velocity - avg_vel;
     auto rel_velB = b.rigidbody->velocity - avg_vel;
 
-    if(qlen(cA) <= 1.f) {
-        return;
-    }
-
     auto corrA = -rel_velA - (damping_coef / delT ) * cA;
     auto corrB = -rel_velB - (damping_coef / delT ) * cB;
 
-    float rperp_dotNA = dot(radperpA, norm(corrA));
-    float rperp_dotNB = dot(radperpB, norm(corrB));
+    float rperp_dotNA = dot(radperpA, cn);
+    float rperp_dotNB = dot(radperpB, -cn);
     float denom = 1.f / a.rigidbody->mass + 1.f / b.rigidbody->mass +
         (rperp_dotNB * rperp_dotNB) / inertiaB+
         (rperp_dotNA * rperp_dotNA) / inertiaA;

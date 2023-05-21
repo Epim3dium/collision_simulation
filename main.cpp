@@ -469,9 +469,11 @@ protected:
             if(!rb.isStatic) {
                 color = PastelColor::Aqua;
             }
+            DEBUG_CALL(
             if(r->collider->isSleeping) {
                 color = PastelColor::Yellow;
             }
+            )
             if(r.get() == opts.selection.object) {
                 color = PastelColor::Red;
             }

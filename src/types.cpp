@@ -1,7 +1,9 @@
 #include "types.hpp"
+#include "debug.hpp"
 #include "SFML/Graphics/PrimitiveType.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/System/Vector3.hpp"
+
 #include <cmath>
 #include <math.h>
 #include <numeric>
@@ -9,8 +11,9 @@
 namespace epi {
 vec2f norm(vec2f v) {
     float l = len(v);
-    if(l == 0.f)
+    if(l == 0.f) {
         return v;
+    }
     return v / l;
 }
 float len(vec2f v) {
