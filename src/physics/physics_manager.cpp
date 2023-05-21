@@ -28,7 +28,8 @@
 namespace epi {
 
 static bool areCompatible(RigidManifold r1, RigidManifold r2) {
-    return !(r1.rigidbody->isDormant() && r2.rigidbody->isDormant()) && 
+    return (!r1.collider->isTrigger || !r2.collider->isTrigger) &&
+        !(r1.rigidbody->isDormant() && r2.rigidbody->isDormant()) && 
         (r2.collider->mask.size() == 0 || r1.collider->tag == r2.collider->mask) && 
         (r1.collider->mask.size() == 0 || r2.collider->tag == r1.collider->mask);
 }
@@ -69,11 +70,19 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
     for(auto ci = col_list.begin(); ci != col_list.end(); ci++) {
         if(!areCompatible(ci->first, ci->second))
             continue;
+        auto col_info = _solver->detect(ci->first.transform, ci->first.collider, ci->second.transform, ci->second.collider);
+
+        ci->first.collider->notify({*ci->first.collider, *ci->second.collider, col_info});
+        col_info.cn *= -1.f;
+        ci->second.collider->notify({*ci->second.collider, *ci->first.collider, col_info});
+        col_info.cn *= -1.f;
+
+        if(ci->first.collider->isTrigger || ci->second.collider->isTrigger) {
+            continue;
+        }
         float restitution = selectFrom(ci->first.material->restitution, ci->second.material->restitution, bounciness_select);
         float sfriction = selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
         float dfriction = selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
-        //ewewewewewewwwwww pls don, float delTt judge me
-        auto col_info = _solver->detect(ci->first.transform, ci->first.collider, ci->second.transform, ci->second.collider);
         _solver->solve(col_info, ci->first, ci->second, restitution, sfriction, dfriction);
     }
 }
@@ -88,17 +97,19 @@ void PhysicsManager::wakeUpAround(const RigidManifold& man) {
 #define DORMANT_MIN_VELOCITY 150.f
 #define DORMANT_MIN_ANGULAR_VELOCITY 0.1f
 void PhysicsManager::updateRigidObj(RigidManifold& man, float delT) {
+    if(man.collider->isTrigger)
+        return;
     auto& rb = *man.rigidbody;
     //processing dormants
-    if(qlen(rb.velocity) + len(rb.force) * delT < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
-        rb.time_immobile += delT;
-    }else {
-        //wake up all objects around it
-        if(man.rigidbody->isDormant()) {
-            wakeUpAround(man);
-        }
-        rb.time_immobile = 0.f;
-    }
+//    if(qlen(rb.velocity) + len(rb.force) * delT < DORMANT_MIN_VELOCITY && abs(rb.angular_velocity) < DORMANT_MIN_ANGULAR_VELOCITY) {
+//        rb.time_immobile += delT;
+//    }else {
+//        //wake up all objects around it
+//        if(man.rigidbody->isDormant()) {
+//            wakeUpAround(man);
+//        }
+//        rb.time_immobile = 0.f;
+//    }
 
     if(rb.isDormant()){
         rb.velocity = vec2f();

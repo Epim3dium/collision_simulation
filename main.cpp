@@ -85,7 +85,13 @@ static void setupImGuiFont() {
     ImFont* font = io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
     ImGui::SFML::UpdateFontTexture();
 }
-
+struct CollisionLogger : public Signal::Observer<ColliderEvent>  {
+    void onNotify(ColliderEvent event) {
+        auto cn = event.info.cn;
+        Log(LogLevel::INFO, 0.25f) << &event.me << " collided with " << &event.other <<
+            ", with a collision normal of: " << cn.x << " " << cn.y;
+    }
+};
 class DemoObject {
 public:
     std::unique_ptr<Transform> transform;
@@ -140,6 +146,7 @@ protected:
             Restraint* res;
             Transform* mouse_trans = new Transform();
             vec2f pinch_point;
+            CollisionLogger logger;
         } selection;
     }opts;
     DemoObject* findHovered() {
@@ -220,6 +227,7 @@ protected:
                         opts.selection.res = new RestraintPointTrans( hovered->getManifold(), opts.selection.pinch_point, opts.selection.mouse_trans, vec2f());
                         physics_manager.add(opts.selection.res);
                         opts.selection.object = hovered;
+                        opts.selection.object->collider->addObserver(&opts.selection.logger);
                         opts.selection.isHolding = true;
                     }else {
                         opts.poly_creation.push_back((vec2f)io_manager.getMousePos());
@@ -275,6 +283,7 @@ protected:
                         }
                         physics_manager.add(demo_objects.back().get()->getManifold());
                         opts.selection.object = demo_objects.back().get();
+                        opts.selection.object->collider->addObserver(&opts.selection.logger);
                     }break;
                     case sf::Keyboard::BackSpace: {
                         DemoObject* objptr = opts.selection.object;
@@ -289,6 +298,7 @@ protected:
                             }
                             objptr = findHovered();
                         }while(objptr != nullptr);
+                        opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         opts.selection.object = nullptr;
                         opts.selection.isHolding = false;
                     }break;
@@ -299,6 +309,7 @@ protected:
                     case sf::Keyboard::R: {
                         if(opts.selection.isHolding)
                             delete opts.selection.res;
+                        opts.selection.object->collider->removeObserver(&opts.selection.logger);
                         opts.selection.object = nullptr;
                         opts.poly_creation.clear();
                     }break;
