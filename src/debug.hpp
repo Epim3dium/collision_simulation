@@ -1,6 +1,5 @@
 #ifndef EPI_DEBUG_H
 #define EPI_DEBUG_H
-#include "collider.hpp"
 #include <chrono>
 #include <cstddef>
 #include <iostream>
