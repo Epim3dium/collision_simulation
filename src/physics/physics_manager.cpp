@@ -100,6 +100,9 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
         if(!areCompatible(ci->first, ci->second))
             continue;
         auto col_info = _solver->detect(ci->first.transform, ci->first.collider, ci->second.transform, ci->second.collider);
+        if(!col_info.detected) {
+            continue;
+        }
 
         ci->first.collider->notify({*ci->first.collider, *ci->second.collider, col_info});
         col_info.cn *= -1.f;

@@ -78,11 +78,9 @@ IntersectionRayRayResult intersectRayRay(vec2f ray0_origin, vec2f ray0_dir, vec2
 struct IntersectionRayPolygonResult {
     bool detected;
     //contact normals from polygon
-    vec2f contact_normal_near;
-    float t_hit_near;
-    //contact normals from polygon
-    vec2f contact_normal_far;
-    float t_hit_far = INFINITY;
+    vec2f contact_normal;
+    vec2f contact_point;
+    float overlap;
 };
 IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const Polygon& poly);
 /**

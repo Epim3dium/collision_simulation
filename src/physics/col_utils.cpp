@@ -105,39 +105,14 @@ IntersectionRayRayResult intersectRayRay(vec2f ray0_origin, vec2f ray0_dir,
     float t_hit_near1;
 */
 IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const Polygon& poly) {
-    size_t idx = 0;
-    float t[2] = {-1.f, -1.f};
-    vec2f cn[2];
-    auto prev = poly.getVertecies().back();
     for(auto v : poly.getVertecies()) {
-        auto r = intersectRayRay(ray_origin, ray_dir, prev, v - prev);
-        if(r.detected && r.t_hit_near1 <= 1.f && r.t_hit_near0 <= 1.f) {
-            t[idx] = r.t_hit_near0;
-            auto t = v - prev;
-            cn[idx] = norm({-t.y, t.x});
-            idx += 1;
-            if(idx == 2) {
-                break;
-            }
+        auto intersection = intersectRayRay(ray_origin, ray_dir, poly.getPos(), v - poly.getPos());
+        if(intersection.detected) {
+            auto closest = findClosestPointOnRay(ray_origin, ray_dir, v);
+            return {true, norm(closest - v), closest, len(v - closest)};
         }
-        prev = v;
     }
-    switch(idx) {
-        case 0:
-            return {false};
-        case 1:
-            return {true, cn[0], t[0], {}, -1.f};
-        case 2: {
-            if(t[0] > t[1]) {
-                std::swap(t[0], t[1]);
-                std::swap(cn[0], cn[1]);
-            }
-            return {true, cn[0], t[0], cn[1], t[1]};
-        }break;
-        default:
-            Log(LogLevel::WARNING) << "error occured in function for findint point of collision";
-            return {false};
-    }
+    return {false};
 }
 vec2f findClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point) {
     float ray_dir_len = len(ray_dir);

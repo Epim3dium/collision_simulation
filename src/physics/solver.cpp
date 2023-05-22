@@ -16,10 +16,9 @@
 namespace epi {
 
 CollisionInfo detectOverlap(const Polygon& poly, const Ray& ray) {
-    assert(false);
     auto intersection = intersectRayPolygon(ray.pos, ray.dir, poly); 
     if(intersection.detected) {
-        return {true, intersection.contact_normal_near, {}, 10.f};
+        return {true, intersection.contact_normal, {intersection.contact_point}, intersection.overlap};
     }
     return {false};
 }
@@ -28,7 +27,7 @@ CollisionInfo detectOverlap(const Circle& circle, const Ray& ray) {
     auto l = len(closest - circle.pos);
     bool detected = (l < circle.radius);
     if(detected) {
-        return {true, norm(closest - circle.pos), {closest}, l - circle.radius};
+        return {true, norm(circle.pos-closest), {closest}, circle.radius - l};
     }
     return {false};
 }
@@ -91,32 +90,32 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
 
 
     auto cp = std::reduce(info.cps.begin(), info.cps.end()) / (float)info.cps.size();
-        vec2f impulse (0, 0);
+    vec2f impulse (0, 0);
 
-        vec2f rad1 = cp - m1.transform->getPos();
-        vec2f rad2 = cp - m2.transform->getPos();
+    vec2f rad1 = rb1.isStatic ? vec2f(INFINITY, INFINITY) : cp - m1.transform->getPos();
+    vec2f rad2 = rb2.isStatic ? vec2f(INFINITY, INFINITY) : cp - m2.transform->getPos();
 
-        vec2f rad1perp(-rad1.y, rad1.x);
-        vec2f rad2perp(-rad2.y, rad2.x);
+    vec2f rad1perp(-rad1.y, rad1.x);
+    vec2f rad2perp(-rad2.y, rad2.x);
 
-        vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * ang_vel1;
-        vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * ang_vel2;
+    vec2f p1ang_vel_lin = rb1.lockRotation ? vec2f(0, 0) : rad1perp * ang_vel1;
+    vec2f p2ang_vel_lin = rb2.lockRotation ? vec2f(0, 0) : rad2perp * ang_vel2;
 
-        vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : vel1 + p1ang_vel_lin;
-        vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : vel2 + p2ang_vel_lin;
+    vec2f vel_sum1 = rb1.isStatic ? vec2f(0, 0) : vel1 + p1ang_vel_lin;
+    vec2f vel_sum2 = rb2.isStatic ? vec2f(0, 0) : vel2 + p2ang_vel_lin;
 
-        //calculate relative velocity
-        vec2f rel_vel = vel_sum2 - vel_sum1;
+    //calculate relative velocity
+    vec2f rel_vel = vel_sum2 - vel_sum1;
 
-        float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
-        vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
-        impulse += info.cn * j - fj;
+    float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
+    vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
+    impulse += info.cn * j;// - fj;
 
-        float cps_ctr = (float)info.cps.size();
-        rb1.velocity -= impulse / rb1.mass;
-        rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
-        rb2.velocity += impulse / rb2.mass;
-        rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
+    float cps_ctr = (float)info.cps.size();
+    rb1.velocity -= impulse / rb1.mass;
+    rb1.angular_velocity += cross(impulse, rad1) * inv_inertia1;
+    rb2.velocity += impulse / rb2.mass;
+    rb2.angular_velocity -= cross(impulse, rad2) * inv_inertia2;
 }
 float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia, float mass1, const vec2f& rad2perp, float p2inv_inertia, float mass2, 
         float restitution, const vec2f& rel_vel, vec2f cn) {
@@ -135,9 +134,10 @@ float DefaultSolver::getReactImpulse(const vec2f& rad1perp, float p1inv_inertia,
 }
 vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1perp, float p2inv_inertia, float mass2, const vec2f& rad2perp, 
         float sfric, float dfric, float j, const vec2f& rel_vel, const vec2f& cn) {
+
     vec2f tangent = rel_vel - cn * dot(rel_vel, cn);
 
-    if(len(tangent) < 0.1f)
+    if(len(tangent) < 0.01f)
         return vec2f(0, 0);
     else
         tangent = norm(tangent);
@@ -150,14 +150,17 @@ vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1
         (r1perp_dotT * r1perp_dotT) *  p1inv_inertia +
         (r2perp_dotT * r2perp_dotT) *  p2inv_inertia;
 
+
     float contact_vel_mag = dot(rel_vel, tangent);
     float jt = -contact_vel_mag;
     jt /= denom;
 
     vec2f friction_impulse;
     if(abs(jt) <= abs(j * sfric)) {
+        Log(LogLevel::DEBUG, 0.25f) << "static";
         friction_impulse = tangent * -jt;
     } else {
+        Log(LogLevel::DEBUG, 0.25f) << "dynamic";
         friction_impulse = tangent * -j * dfric;
     }
     return friction_impulse;

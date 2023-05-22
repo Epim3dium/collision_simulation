@@ -55,7 +55,15 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             auto p = col.getPolygonShape(*man.transform);
             drawFill(rw, p, color);
             drawOutline(rw, p, sf::Color::Black);
-            DEBUG_CALL(drawOutline(rw, p, sf::Color::Red));
+            DEBUG_CALL(
+            drawOutline(rw, p, sf::Color::Red);
+            sf::Vertex verts[2];
+            verts[0].position = p.getPos();
+            verts[1].position = p.getVertecies()[0];
+            verts[0].color = Color::Blue;
+            verts[1].color = Color::Blue;
+            rw.draw(verts, 2, sf::Lines);
+            )
         } break;
         case epi::eCollisionShape::Ray: {
             Ray t = col.getRayShape(*man.transform);
