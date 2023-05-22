@@ -15,7 +15,7 @@ namespace epi {
  * files via the command line
  */
 
-#if _DEBUG
+#ifdef EPI_DEBUG
 #define DEBUG_CALL(x) x 
 #else 
 #define DEBUG_CALL(x) ;
@@ -26,7 +26,7 @@ enum class LogLevel {
     INFO,
     DEBUG,
 };
-#if _DEBUG
+#ifdef EPI_DEBUG
 
 #define Log1(loglevel) LogIt(loglevel)
 #define Log2(loglevel, duration) Log3Helper(loglevel, duration, __LINE__)

@@ -28,6 +28,19 @@ set(HEADER_FILES
     physics/rigidbody.hpp
     physics/solver.hpp
 )
+add_compile_options(
+  -Wall
+  -Wextra
+  -Wconversion
+  -Wsign-conversion
+  $<$<CONFIG:DEBUG>:-glldb>
+  $<$<CONFIG:DEBUG>:-Og>
+  $<$<CONFIG:RELEASE>:-O3>
+)
+add_compile_definitions(
+$<$<CONFIG:DEBUG>:EPI_DEBUG>
+)
+
 add_executable(EpiSim
     ${SOURCE_FILES} ${HEADER_FILES}
 )

@@ -49,7 +49,7 @@ public:
     }
     IOManager(vec2i size, std::string title = "demo") : _window(sf::VideoMode(size.x, size.y), title) 
     { 
-        ImGui::SFML::Init(_window);
+        auto result = ImGui::SFML::Init(_window);
     }
     ~IOManager() {
     }
