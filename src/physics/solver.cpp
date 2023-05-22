@@ -92,8 +92,8 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
     auto cp = std::reduce(info.cps.begin(), info.cps.end()) / (float)info.cps.size();
     vec2f impulse (0, 0);
 
-    vec2f rad1 = rb1.isStatic ? vec2f(INFINITY, INFINITY) : cp - m1.transform->getPos();
-    vec2f rad2 = rb2.isStatic ? vec2f(INFINITY, INFINITY) : cp - m2.transform->getPos();
+    vec2f rad1 = cp - m1.transform->getPos();
+    vec2f rad2 = cp - m2.transform->getPos();
 
     vec2f rad1perp(-rad1.y, rad1.x);
     vec2f rad2perp(-rad2.y, rad2.x);
@@ -109,7 +109,7 @@ void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifo
 
     float j = getReactImpulse(rad1perp, inv_inertia1, mass1, rad2perp, inv_inertia2, mass2, bounce, rel_vel, info.cn);
     vec2f fj = getFricImpulse(inv_inertia1, mass1, rad1perp, inv_inertia2, mass2, rad2perp, sfric, dfric, j, rel_vel, info.cn);
-    impulse += info.cn * j;// - fj;
+    impulse += info.cn * j - fj;
 
     float cps_ctr = (float)info.cps.size();
     rb1.velocity -= impulse / rb1.mass;
@@ -157,10 +157,8 @@ vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1
 
     vec2f friction_impulse;
     if(abs(jt) <= abs(j * sfric)) {
-        Log(LogLevel::DEBUG, 0.25f) << "static";
         friction_impulse = tangent * -jt;
     } else {
-        Log(LogLevel::DEBUG, 0.25f) << "dynamic";
         friction_impulse = tangent * -j * dfric;
     }
     return friction_impulse;
