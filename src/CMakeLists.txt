@@ -29,10 +29,10 @@ set(HEADER_FILES
     physics/solver.hpp
 )
 add_compile_options(
-  -Wall
-  -Wextra
-  -Wconversion
-  -Wsign-conversion
+  #-Wall
+  #-Wextra
+  #-Wconversion
+  #-Wsign-conversion
   $<$<CONFIG:DEBUG>:-glldb>
   $<$<CONFIG:DEBUG>:-Og>
   $<$<CONFIG:RELEASE>:-O3>

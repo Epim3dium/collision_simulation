@@ -31,7 +31,7 @@ public:
     void setRot(float r) {
         _rot = r;
     }
-    Transform() : _scale(1.f, 1.f), _rot(0.f), _pos(0, 0) {
+    Transform() : _pos(0, 0), _scale(1.f, 1.f), _rot(0.f) {
     }
 };
 

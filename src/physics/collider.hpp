@@ -11,8 +11,8 @@
 #include <set>
 
 namespace epi {
-struct Rigidbody;
-struct Collider;
+class Rigidbody;
+class Collider;
 
 struct CollisionInfo {
     bool detected;
@@ -43,7 +43,7 @@ struct ColliderEvent {
     Collider& other;
     CollisionInfo info;
 };
-struct Collider : Signal::Subject<ColliderEvent> {
+class Collider : public Signal::Subject<ColliderEvent> {
     float m_inertia_dev_mass = -1.f;
     union {
         struct {

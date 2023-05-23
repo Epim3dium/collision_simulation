@@ -48,7 +48,7 @@ public:
             notify({*this, _current_event});
         }
     }
-    IOManager(vec2i size, std::string title = "demo") : _window(sf::VideoMode(size.x, size.y), title) 
+    IOManager(vec2i size, std::string title = "EpiSim") : _window(sf::VideoMode(size.x, size.y), title) 
     { 
         if(!ImGui::SFML::Init(_window)) {
             Log(LogLevel::ERROR) << "failed to initialize ImGui";

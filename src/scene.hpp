@@ -49,10 +49,8 @@ protected:
     AABB sim_window;
     PhysicsManager physics_manager;
 
-    virtual void onUpdate(float delT) {
-    }
-    virtual void onRender(sf::RenderTarget& target) {
-    }
+    virtual void onUpdate(float delT) = 0;
+    virtual void onRender(sf::RenderTarget &target) = 0;
     virtual void onSetup() {
     }
 public:
@@ -68,7 +66,7 @@ public:
         onSetup();
         return 0; 
     }
-    DefaultScene(vec2i s = {2000, 2000}) : _size(s), sim_window({{0, 0}, (vec2f)s}), physics_manager(sim_window), Scene(s) {}
+    DefaultScene(vec2i s = {2000, 2000}) : Scene(s), _size(s), sim_window({{0, 0}, (vec2f)s}), physics_manager(sim_window) {}
 };
 
 
