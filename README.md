@@ -2,7 +2,6 @@
 previously it was just a fun little physics engine project, but I thought to myself that making a whole game engine could be fun and could teach me a lot.
 
 goal is to create an engine that supports main, basic features like:
-* 2D Cameras
 * Input Handling
 * GUI (more with ImGui)
 * Particle Engine
@@ -16,6 +15,9 @@ goal is to create an engine that supports main, basic features like:
 * A quite bareboned Network/Lobby implementation
 * ✅ Physics
 * ✅ Sprite ( Animation, Sprite Sheets)
+WIP:
+* 2D Cameras
+
 
 ... but according to stackoverflow **all hail stackoverflow**:
 >You're approaching it in an upside-down manner.
