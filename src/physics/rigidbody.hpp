@@ -10,7 +10,6 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
-#include <sys/_types/_size_t.h>
 #include <vector>
 #include <set>
 

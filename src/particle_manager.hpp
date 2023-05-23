@@ -1,7 +1,6 @@
 #include "particle.hpp"
 #include "types.hpp"
 #include <cstddef>
-#include <sys/_types/_size_t.h>
 #include <vector>
 
 namespace epi {

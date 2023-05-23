@@ -73,7 +73,7 @@ public:
     * updates all rigidbodies bound applying their velocities and resoving collisions
     * @param pm is particle manager, if bound collisions for all active particles will be resolved(colliding particles will become inactive)
     */
-    void update(float delT, ParticleManager* pm = nullptr);
+    void update(float delT);
 
     //mode used to select bounce when colliding
     eSelectMode bounciness_select = eSelectMode::Min;

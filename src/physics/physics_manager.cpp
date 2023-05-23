@@ -19,7 +19,6 @@
 #include <memory>
 #include <set>
 #include <stdexcept>
-#include <sys/_types/_size_t.h>
 #include <vector>
 #include <thread>
 #include <mutex>
@@ -162,8 +161,6 @@ void PhysicsManager::updateRigidbodies(float delT) {
         updateRigidObj(r, delT);
     }
 }
-void PhysicsManager::processParticles(ParticleManager& pm) {
-}
 #define MIN_IMMOBILE_TIME_TO_SLEEP 1.f
 void PhysicsManager::processSleeping() {
     std::set<Collider*> parent_colliders_woke;
@@ -193,7 +190,7 @@ void PhysicsManager::processSleeping() {
         }
     }
 }
-void PhysicsManager::update(float delT, ParticleManager* pm ) {
+void PhysicsManager::update(float delT) {
     float deltaStep = delT / (float)steps;
 
     auto col_list = processBroadPhase();
@@ -207,9 +204,6 @@ void PhysicsManager::update(float delT, ParticleManager* pm ) {
     for(auto r : _rigidbodies) {
         r.rigidbody->force = {0.f, 0.f};
         r.rigidbody->angular_force = 0.f;
-    }
-    if(pm){
-        processParticles(*pm);
     }
 }
 void PhysicsManager::add(RigidManifold man) {

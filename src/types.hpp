@@ -16,6 +16,9 @@
 
 namespace epi {
 
+#define EPI_PI 3.14159265358979323846264338327950288   /* pi */
+#define fEPI_PI 3.141592653f   /* pi */
+
 typedef sf::Vector2f vec2f;
 typedef sf::Vector2i vec2i;
 typedef sf::Color Color;
@@ -46,7 +49,7 @@ float cross(vec2f, vec2f);
 vec2f sign(vec2f);
 
 struct Circle;
-struct Polygon;
+class Polygon;
 
 struct AABB {
     vec2f min;
@@ -173,14 +176,14 @@ public:
         return model;
     }
     Polygon() {}
-    Polygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : pos(pos_), rotation(rot_), model(model_), points(model_.size(), vec2f(0, 0)) {
+    Polygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : points(model_.size(), vec2f(0, 0)), model(model_), rotation(rot_), pos(pos_) {
         std::sort(model.begin(), model.end(), [](vec2f a, vec2f b) {
                       auto anga = std::atan2(a.x, a.y);
-                      if (anga > M_PI)        { anga -= 2 * M_PI; }
-                      else if (anga <= -M_PI) { anga += 2 * M_PI; }
+                      if (anga > fEPI_PI)        { anga -= 2.f * fEPI_PI; }
+                      else if (anga <= -fEPI_PI) { anga += 2.f * fEPI_PI; }
                       auto angb = std::atan2(b.x, b.y);
-                      if (angb > M_PI)        { angb -= 2 * M_PI; }
-                      else if (angb <= -M_PI) { angb += 2 * M_PI; }
+                      if (angb > fEPI_PI)        { angb -= 2.f * fEPI_PI ; }
+                      else if (angb <= -fEPI_PI) { angb += 2.f * fEPI_PI; }
 
                       return anga < angb;
                   });

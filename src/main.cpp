@@ -1,6 +1,5 @@
 #include <memory>
 #include <string>
-#include <sys/_types/_size_t.h>
 #include <sys/signal.h>
 #include <vector>
 #include <numeric>
@@ -80,8 +79,8 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
 static void setupImGuiFont() {
     sf::Font consolas;
     if (!consolas.loadFromFile(CONSOLAS_PATH)) {
-        std::cout << "error while lodaing font file!";
-        exit(1);
+        Log(LogLevel::WARNING) << "failed to load font file: " << CONSOLAS_PATH;
+        return;
     }
 
     //for bigger font
@@ -90,8 +89,10 @@ static void setupImGuiFont() {
     io.WantCaptureMouse = true;
     io.WantCaptureMouseUnlessPopupClose = true;
     
-    ImFont* font = io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
-    ImGui::SFML::UpdateFontTexture();
+    io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
+    if(!ImGui::SFML::UpdateFontTexture()) {
+        Log(LogLevel::WARNING) << "failed to update font texture";
+    }
 }
 struct CollisionLogger : public Signal::Observer<ColliderEvent>  {
     bool isLogging = false;
@@ -276,7 +277,7 @@ protected:
                     }break;
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
-                        Polygon t = Polygon::CreateRegular((vec2f)io_manager.getMousePos(), M_PI/side_count, side_count, r * sqrt(2.f));
+                        Polygon t = Polygon::CreateRegular((vec2f)io_manager.getMousePos(), fEPI_PI/side_count, static_cast<size_t>(side_count), r * sqrt(2.f));
                         auto ptr = new DemoObject(t);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(ptr));
                         physics_manager.add(demo_objects.back().get()->getManifold());
@@ -364,7 +365,6 @@ protected:
         }
         ImGui::Begin("Demo window");
         {
-            static int tab_open = 0;
             ImGui::BeginTabBar("Settings");
             {
                 static bool open_global = true;
@@ -372,11 +372,11 @@ protected:
                 {
                     static int framerate_max = 0xffffff;
                     ImGui::SliderInt("change max fps" , &framerate_max, 1, 1000);
-                    this->io_manager.getWindow().setFramerateLimit(framerate_max);
+                    this->io_manager.getWindow().setFramerateLimit(static_cast<unsigned int>(framerate_max));
 
                     static int tsteps = 5;
                     ImGui::SliderInt("change step count" , &tsteps, 1, 50);
-                    physics_manager.steps = tsteps;
+                    physics_manager.steps = static_cast<unsigned int>(tsteps);
                     ImGui::SliderFloat("change gravity" , &opts.gravity, -3000.f, 3000.f, "%.1f");
                     ImGui::SliderFloat("radius" , &opts.default_radius, 5.f, 100.f);
                     ImGui::SliderFloat("radius_deviation" , &opts.radius_dev, 0.f, 1.f);

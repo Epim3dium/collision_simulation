@@ -7,7 +7,6 @@
 #include <cmath>
 #include <cstddef>
 #include <iterator>
-#include <sys/_types/_size_t.h>
 #include <vector>
 #include <set>
 
@@ -74,7 +73,7 @@ public:
         assert(type == eCollisionShape::Circle);
         auto t = _circle.shape;
         t.pos = trans.getPos();
-        return std::move(t);
+        return t;
     }
     Polygon getPolygonShape(Transform& trans) const {
         assert(type == eCollisionShape::Polygon);
@@ -82,14 +81,14 @@ public:
         t.setPos(trans.getPos());
         t.setRot(trans.getRot());
         t.setScale(trans.getScale());
-        return std::move(t);
+        return t;
     }
     Ray getRayShape(Transform& trans) const {
         auto t = _ray.shape;
         t.dir = rotateVec(t.dir, trans.getRot());
         t.pos = trans.getPos();
         t.pos -= t.dir / 2.f;
-        return std::move(t);
+        return t;
     }
 
     virtual AABB getAABB(Transform& trans) { 
