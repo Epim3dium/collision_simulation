@@ -1,5 +1,4 @@
 set(SOURCE_FILES
-    main.cpp
     debug.cpp
     particle.cpp
     particle_manager.cpp
@@ -41,7 +40,7 @@ add_compile_definitions(
 $<$<CONFIG:DEBUG>:EPI_DEBUG>
 )
 
-add_executable(EpiSim
+add_library(EpiSim
     ${SOURCE_FILES} ${HEADER_FILES}
 )
 
