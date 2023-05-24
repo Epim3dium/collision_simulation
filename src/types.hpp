@@ -12,8 +12,6 @@
 
 #include "SFML/Graphics.hpp"
 
-#include "transform.hpp"
-
 namespace epi {
 
 #define EPI_PI 3.14159265358979323846264338327950288   /* pi */

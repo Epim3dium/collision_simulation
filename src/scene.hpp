@@ -2,6 +2,7 @@
 #define SCENE_H
 #include "SFML/System/Clock.hpp"
 #include "SFML/System/Time.hpp"
+#include "camera.hpp"
 #include "types.hpp"
 #include "io_manager.hpp"
 #include "physics_manager.hpp"
@@ -13,7 +14,7 @@
 #include <vector>
 
 namespace epi {
-class Scene : Signal::Observer<IOManagerEvent> {
+class Scene : public Signal::Observer<IOManagerEvent> {
     struct BailException : public std::exception {
         std::string message;
         const char* what() const noexcept override {
@@ -25,6 +26,7 @@ class Scene : Signal::Observer<IOManagerEvent> {
     sf::Clock deltaTimer;
 protected:
     IOManager io_manager;
+    Camera camera;
     bool isActive = true;
 
     inline void bail(std::string msg = "") {
@@ -35,7 +37,7 @@ public:
     virtual void update(sf::Time delT) {}
     virtual int setup() { return 0; }
 
-    Scene(vec2i s = {2000, 2000}) : io_manager(s) {
+    Scene(vec2i s = {2000, 2000}) : io_manager(s), camera(io_manager.getRenderObject(), vec2f(s)) {
         io_manager.addObserver(this);
     }
     ~Scene() {

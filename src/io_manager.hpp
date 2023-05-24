@@ -34,8 +34,8 @@ public:
     const sf::Event& getEvent() const {
         return _current_event;
     }
-    vec2i getMousePos() const {
-        return sf::Mouse::getPosition(_window);
+    vec2f getMouseWorldPos() const {
+        return _window.mapPixelToCoords(sf::Mouse::getPosition(_window));
     }
     void display() {
         //ImGui::SFML::Update();

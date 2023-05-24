@@ -142,11 +142,14 @@ public:
 class Demo : public DefaultScene {
 protected:
     std::vector<std::unique_ptr<DemoObject>> demo_objects;
+    float scroll_delta;
     struct {
         RNG _rng;
         float default_radius = 50.f;
         float radius_dev = 0.1f;
         float gravity = 1000.f;
+
+        
         std::vector<vec2f> poly_creation;
         struct {
             int min = 4;
@@ -163,7 +166,8 @@ protected:
     }opts;
     DemoObject* findHovered() {
         DemoObject* result;
-        auto mouse_pos = (vec2f)io_manager.getMousePos();
+        auto mouse_pos = io_manager.getMouseWorldPos();
+
         for(auto& r : demo_objects) {
             switch(r->collider->type) {
                 case eCollisionShape::Circle: {
@@ -235,13 +239,13 @@ protected:
                     auto hovered = findHovered();
                     if(hovered) {
                         //opts.selection.isHolding = true;
-                        opts.selection.pinch_point = rotateVec((vec2f)io_manager.getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
+                        opts.selection.pinch_point = rotateVec(io_manager.getMouseWorldPos() - hovered->transform->getPos(), -hovered->transform->getRot());
                         opts.selection.res = new RestraintPointTrans( hovered->getManifold(), opts.selection.pinch_point, opts.selection.mouse_trans, vec2f());
                         physics_manager.add(opts.selection.res);
                         opts.selection.object = hovered;
                         opts.selection.isHolding = true;
                     }else {
-                        opts.poly_creation.push_back((vec2f)io_manager.getMousePos());
+                        opts.poly_creation.push_back(io_manager.getMouseWorldPos());
                     }
                 } else if(event.mouseButton.button == sf::Mouse::Right) {
                     auto hovered = findHovered();
@@ -250,7 +254,7 @@ protected:
                         auto a = opts.selection.object;
                         auto ap = opts.selection.pinch_point;
                         auto b = hovered;
-                        auto bp = rotateVec((vec2f)io_manager.getMousePos() - hovered->transform->getPos(), -hovered->transform->getRot());
+                        auto bp = rotateVec(io_manager.getMouseWorldPos() - hovered->transform->getPos(), -hovered->transform->getRot());
                         auto res = new RestraintRigidRigid(b->getManifold(), bp, a->getManifold(), ap);
                         physics_manager.add(res);
                     }
@@ -271,13 +275,13 @@ protected:
                 switch(event.key.code)
                 {
                     case sf::Keyboard::C: {
-                        Circle t((vec2f)io_manager.getMousePos(), r);
+                        Circle t(io_manager.getMouseWorldPos(), r);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
                         physics_manager.add(demo_objects.back().get()->getManifold());
                     }break;
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
-                        Polygon t = Polygon::CreateRegular((vec2f)io_manager.getMousePos(), fEPI_PI/side_count, static_cast<size_t>(side_count), r * sqrt(2.f));
+                        Polygon t = Polygon::CreateRegular(io_manager.getMouseWorldPos(), fEPI_PI/side_count, static_cast<size_t>(side_count), r * sqrt(2.f));
                         auto ptr = new DemoObject(t);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(ptr));
                         physics_manager.add(demo_objects.back().get()->getManifold());
@@ -325,6 +329,9 @@ protected:
                     break;
                 }break;
             }break;
+            case sf::Event::MouseWheelMoved: {
+                scroll_delta = event.mouseWheel.delta;
+            } break;
             default:
             break;
         }
@@ -332,7 +339,13 @@ protected:
     void onNotify(IOManagerEvent msg) override {
         if(msg.event.type == sf::Event::Closed) {
             bail("window closed");
-        }
+        }// catch the resize events
+        else if (msg.event.type == sf::Event::Resized)
+        {
+            // update the view to the new size of the window
+            sf::FloatRect visibleArea(0.f, 0.f, msg.event.size.width, msg.event.size.height);
+            io_manager.getRenderObject().setView(sf::View(visibleArea));
+        } 
         //demo
         if (!ImGui::IsAnyItemHovered()) {
             onEvent(msg.event);
@@ -340,14 +353,37 @@ protected:
     }
 
     void onUpdate(float delT) override {
-        opts.selection.mouse_trans->setPos((vec2f)io_manager.getMousePos());
+        opts.selection.mouse_trans->setPos(io_manager.getMouseWorldPos());
         if(opts.selection.isHolding && opts.selection.object && opts.selection.object->rigidbody->isStatic) {
-            opts.selection.object->transform->setPos((vec2f)io_manager.getMousePos() - rotateVec(opts.selection.pinch_point, opts.selection.object->transform->getRot()));
+            opts.selection.object->transform->setPos(io_manager.getMouseWorldPos() - rotateVec(opts.selection.pinch_point, opts.selection.object->transform->getRot()));
         }
         for(auto& r : demo_objects) {
             if(!r.get()->rigidbody->isStatic)
                 r.get()->rigidbody->force += vec2f(0, opts.gravity) * r->rigidbody->mass;
         }
+        vec2f keyboard_input = {0, 0};
+        if(sf::Keyboard::isKeyPressed(sf::Keyboard::W)) {
+            keyboard_input.y = -1;
+        }if(sf::Keyboard::isKeyPressed(sf::Keyboard::S)) {
+            keyboard_input.y = 1;
+        }if(sf::Keyboard::isKeyPressed(sf::Keyboard::A)) {
+            keyboard_input.x = -1;
+        }if(sf::Keyboard::isKeyPressed(sf::Keyboard::D)) {
+            keyboard_input.x = 1;
+        }
+        float cam_speed = 1000.f;
+        camera.transform.setPos(camera.transform.getPos() + norm(keyboard_input) *  cam_speed * delT * camera.transform.getScale());
+        camera.transform.setScale(camera.transform.getScale() + vec2f(scroll_delta, scroll_delta) * delT);
+        scroll_delta = 0.f;
+
+        for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
+            if(len(it->get()->transform->getPos() - camera.transform.getPos()) > 10000.f) {
+                physics_manager.remove(it->get()->getManifold());
+                demo_objects.erase(it);
+                break;
+            }
+        }
+
         if(opts.selection.object)
             opts.selection.object->collider->addObserver(&opts.selection.logger);
 
@@ -356,13 +392,6 @@ protected:
         if(opts.selection.object)
             opts.selection.object->collider->removeObserver(&opts.selection.logger);
 
-        for(auto it = demo_objects.begin(); it != demo_objects.end(); it++) {
-            if(!isOverlappingPointAABB(it->get()->transform->getPos(), sim_window)) {
-                demo_objects.erase(it);
-                physics_manager.remove(it->get()->getManifold());
-                break;
-            }
-        }
         ImGui::Begin("Demo window");
         {
             ImGui::BeginTabBar("Settings");
