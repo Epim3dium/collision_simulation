@@ -2,7 +2,6 @@
 #include "solver.hpp"
 #include "rigidbody.hpp"
 #include "restraint.hpp"
-#include "quad_tree.hpp"
 
 #include <algorithm>
 #include <functional>

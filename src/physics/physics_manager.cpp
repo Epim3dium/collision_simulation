@@ -6,7 +6,6 @@
 
 #include "restraint.hpp"
 #include "solver.hpp"
-#include "particle_manager.hpp"
 #include "rigidbody.hpp"
 #include "transform.hpp"
 

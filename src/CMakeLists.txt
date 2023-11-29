@@ -1,8 +1,6 @@
 set(SOURCE_FILES
     main.cpp
     debug.cpp
-    particle.cpp
-    particle_manager.cpp
     scene.cpp
     types.cpp
     physics/col_utils.cpp
@@ -13,8 +11,6 @@ set(SOURCE_FILES
 )
 set(HEADER_FILES
     debug.hpp
-    particle.hpp
-    particle_manager.hpp
     io_manager.hpp
     quad_tree.hpp
     scene.hpp
