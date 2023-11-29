@@ -1,5 +1,4 @@
 #include "types.hpp"
-#include "debug.hpp"
 #include "SFML/Graphics/PrimitiveType.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/System/Vector3.hpp"

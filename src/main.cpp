@@ -12,7 +12,6 @@
 #include "SFML/Window/Event.hpp"
 #include "SFML/Window/Keyboard.hpp"
 #include "SFML/Window/Mouse.hpp"
-#include "debug.hpp"
 #include "imgui-SFML.h"
 
 #include "io_manager.hpp"
@@ -37,24 +36,21 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             cs.setPosition(man.transform->getPos() - vec2f(c.radius, c.radius));
             cs.setFillColor(color);
             cs.setOutlineColor(Color::Black);
-            DEBUG_CALL(cs.setOutlineColor(Color::Red));
+            cs.setOutlineColor(Color::Red);
             cs.setOutlineThickness(1.f);
             rw.draw(cs);
 
-            DEBUG_CALL(
             sf::Vertex verts[2];
             verts[0].position = c.pos;
             verts[1].position = c.pos + rotateVec(vec2f(c.radius, 0.f), man.transform->getRot());
             verts[0].color = Color::Blue;
             verts[1].color = Color::Blue;
             rw.draw(verts, 2, sf::Lines);
-            )
         }break;
         case eCollisionShape::Polygon: {
             auto p = col.getPolygonShape(*man.transform);
             drawFill(rw, p, color);
             drawOutline(rw, p, sf::Color::Black);
-            DEBUG_CALL(
             drawOutline(rw, p, sf::Color::Red);
             sf::Vertex verts[2];
             verts[0].position = p.getPos();
@@ -62,7 +58,6 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
             verts[0].color = Color::Blue;
             verts[1].color = Color::Blue;
             rw.draw(verts, 2, sf::Lines);
-            )
         } break;
         case epi::eCollisionShape::Ray: {
             Ray t = col.getRayShape(*man.transform);
@@ -79,7 +74,7 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
 static void setupImGuiFont() {
     sf::Font consolas;
     if (!consolas.loadFromFile(CONSOLAS_PATH)) {
-        Log(LogLevel::WARNING) << "failed to load font file: " << CONSOLAS_PATH;
+        std::cerr << "failed to load font file: " << CONSOLAS_PATH;
         return;
     }
 
@@ -91,7 +86,7 @@ static void setupImGuiFont() {
     
     io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
     if(!ImGui::SFML::UpdateFontTexture()) {
-        Log(LogLevel::WARNING) << "failed to update font texture";
+        std::cerr << "failed to update font texture";
     }
 }
 struct CollisionLogger : public Signal::Observer<ColliderEvent>  {
@@ -99,7 +94,7 @@ struct CollisionLogger : public Signal::Observer<ColliderEvent>  {
     void onNotify(ColliderEvent event) {
         auto cn = event.info.cn;
         if(isLogging){
-            Log(LogLevel::INFO, 0.25f) << &event.me << " collided with " << &event.other <<
+            std::cerr << &event.me << " collided with " << &event.other <<
                 ", with a collision normal of: " << cn.x << " " << cn.y;
         }
     }
@@ -145,7 +140,7 @@ protected:
     float scroll_delta;
     struct {
         RNG _rng;
-        float default_radius = 50.f;
+        float default_radius = 25.f;
         float radius_dev = 0.1f;
         float gravity = 1000.f;
 
@@ -506,11 +501,9 @@ protected:
             if(!rb.isStatic) {
                 color = PastelColor::Aqua;
             }
-            DEBUG_CALL(
             if(r->collider->isSleeping) {
                 color = PastelColor::Yellow;
             }
-            )
             if(r.get() == opts.selection.object) {
                 color = PastelColor::Red;
             }
@@ -526,11 +519,10 @@ protected:
         //DEBUG_CALL(debugDraw(target, _physics_manager->getQuadTree(), Color::Magenta));
     }
 public:
-    Demo(vec2i s = {1500, 1500}) : DefaultScene(s) {}
+    Demo(vec2i s = {800, 800}) : DefaultScene(s) {}
 };
 
 int main() {
-    DEBUG_CALL(Log(LogLevel::DEBUG) << "debug build running");
     Demo demo;
     run(demo);
     return 0;

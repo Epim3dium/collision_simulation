@@ -9,7 +9,6 @@
 #include "SFML/Window.hpp"
 
 #include "types.hpp"
-#include "debug.hpp"
 
 namespace epi {
 /*
@@ -51,7 +50,7 @@ public:
     IOManager(vec2i size, std::string title = "EpiSim") : _window(sf::VideoMode(size.x, size.y), title) 
     { 
         if(!ImGui::SFML::Init(_window)) {
-            Log(LogLevel::ERROR) << "failed to initialize ImGui";
+            std::cerr << "failed to initialize ImGui";
         }
 
     }

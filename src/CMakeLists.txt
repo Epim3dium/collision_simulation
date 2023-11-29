@@ -1,6 +1,5 @@
 set(SOURCE_FILES
     main.cpp
-    debug.cpp
     scene.cpp
     types.cpp
     physics/col_utils.cpp
@@ -10,9 +9,7 @@ set(SOURCE_FILES
     physics/solver.cpp
 )
 set(HEADER_FILES
-    debug.hpp
     io_manager.hpp
-    quad_tree.hpp
     scene.hpp
     types.hpp
     physics/col_utils.hpp
