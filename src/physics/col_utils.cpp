@@ -1,4 +1,5 @@
 #include "col_utils.hpp"
+#include "collider.hpp"
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -18,11 +19,11 @@ bool isOverlappingPointAABB(const vec2f& p, const AABB& r) {
 bool isOverlappingPointCircle(const vec2f& p, const Circle& c) {
     return len(p - c.pos) <= c.radius;
 }
-bool isOverlappingPointPoly(const vec2f& p, const Polygon& poly) {
+bool isOverlappingPointPoly(const vec2f& p, const std::vector<vec2f>& points) {
     int i, j, c = 0;
-    for (i = 0, j = poly.getVertecies().size() - 1; i < poly.getVertecies().size(); j = i++) {
-        auto& vi = poly.getVertecies()[i];
-        auto& vj = poly.getVertecies()[j];
+    for (i = 0, j = points.size() - 1; i < points.size(); j = i++) {
+        auto& vi = points[i];
+        auto& vj = points[j];
         if ( ((vi.y>p.y) != (vj.y>p.y)) &&
              (p.x < (vj.x-vi.x) * (p.y-vi.y) / (vj.y-vi.y) + vi.x) )
                c = !c;
@@ -103,7 +104,7 @@ IntersectionRayRayResult intersectRayRay(vec2f ray0_origin, vec2f ray0_dir,
     float t_hit_near0;
     float t_hit_near1;
 */
-IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const Polygon& poly) {
+IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const ConvexPolygon& poly) {
     for(auto v : poly.getVertecies()) {
         auto intersection = intersectRayRay(ray_origin, ray_dir, poly.getPos(), v - poly.getPos());
         if(intersection.detected) {
@@ -123,7 +124,7 @@ vec2f findClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point) {
         return ray_origin + ray_dir;
     return seg_v_unit * proj + ray_origin;
 }
-vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly) {
+vec2f findClosestPointOnEdge(vec2f point, const ConvexPolygon& poly) {
     vec2f closest(INFINITY, INFINITY);
     float closest_dist = INFINITY;
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
@@ -139,17 +140,42 @@ vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly) {
     }
     return closest;
 }
-#define VERY_SMALL_AMOUNT 0.005f
+#define VERY_SMALL_AMOUNT 0.001f
 bool nearlyEqual(float a, float b) {
     return abs(a - b) < VERY_SMALL_AMOUNT;
 }
 bool nearlyEqual(vec2f a, vec2f b) {
     return nearlyEqual(a.x, b.x) && nearlyEqual(a.y, b.y);
 }
+std::vector<vec2f> findContactPointFast(const ConvexPolygon* p0, const ConvexPolygon* p1, vec2f cn) {
+    float best = 0.f;
+    std::vector<vec2f> contact_point;
+            std::swap(p0, p1);
+    for(int i = 0; i < 2; i++) {
+        if(i == 1) {
+            std::swap(p0, p1);
+            cn *= -1.f;
+        }
+        for(auto p : p0->getVertecies()) {
+            auto d = dot(norm(p - p0->getPos()), cn);
+            if(abs(best - d) < VERY_SMALL_AMOUNT * VERY_SMALL_AMOUNT) {
+                best = d;
+                contact_point.push_back(p);
+            }
+            else if(best > d) {
+                best = d;
+                contact_point = {p};
+            }
+        }
+    }
+    return {contact_point};
 
-std::vector<vec2f> findContactPoints(const Polygon& p0, const Polygon& p1) {
+
+}
+
+std::vector<vec2f> findContactPoints(const ConvexPolygon& p0, const ConvexPolygon& p1) {
     std::vector<vec2f> result;
-    const Polygon* poly[] = {&p0, &p1};
+    const ConvexPolygon* poly[] = {&p0, &p1};
     struct Seg {
         char polyID;
         float x_pos;
@@ -211,9 +237,9 @@ float area(const std::vector<vec2f>& model) {
     }
     return abs(area / 2.0);
 }
-IntersectionPolygonPolygonResult intersectPolygonPolygon(const Polygon &r1, const Polygon &r2) {
-    const Polygon *poly1 = &r1;
-    const Polygon *poly2 = &r2;
+IntersectionPolygonPolygonResult intersectPolygonPolygon(const ConvexPolygon &r1, const ConvexPolygon &r2) {
+    const ConvexPolygon *poly1 = &r1;
+    const ConvexPolygon *poly2 = &r2;
 
     float overlap = INFINITY;
     vec2f cn;
@@ -264,7 +290,7 @@ IntersectionPolygonPolygonResult intersectPolygonPolygon(const Polygon &r1, cons
 
     return {true, cn, overlap};
 }
-IntersectionPolygonCircleResult intersectCirclePolygon(const Circle &c, const Polygon &r) {
+IntersectionPolygonCircleResult intersectCirclePolygon(const Circle &c, const ConvexPolygon &r) {
     vec2f max_reach = c.pos + norm(r.getPos() - c.pos) * c.radius;
 
     vec2f cn;
@@ -277,7 +303,7 @@ IntersectionPolygonCircleResult intersectCirclePolygon(const Circle &c, const Po
         }
         prev = p;
     }
-    bool isOverlappingPoint = isOverlappingPointPoly(c.pos, r);
+    bool isOverlappingPoint = isOverlappingPointPoly(c.pos, r.getVertecies());
     bool isOverlapping = qlen(closest - c.pos) <= c.radius * c.radius || isOverlappingPoint;
     if(!isOverlapping) {
         return {false};
@@ -304,5 +330,32 @@ IntersectionCircleCircleResult intersectCircleCircle(const Circle &c1, const Cir
     float overlap = c1.radius + c2.radius - dist_len;
     vec2f contact_point =  dist / dist_len * c2.radius + c2.pos;
     return {true, dist / dist_len, contact_point, overlap};
+}
+float calculateInertia(const std::vector<vec2f>& model, float mass) {
+    float area = 0;
+    float mmoi = 0;
+
+    int prev = model.size()-1;
+    for (int index = 0; index < model.size(); index++) {
+        auto a = model[prev];
+        auto b = model[index];
+
+        float area_step = abs(cross(a, b))/2.f;
+        float mmoi_step = area_step*(dot(a, a)+dot(b, b)+abs(dot(a, b)))/6.f;
+
+        area += area_step;
+        mmoi += mmoi_step;
+
+        prev = index;
+    }
+    
+    double density = mass/area;
+    mmoi *= density;
+    //mmoi -= mass * dot(center, center);
+    if(std::isnan(mmoi)) {
+        std::cerr << "mmoi calc erreor!";
+        mmoi = 0.f;
+    }
+    return abs(mmoi);
 }
 }

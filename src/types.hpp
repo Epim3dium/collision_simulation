@@ -38,6 +38,9 @@ namespace PastelColor {
     const Color Gray =   Color(0x928374ff);
 };
 
+float angleAround(vec2f a, vec2f pivot, vec2f b);
+//around origin point
+float angle(vec2f, vec2f);
 float len(vec2f);
 vec2f norm(vec2f);
 float qlen(vec2f);
@@ -47,7 +50,7 @@ float cross(vec2f, vec2f);
 vec2f sign(vec2f);
 
 struct Circle;
-class Polygon;
+class ConvexPolygon;
 
 struct AABB {
     vec2f min;
@@ -102,7 +105,7 @@ struct AABB {
     static AABB CreateCenterSize(vec2f center, vec2f size);
     static AABB CreateMinSize(vec2f min, vec2f size);
     static AABB CreateFromCircle(const Circle& c);
-    static AABB CreateFromPolygon(const Polygon& p);
+    static AABB CreateFromPolygon(const ConvexPolygon& p);
 };
 struct Ray {
     vec2f pos;
@@ -115,13 +118,19 @@ struct Ray {
     static Ray CreatePoints(vec2f a, vec2f b);
     static Ray CreatePositionDirection(vec2f p, vec2f d);
 };
+struct Triangle {
+    vec2f a;
+    vec2f b;
+    vec2f c;
+};
+std::vector<Triangle> toTriangles(const std::vector<vec2f>& points);
 struct Circle {
 
     vec2f pos;
     float radius;
     Circle(vec2f p = vec2f(0, 0), float r = 1.f) : pos(p), radius(r) {}
 };
-class Polygon {
+class ConvexPolygon {
     std::vector<vec2f> points;
     std::vector<vec2f> model;
     float rotation;
@@ -173,29 +182,19 @@ public:
     const std::vector<vec2f>& getModelVertecies() const {
         return model;
     }
-    Polygon() {}
-    Polygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : points(model_.size(), vec2f(0, 0)), model(model_), rotation(rot_), pos(pos_) {
-        std::sort(model.begin(), model.end(), [](vec2f a, vec2f b) {
-                      auto anga = std::atan2(a.x, a.y);
-                      if (anga > fEPI_PI)        { anga -= 2.f * fEPI_PI; }
-                      else if (anga <= -fEPI_PI) { anga += 2.f * fEPI_PI; }
-                      auto angb = std::atan2(b.x, b.y);
-                      if (angb > fEPI_PI)        { angb -= 2.f * fEPI_PI ; }
-                      else if (angb <= -fEPI_PI) { angb += 2.f * fEPI_PI; }
-
-                      return anga < angb;
-                  });
+    ConvexPolygon() {}
+    ConvexPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : points(model_.size(), vec2f(0, 0)), model(model_), rotation(rot_), pos(pos_) {
         m_updatePoints();
         m_avgPoints();
     }
 
-    static Polygon CreateRegular(vec2f pos, float rot, size_t count, float dist);
-    static Polygon CreateFromAABB(const AABB& aabb);
-    static Polygon CreateFromPoints(std::vector<vec2f> verticies);
+    static ConvexPolygon CreateRegular(vec2f pos, float rot, size_t count, float dist);
+    static ConvexPolygon CreateFromAABB(const AABB& aabb);
+    static ConvexPolygon CreateFromPoints(std::vector<vec2f> verticies);
 
-    friend void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr);
-    friend void drawFill(sf::RenderTarget& rw, const Polygon& poly, Color clr);
-    friend void drawOutline(sf::RenderTarget& rw, const Polygon& poly, Color clr);
+    friend void draw(sf::RenderWindow& rw, const ConvexPolygon& poly, Color clr);
+    friend void drawFill(sf::RenderTarget& rw, const ConvexPolygon& poly, Color clr);
+    friend void drawOutline(sf::RenderTarget& rw, const ConvexPolygon& poly, Color clr);
 };
 
 

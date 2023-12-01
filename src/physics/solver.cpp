@@ -14,31 +14,7 @@
 
 namespace epi {
 
-CollisionInfo detectOverlap(const Polygon& poly, const Ray& ray) {
-    auto intersection = intersectRayPolygon(ray.pos, ray.dir, poly); 
-    if(intersection.detected) {
-        return {true, intersection.contact_normal, {intersection.contact_point}, intersection.overlap};
-    }
-    return {false};
-}
-CollisionInfo detectOverlap(const Circle& circle, const Ray& ray) {
-    auto closest = findClosestPointOnRay(ray.pos, ray.dir, circle.pos);
-    auto l = len(closest - circle.pos);
-    bool detected = (l < circle.radius);
-    if(detected) {
-        return {true, norm(circle.pos-closest), {closest}, circle.radius - l};
-    }
-    return {false};
-}
-CollisionInfo detectOverlap(const Circle& circle, const Polygon& poly) {
-
-    auto intersection = intersectCirclePolygon(circle, poly);
-    if(intersection.detected) {
-        return {true, intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
-    }
-    return {false};
-}
-CollisionInfo detectOverlap(const Polygon& p1, const Polygon& p2) {
+CollisionInfo detectOverlap(const ConvexPolygon& p1, const ConvexPolygon& p2) {
     auto intersection = intersectPolygonPolygon(p1, p2);
     if(intersection.detected) {
         std::vector<vec2f> cps;
@@ -46,13 +22,6 @@ CollisionInfo detectOverlap(const Polygon& p1, const Polygon& p2) {
         if(cps.size() ==0)
             return {false};
         return {true, intersection.contact_normal, cps , intersection.overlap};
-    }
-    return {false};
-}
-CollisionInfo detectOverlap(const Circle& c1, const Circle& c2) {
-    auto intersection = intersectCircleCircle(c1, c2);
-    if(intersection.detected) {
-        return {true, intersection.contact_normal, {intersection.contact_point} , intersection.overlap};
     }
     return {false};
 }
@@ -163,53 +132,7 @@ vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1
     return friction_impulse;
 }
 CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) {
-    CollisionInfo man;
-    //ik its ugly but switch case will catch new variants if eCollisionShape will be getting more shapes
-    switch(col1->type) {
-        case eCollisionShape::Polygon:
-            switch(col2->type) {
-                case eCollisionShape::Polygon:
-                    man = detectOverlap(col1->getPolygonShape(*trans1), col2->getPolygonShape(*trans2));
-                break;
-                case eCollisionShape::Circle:
-                    man = detectOverlap(col2->getCircleShape(*trans2), col1->getPolygonShape(*trans1));
-                    man.cn *= -1.f;
-                break;
-                case eCollisionShape::Ray:
-                    man = detectOverlap(col1->getPolygonShape(*trans1), col2->getRayShape(*trans2));
-                break;
-            }
-        break;
-        case eCollisionShape::Circle:
-            switch(col2->type) {
-                case eCollisionShape::Polygon:
-                    man = detectOverlap(col1->getCircleShape(*trans1), col2->getPolygonShape(*trans2));
-                break;
-                case eCollisionShape::Circle:
-                    man = detectOverlap(col1->getCircleShape(*trans1), col2->getCircleShape(*trans2));
-                break;
-                case eCollisionShape::Ray:
-                    man = detectOverlap(col1->getCircleShape(*trans1), col2->getRayShape(*trans2));
-                break;
-            }
-        break;
-        case eCollisionShape::Ray: {
-            switch (col2->type) {
-                case eCollisionShape::Polygon:
-                    man = detectOverlap(col2->getPolygonShape(*trans2), col1->getRayShape(*trans1));
-                    man.cn *= -1.f;
-                break;
-                case eCollisionShape::Circle:
-                    man = detectOverlap(col2->getCircleShape(*trans2), col1->getRayShape(*trans1));
-                    man.cn *= -1.f;
-                break;
-                case eCollisionShape::Ray:
-                std::cerr << "ray and ray should not be colliding";
-                break;
-            }
-        }break;
-    }
-    return man;
+    return detectOverlap(col1->getPolygonShape(*trans1), col2->getPolygonShape(*trans2));
 }
 void DefaultSolver::solve(CollisionInfo man, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction)  {
     if(!man.detected) {

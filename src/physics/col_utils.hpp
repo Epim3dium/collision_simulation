@@ -10,9 +10,10 @@ bool AABBcontainsAABB(const AABB& r1, const AABB& r2);
 //finds the closest vector to point that lies on ray
 vec2f findClosestPointOnRay(vec2f ray_origin, vec2f ray_dir, vec2f point);
 //finds the closest vetor to point that lies on one of poly's edges
-vec2f findClosestPointOnEdge(vec2f point, const Polygon& poly);
+vec2f findClosestPointOnEdge(vec2f point, const ConvexPolygon& poly);
+std::vector<vec2f> findContactPointFast(const ConvexPolygon* p0, const ConvexPolygon* p1, vec2f cn);
 //returns all of contact points of 2 polygons
-std::vector<vec2f> findContactPoints(const Polygon& r1, const Polygon& r2);
+std::vector<vec2f> findContactPoints(const ConvexPolygon& r1, const ConvexPolygon& r2);
 //calculates area of polygon whose center should be at {0, 0}
 float area(const std::vector<vec2f>& model);
 //returns true if a and b are nearly equal
@@ -25,9 +26,10 @@ bool isOverlappingPointAABB(const vec2f& p, const AABB& r) ;
 //returns true if p is within circle 
 bool isOverlappingPointCircle(const vec2f& p, const Circle& c);
 //returns true if p is within polygon 
-bool isOverlappingPointPoly(const vec2f& p, const Polygon& poly);
+bool isOverlappingPointPoly(const vec2f& p, const std::vector<vec2f>& poly_points);
 //returns true if aabb and aabb are overlapping
 bool isOverlappingAABBAABB(const AABB& r1, const AABB& r2);
+float calculateInertia(const std::vector<vec2f>& model, float mass);
 
 /**
  * structure containing all info returned by Ray and AABB intersection
@@ -82,7 +84,7 @@ struct IntersectionRayPolygonResult {
     vec2f contact_point;
     float overlap;
 };
-IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const Polygon& poly);
+IntersectionRayPolygonResult intersectRayPolygon(vec2f ray_origin, vec2f ray_dir, const ConvexPolygon& poly);
 /**
  * structure containing all info returned by Polygon intersection
  *
@@ -99,7 +101,7 @@ struct IntersectionPolygonPolygonResult {
  * Calculates all information connected to Polygon and Polygon intersection
  * @return IntersectionPolygonPolygonResult that contains: (in order) [bool]detected, [vec2f]contact_normal, [float]overlap
  */
-IntersectionPolygonPolygonResult intersectPolygonPolygon(const Polygon &r1, const Polygon &r2);
+IntersectionPolygonPolygonResult intersectPolygonPolygon(const ConvexPolygon &r1, const ConvexPolygon &r2);
 
 struct IntersectionPolygonCircleResult {
     bool detected;
@@ -111,7 +113,7 @@ struct IntersectionPolygonCircleResult {
  * Calculates all information connected to Polygon and Polygon intersection
  * @return IntaresctionPolygonCircleResult that contains: (in order) [bool]detected, [vec2f]contact_normal, [vec2f]contact_point, [float]overlap
  */
-IntersectionPolygonCircleResult intersectCirclePolygon(const Circle &c, const Polygon &r);
+IntersectionPolygonCircleResult intersectCirclePolygon(const Circle &c, const ConvexPolygon &r);
 
 typedef IntersectionPolygonCircleResult IntersectionCircleCircleResult;
 /**

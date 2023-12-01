@@ -2,12 +2,19 @@
 #include "SFML/Graphics/PrimitiveType.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
 #include "SFML/System/Vector3.hpp"
+#include "col_utils.hpp"
 
 #include <cmath>
 #include <math.h>
 #include <numeric>
 #include <vector>
 namespace epi {
+float angleAround(vec2f a, vec2f pivot, vec2f b) {
+    return angle(a - pivot, b - pivot);
+}
+float angle(vec2f a, vec2f b) {
+    return atan2(cross(a,b), dot(a,b));
+}
 vec2f norm(vec2f v) {
     float l = len(v);
     if(l == 0.f) {
@@ -33,10 +40,46 @@ float cross(vec2f a, vec2f b) {
 vec2f sign(vec2f x) {
     return { std::copysign(1.f, x.x), std::copysign(1.f, x.y) };
 }
+std::vector<Triangle> toTriangles(const std::vector<vec2f>& points) {
+    std::vector<Triangle> result;
+    std::vector<vec2f> tmp = points;
+    while(result.size() != points.size() - 2) {
+        size_t res_size_last = result.size();
+        for(int i = 0; i < tmp.size(); i++) {
+            auto first = tmp[i];
+            auto mid_index = (i + 1) % tmp.size();
+            auto mid = tmp[mid_index];
+            auto last = tmp[(i + 2) % tmp.size()];
+            float angle = angleAround(first, mid, last);
+            if(angle < 0.f) {
+                continue;
+            }
+            bool containsVertex = false;
+            for(auto p : tmp) {
+                if(p == first || p == mid || p == last)
+                    continue;
+                if(isOverlappingPointPoly(p, {first, mid, last})) {
+                    containsVertex = true;
+                    break;
+                }
+            }
+            if(containsVertex) {
+                continue;
+            }
+            result.push_back({first, mid, last});
+            tmp.erase(tmp.begin() + mid_index);
+            break;
+        }
+        if(res_size_last == result.size()) {
+            break;
+        }
+    }
+    return result;
+}
 AABB AABB::CreateFromCircle(const Circle& c) {
     return AABB::CreateMinMax(c.pos - vec2f(c.radius, c.radius), c.pos + vec2f(c.radius, c.radius));
 }
-AABB AABB::CreateFromPolygon(const Polygon& p) {
+AABB AABB::CreateFromPolygon(const ConvexPolygon& p) {
     vec2f min = {INFINITY, INFINITY};
     vec2f max = {-INFINITY, -INFINITY};
     for(auto& v : p.getVertecies()) {
@@ -77,7 +120,7 @@ Ray Ray::CreatePositionDirection(vec2f p, vec2f d) {
     r.dir = d;
     return r;
 }
-void draw(sf::RenderWindow& rw, const Polygon& poly, Color clr) {
+void draw(sf::RenderWindow& rw, const ConvexPolygon& poly, Color clr) {
     struct VertPair {
         sf::Vertex a;
         sf::Vertex b;
@@ -116,7 +159,7 @@ void drawFill(sf::RenderTarget& rw, const AABB& aabb, Color clr) {
     }
     rw.draw(t, 4, sf::Quads);
 }
-void drawFill(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
+void drawFill(sf::RenderTarget& rw, const ConvexPolygon& poly, Color clr) {
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         sf::Vertex t[3];
         t[0].color = clr;
@@ -132,7 +175,7 @@ void drawFill(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
         rw.draw(t, 3, sf::Triangles);
     }
 }
-void drawOutline(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
+void drawOutline(sf::RenderTarget& rw, const ConvexPolygon& poly, Color clr) {
     for(size_t i = 0; i < poly.getVertecies().size(); i++) {
         sf::Vertex t[2];
         t[0].color = clr;
@@ -146,22 +189,22 @@ void drawOutline(sf::RenderTarget& rw, const Polygon& poly, Color clr) {
         rw.draw(t, 2, sf::Lines);
     }
 }
-Polygon Polygon::CreateRegular(vec2f pos, float rot, size_t count, float dist) {
+ConvexPolygon ConvexPolygon::CreateRegular(vec2f pos, float rot, size_t count, float dist) {
     std::vector<vec2f> model;
     for(size_t i = 0; i < count; i++) {
         model.push_back(vec2f(sinf(3.141f * 2.f * ((float)i / (float)count)), cosf(3.141f * 2.f * ((float)i / (float)count))) * dist );
     }
-    return Polygon(pos, rot, model);
+    return ConvexPolygon(pos, rot, model);
 }
-Polygon Polygon::CreateFromPoints(std::vector<vec2f> verticies) {
+ConvexPolygon ConvexPolygon::CreateFromPoints(std::vector<vec2f> verticies) {
     vec2f avg = std::reduce(verticies.begin(), verticies.end()) / (float)verticies.size();
     for(auto& v : verticies)
         v -= avg;
-    return Polygon(avg, 0.f, verticies);
+    return ConvexPolygon(avg, 0.f, verticies);
 }
-Polygon Polygon::CreateFromAABB(const AABB& aabb) {
+ConvexPolygon ConvexPolygon::CreateFromAABB(const AABB& aabb) {
     std::vector<vec2f> points = {aabb.min, vec2f(aabb.min.x, aabb.max.y), aabb.max, vec2f(aabb.max.x, aabb.min.y)};
-    return Polygon::CreateFromPoints(points);
+    return ConvexPolygon::CreateFromPoints(points);
 }
 
 

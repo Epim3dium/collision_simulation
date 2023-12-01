@@ -5,6 +5,7 @@
 #include <numeric>
 
 #include "SFML/Graphics/CircleShape.hpp"
+#include "SFML/Graphics/ConvexShape.hpp"
 #include "SFML/Graphics/Color.hpp"
 #include "SFML/Graphics/PrimitiveType.hpp"
 #include "SFML/Graphics/RenderTarget.hpp"
@@ -27,47 +28,33 @@
 
 using namespace epi;
 
+
 static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = PastelColor::bg1) {
     auto& col = *man.collider;
-    switch(col.type) {
-        case eCollisionShape::Circle: {
-            auto c = col.getCircleShape(*man.transform);
-            sf::CircleShape cs(c.radius);
-            cs.setPosition(man.transform->getPos() - vec2f(c.radius, c.radius));
-            cs.setFillColor(color);
-            cs.setOutlineColor(Color::Black);
-            cs.setOutlineColor(Color::Red);
-            cs.setOutlineThickness(1.f);
-            rw.draw(cs);
-
-            sf::Vertex verts[2];
-            verts[0].position = c.pos;
-            verts[1].position = c.pos + rotateVec(vec2f(c.radius, 0.f), man.transform->getRot());
-            verts[0].color = Color::Blue;
-            verts[1].color = Color::Blue;
-            rw.draw(verts, 2, sf::Lines);
-        }break;
-        case eCollisionShape::Polygon: {
-            auto p = col.getPolygonShape(*man.transform);
-            drawFill(rw, p, color);
-            drawOutline(rw, p, sf::Color::Black);
-            drawOutline(rw, p, sf::Color::Red);
-            sf::Vertex verts[2];
-            verts[0].position = p.getPos();
-            verts[1].position = p.getVertecies()[0];
-            verts[0].color = Color::Blue;
-            verts[1].color = Color::Blue;
-            rw.draw(verts, 2, sf::Lines);
-        } break;
-        case epi::eCollisionShape::Ray: {
-            Ray t = col.getRayShape(*man.transform);
-            sf::Vertex verts[2] ;
-            verts[0].position = t.pos;
-            verts[1].position = t.pos + t.dir;
-            verts[0].color = sf::Color::White;
-            verts[1].color = sf::Color::White;
-            rw.draw(verts, 2, sf::Lines);
-        } break;
+    auto p = col.getPolygonShape(*man.transform);
+    drawFill(rw, p, color);
+    drawOutline(rw, p, sf::Color::Black);
+    drawOutline(rw, p, sf::Color::Red);
+    {
+        sf::Vertex verts[2];
+        verts[0].position = p.getPos();
+        verts[1].position = p.getVertecies()[0];
+        verts[0].color = Color::Blue;
+        verts[1].color = Color::Blue;
+        rw.draw(verts, 2, sf::Lines);
+    }
+    auto points = man.collider->getPolygonShape(*man.transform).getVertecies();
+    auto triangles = toTriangles(points);
+    for(auto t : triangles) {
+        sf::VertexArray arr;
+        arr.setPrimitiveType(sf::Lines);
+        arr.append({t.a, sf::Color::Magenta});
+        arr.append({t.b, sf::Color::Magenta});
+        arr.append({t.a, sf::Color::Magenta});
+        arr.append({t.c, sf::Color::Magenta});
+        arr.append({t.b, sf::Color::Magenta});
+        arr.append({t.c, sf::Color::Magenta});
+        rw.draw(arr);
     }
 }
 #define CONSOLAS_PATH "assets/Consolas.ttf"
@@ -108,27 +95,12 @@ public:
     RigidManifold getManifold() const {
         return {transform.get(), collider.get(), rigidbody.get(), material.get()};
     }
-    DemoObject(Polygon poly) {
+    DemoObject(ConvexPolygon poly) {
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(poly.getPos());
         transform->setRot(poly.getRot());
         collider = std::unique_ptr<Collider>(new Collider(poly));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
-        material = std::unique_ptr<Material>(new Material());
-    }
-    DemoObject(Circle circ) {
-        transform = std::unique_ptr<Transform>(new Transform());
-        transform->setPos(circ.pos);
-        collider = std::unique_ptr<Collider>(new Collider(circ));
-        rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
-        material = std::unique_ptr<Material>(new Material());
-    }
-    DemoObject(Ray ray) {
-        transform = std::unique_ptr<Transform>(new Transform());
-        transform->setPos(ray.pos + ray.dir / 2.f);
-        collider = std::unique_ptr<Collider>(new Collider(ray));
-        rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
-        rigidbody->isStatic = true;
         material = std::unique_ptr<Material>(new Material());
     }
     ~DemoObject() {
@@ -164,25 +136,9 @@ protected:
         auto mouse_pos = io_manager.getMouseWorldPos();
 
         for(auto& r : demo_objects) {
-            switch(r->collider->type) {
-                case eCollisionShape::Circle: {
-                    Circle shape = r->collider->getCircleShape(*r->transform);
-                    if(isOverlappingPointCircle(mouse_pos, shape)) {
-                        return r.get();
-                    }
-                } break;
-                case eCollisionShape::Polygon: {
-                    Polygon polygon = r->collider->getPolygonShape(*r->transform);
-                    if(isOverlappingPointPoly(mouse_pos, polygon)) {
-                        return r.get();
-                    }
-                }break;
-                case eCollisionShape::Ray: {
-                    Ray t = r->collider->getRayShape(*r->transform);
-                    auto closest = findClosestPointOnRay(t.pos, t.dir, mouse_pos);
-                    if(len(closest - mouse_pos) < 10.f)
-                        return r.get();
-                }break;
+            ConvexPolygon polygon = r->collider->getPolygonShape(*r->transform);
+            if(isOverlappingPointPoly(mouse_pos, polygon.getVertecies())) {
+                return r.get();
             }
         }
         return nullptr;
@@ -196,7 +152,7 @@ protected:
 
         auto aabb_outer = sim_window;
         auto aabb_inner = sim_window;
-        static const float padding = 80.f;
+        static const float padding = 40.f;
         aabb_inner.setSize(aabb_inner.size() - vec2f(padding * 2.f, padding * 2.f));
         aabb_outer.setSize(aabb_outer.size() - vec2f(padding, padding));
         {
@@ -213,7 +169,7 @@ protected:
             model.push_back(vec2f(aabb_inner.bx, aabb_inner.by));\
             model.push_back(vec2f(aabb_outer.bx, aabb_outer.by));\
             model.push_back(vec2f(aabb_outer.ax, aabb_outer.ay));\
-            auto t = Polygon::CreateFromPoints(model);\
+            auto t = ConvexPolygon::CreateFromPoints(model);\
             demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
             demo_objects.back().get()->rigidbody->isStatic = true;\
             demo_objects.back().get()->collider->tag.add("ground");\
@@ -269,14 +225,9 @@ protected:
                 float r = opts.default_radius * opts._rng.Random(1.f, 1.f + opts.radius_dev);
                 switch(event.key.code)
                 {
-                    case sf::Keyboard::C: {
-                        Circle t(io_manager.getMouseWorldPos(), r);
-                        demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
-                        physics_manager.add(demo_objects.back().get()->getManifold());
-                    }break;
                     case sf::Keyboard::V: {
                         auto side_count = opts._rng.Random(opts.poly_sides_count.min, opts.poly_sides_count.max);
-                        Polygon t = Polygon::CreateRegular(io_manager.getMouseWorldPos(), fEPI_PI/side_count, static_cast<size_t>(side_count), r * sqrt(2.f));
+                        ConvexPolygon t = ConvexPolygon::CreateRegular(io_manager.getMouseWorldPos(), fEPI_PI/side_count, static_cast<size_t>(side_count), r * sqrt(2.f));
                         auto ptr = new DemoObject(t);
                         demo_objects.push_back(std::unique_ptr<DemoObject>(ptr));
                         physics_manager.add(demo_objects.back().get()->getManifold());
@@ -284,11 +235,8 @@ protected:
                     case sf::Keyboard::Enter: {
                         if(opts.poly_creation.size() < 2) {
                             break;
-                        }else if(opts.poly_creation.size() == 2) {
-                            Ray t = Ray::CreatePoints(opts.poly_creation.front(), opts.poly_creation.back());
-                            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
-                        } else {
-                            Polygon t = Polygon::CreateFromPoints(opts.poly_creation);
+                        }else {
+                            ConvexPolygon t = ConvexPolygon::CreateFromPoints(opts.poly_creation);
                             demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
                         }
                         physics_manager.add(demo_objects.back().get()->getManifold());
