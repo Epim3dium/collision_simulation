@@ -40,8 +40,12 @@ float cross(vec2f a, vec2f b) {
 vec2f sign(vec2f x) {
     return { std::copysign(1.f, x.x), std::copysign(1.f, x.y) };
 }
-std::vector<Triangle> toTriangles(const std::vector<vec2f>& points) {
-    std::vector<Triangle> result;
+vec2f rotateVec(vec2f vec, float angle) {
+    return vec2f(cos(angle) * vec.x - sin(angle) * vec.y,
+        sin(angle) * vec.x + cos(angle) * vec.y);
+}
+std::vector<ConvexPolygon> toTriangles(const std::vector<vec2f>& points) {
+    std::vector<ConvexPolygon> result;
     std::vector<vec2f> tmp = points;
     while(result.size() != points.size() - 2) {
         size_t res_size_last = result.size();
@@ -66,13 +70,23 @@ std::vector<Triangle> toTriangles(const std::vector<vec2f>& points) {
             if(containsVertex) {
                 continue;
             }
-            result.push_back({first, mid, last});
+            result.push_back(ConvexPolygon::CreateFromPoints({first, mid, last}));
             tmp.erase(tmp.begin() + mid_index);
             break;
         }
         if(res_size_last == result.size()) {
             break;
         }
+    }
+    return result;
+}
+std::vector<ConvexPolygon> toBiggestConvexPolygons(const std::vector<ConvexPolygon>& polygons) {
+    std::vector<bool> wasIncluded(polygons.size(), false);
+    std::vector<ConvexPolygon> result;
+    for(int i = 0; i < polygons.size(); i++) {
+        if(wasIncluded[i])
+            continue;
+        wasIncluded[i] = true;
     }
     return result;
 }

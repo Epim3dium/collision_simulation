@@ -32,48 +32,19 @@ using namespace epi;
 static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = PastelColor::bg1) {
     auto& col = *man.collider;
     auto p = col.getPolygonShape(*man.transform);
-    drawFill(rw, p, color);
-    drawOutline(rw, p, sf::Color::Black);
-    drawOutline(rw, p, sf::Color::Red);
-    {
+    for(auto& poly : p) {
+        drawFill(rw, poly, color);
+        drawOutline(rw, poly, sf::Color::Black);
+        drawOutline(rw, poly, sf::Color::Red);
+        for(auto t : toTriangles(poly.getVertecies())) {
+            drawOutline(rw, t, sf::Color::White);
+        }
         sf::Vertex verts[2];
-        verts[0].position = p.getPos();
-        verts[1].position = p.getVertecies()[0];
+        verts[0].position = poly.getPos();
+        verts[1].position = poly.getVertecies()[0];
         verts[0].color = Color::Blue;
         verts[1].color = Color::Blue;
         rw.draw(verts, 2, sf::Lines);
-    }
-    auto points = man.collider->getPolygonShape(*man.transform).getVertecies();
-    auto triangles = toTriangles(points);
-    for(auto t : triangles) {
-        sf::VertexArray arr;
-        arr.setPrimitiveType(sf::Lines);
-        arr.append({t.a, sf::Color::Magenta});
-        arr.append({t.b, sf::Color::Magenta});
-        arr.append({t.a, sf::Color::Magenta});
-        arr.append({t.c, sf::Color::Magenta});
-        arr.append({t.b, sf::Color::Magenta});
-        arr.append({t.c, sf::Color::Magenta});
-        rw.draw(arr);
-    }
-}
-#define CONSOLAS_PATH "assets/Consolas.ttf"
-static void setupImGuiFont() {
-    sf::Font consolas;
-    if (!consolas.loadFromFile(CONSOLAS_PATH)) {
-        std::cerr << "failed to load font file: " << CONSOLAS_PATH;
-        return;
-    }
-
-    //for bigger font
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->Clear();
-    io.WantCaptureMouse = true;
-    io.WantCaptureMouseUnlessPopupClose = true;
-    
-    io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
-    if(!ImGui::SFML::UpdateFontTexture()) {
-        std::cerr << "failed to update font texture";
     }
 }
 struct CollisionLogger : public Signal::Observer<ColliderEvent>  {
@@ -98,8 +69,9 @@ public:
     DemoObject(ConvexPolygon poly) {
         transform = std::unique_ptr<Transform>(new Transform());
         transform->setPos(poly.getPos());
-        transform->setRot(poly.getRot());
-        collider = std::unique_ptr<Collider>(new Collider(poly));
+        auto triangles = toTriangles(poly.getVertecies());
+        ConcavePolygon concave_poly(triangles);
+        collider = std::unique_ptr<Collider>(new Collider(concave_poly));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
     }
@@ -136,17 +108,18 @@ protected:
         auto mouse_pos = io_manager.getMouseWorldPos();
 
         for(auto& r : demo_objects) {
-            ConvexPolygon polygon = r->collider->getPolygonShape(*r->transform);
-            if(isOverlappingPointPoly(mouse_pos, polygon.getVertecies())) {
-                return r.get();
+            auto polygons = r->collider->getPolygonShape(*r->transform);
+            for(const auto& poly : polygons) {
+                if(isOverlappingPointPoly(mouse_pos, poly.getVertecies())) {
+                    return r.get();
+                }
             }
         }
         return nullptr;
     }
 
     void onSetup() override {
-        setupImGuiFont();
-        physics_manager.steps = 5;
+        physics_manager.steps = 8;
         physics_manager.bounciness_select = PhysicsManager::eSelectMode::Max;
         physics_manager.friction_select = PhysicsManager::eSelectMode::Max;
 
@@ -176,10 +149,10 @@ protected:
             physics_manager.add(demo_objects.back().get()->getManifold());\
         }
 
-        ADD_SIDE(min.x, min.y, min.x, max.y);
-        ADD_SIDE(max.x, min.y, min.x, min.y);
+        // ADD_SIDE(min.x, min.y, min.x, max.y);
+        // ADD_SIDE(max.x, min.y, min.x, min.y);
         ADD_SIDE(max.x, max.y, min.x, max.y);
-        ADD_SIDE(max.x, max.y, max.x, min.y);
+        // ADD_SIDE(max.x, max.y, max.x, min.y);
 
     }
     void onEvent(const sf::Event& event) {

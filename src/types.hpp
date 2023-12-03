@@ -48,6 +48,7 @@ float dot(vec2f, vec2f);
 vec2f proj(vec2f, vec2f);
 float cross(vec2f, vec2f);
 vec2f sign(vec2f);
+vec2f rotateVec(vec2f vec, float angle);
 
 struct Circle;
 class ConvexPolygon;
@@ -97,6 +98,13 @@ struct AABB {
         min = t - s / 2.f;
         max = t + s / 2.f;
     }
+    AABB combine(AABB val) {
+        val.min.x = std::min(min.x, val.min.x);
+        val.min.y = std::min(min.y, val.min.y);
+        val.max.x = std::max(max.x, val.max.x);
+        val.max.y = std::max(max.y, val.max.y);
+        return val;
+    }
     friend void draw(sf::RenderWindow& rw, const AABB& aabb, Color clr);
     friend void drawFill(sf::RenderTarget& rw, const AABB& aabb, Color clr);
     friend void drawOutline(sf::RenderTarget& rw, const AABB& aabb, Color clr);
@@ -123,7 +131,8 @@ struct Triangle {
     vec2f b;
     vec2f c;
 };
-std::vector<Triangle> toTriangles(const std::vector<vec2f>& points);
+std::vector<ConvexPolygon> toTriangles(const std::vector<vec2f>& points);
+std::vector<ConvexPolygon> toBiggestConvexPolygons(const std::vector<ConvexPolygon>& polygons);
 struct Circle {
 
     vec2f pos;
@@ -195,6 +204,57 @@ public:
     friend void draw(sf::RenderWindow& rw, const ConvexPolygon& poly, Color clr);
     friend void drawFill(sf::RenderTarget& rw, const ConvexPolygon& poly, Color clr);
     friend void drawOutline(sf::RenderTarget& rw, const ConvexPolygon& poly, Color clr);
+};
+struct ConcavePolygon {
+private:
+    std::vector<ConvexPolygon> m_model;
+    std::vector<ConvexPolygon> m_polygons;
+    vec2f pos;
+    float rotation = 0.f;
+    void m_updatePolys() {
+        for(int i = 0; i < m_model.size(); i++) {
+            m_polygons[i].setRot(m_model[i].getRot() + rotation);
+        }
+        for(int i = 0; i < m_model.size(); i++) {
+            m_polygons[i].setPos(rotateVec(m_model[i].getPos(), rotation) + pos);
+        }
+    }
+public:
+    float getRot() const {
+        return rotation;
+    }
+    void setRot(float r) {
+        rotation = r;
+        m_updatePolys();
+    }
+    vec2f getPos() const {
+        return pos;
+    }
+    void setPos(vec2f v) {
+        pos = v;
+        m_updatePolys();
+    }
+    const std::vector<ConvexPolygon>& getModelPolygons() const {
+        return m_model;
+    }
+    const std::vector<ConvexPolygon>& getPolygons() const {
+        return m_polygons;
+    }
+    ConcavePolygon(std::vector<ConvexPolygon> polygons) {
+        vec2f avg_pos;
+        for(const auto& p : polygons) {
+            avg_pos += p.getPos();
+        }
+        avg_pos = avg_pos / static_cast<float>(polygons.size());
+        for(auto& p : polygons) {
+            p.setPos(p.getPos() - avg_pos);
+        }
+        pos = avg_pos;
+        m_model = polygons;
+        m_polygons = m_model;
+        m_updatePolys();
+    }
+
 };
 
 

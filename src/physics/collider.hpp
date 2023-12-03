@@ -37,7 +37,7 @@ struct ColliderEvent {
 };
 class Collider : public Signal::Subject<ColliderEvent> {
     float m_inertia_dev_mass = -1.f;
-    std::vector<ConvexPolygon> shape;
+    ConcavePolygon shape;
 public:
     Tag tag;
     Tag mask;
@@ -47,23 +47,26 @@ public:
     float time_immobile = 0.f;
     bool isSleeping = false;
 
-    ConvexPolygon getPolygonShape(Transform& trans) const {
-        auto t = shape.front();
+    std::vector<ConvexPolygon> getPolygonShape(Transform& trans) const {
+        auto t = shape;
         t.setPos(trans.getPos());
         t.setRot(trans.getRot());
-        t.setScale(trans.getScale());
-        return t;
+        return t.getPolygons();
     }
 
     virtual AABB getAABB(Transform& trans) { 
-        auto t = shape.front();
-        t.setPos(trans.getPos());
-        t.setRot(trans.getRot());
-        t.setScale(trans.getScale());
-        return AABB::CreateFromPolygon(t);
+        auto polys = getPolygonShape(trans);
+        AABB result = AABB::CreateFromPolygon(polys.front());
+        for(auto& p : polys)
+            result = result.combine(AABB::CreateFromPolygon(p));
+        return result;
     }
     float calcInertia(float mass) {
-        return calculateInertia(shape.front().getModelVertecies(), mass); 
+        float result = 0.f;
+        for(const auto& poly : shape.getPolygons()) {
+            result += calculateInertia(poly.getModelVertecies(), mass);
+        }
+        return result; 
     }
     float getInertia(float mass) {
         if(m_inertia_dev_mass == -1.f) {
@@ -73,8 +76,7 @@ public:
     }
 
     Collider() = delete;
-    Collider(ConvexPolygon poly) { 
-        shape = {poly};
+    Collider(ConcavePolygon polygons) : shape(polygons)  { 
     }
     virtual ~Collider() {
     }

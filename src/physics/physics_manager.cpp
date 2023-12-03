@@ -96,25 +96,27 @@ void PhysicsManager::processNarrowPhase(const std::vector<PhysicsManager::ColInf
     for(auto ci = col_list.begin(); ci != col_list.end(); ci++) {
         if(!areCompatible(ci->first, ci->second))
             continue;
-        auto col_info = _solver->detect(ci->first.transform, ci->first.collider, ci->second.transform, ci->second.collider);
-        if(!col_info.detected) {
-            continue;
-        }
+        auto col_infos = _solver->detect(ci->first.transform, ci->first.collider, ci->second.transform, ci->second.collider);
+        for(auto col_info : col_infos) {
+            if(!col_info.detected) {
+                continue;
+            }
 
-        ci->first.collider->notify({*ci->first.collider, *ci->second.collider, col_info});
-        col_info.cn *= -1.f;
-        ci->second.collider->notify({*ci->second.collider, *ci->first.collider, col_info});
-        col_info.cn *= -1.f;
+            ci->first.collider->notify({*ci->first.collider, *ci->second.collider, col_info});
+            col_info.cn *= -1.f;
+            ci->second.collider->notify({*ci->second.collider, *ci->first.collider, col_info});
+            col_info.cn *= -1.f;
 
-        if(ci->first.collider->isTrigger || ci->second.collider->isTrigger) {
-            continue;
+            if(ci->first.collider->isTrigger || ci->second.collider->isTrigger) {
+                continue;
+            }
+            float restitution = selectFrom(ci->first.material->restitution, ci->second.material->restitution, bounciness_select);
+            float sfriction = selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
+            float dfriction = selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
+            _solver->solve(col_info, ci->first, ci->second, restitution, sfriction, dfriction);
+            if(!ci->first.rigidbody->isStatic && !ci->second.rigidbody->isStatic)
+                Merge(ci->first.collider, ci->second.collider);
         }
-        float restitution = selectFrom(ci->first.material->restitution, ci->second.material->restitution, bounciness_select);
-        float sfriction = selectFrom(ci->first.material->sfriction, ci->second.material->sfriction, friction_select);
-        float dfriction = selectFrom(ci->first.material->dfriction, ci->second.material->dfriction, friction_select);
-        _solver->solve(col_info, ci->first, ci->second, restitution, sfriction, dfriction);
-        if(!ci->first.rigidbody->isStatic && !ci->second.rigidbody->isStatic)
-            Merge(ci->first.collider, ci->second.collider);
     }
 }
 void PhysicsManager::updateRestraints(float delT) {

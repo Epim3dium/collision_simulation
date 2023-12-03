@@ -35,8 +35,8 @@ void handleOverlap(RigidManifold& m1, RigidManifold& m2, const CollisionInfo& ma
     } else if(m1.rigidbody->isStatic) {
         t2.setPos(t2.getPos() - man.cn * man.overlap);
     } else {
-        t1.setPos(t1.getPos() + man.cn * man.overlap / 2.f);
-        t2.setPos(t2.getPos() - man.cn * man.overlap / 2.f);
+        t1.setPos(t1.getPos() + man.cn * man.overlap * 0.3f);
+        t2.setPos(t2.getPos() - man.cn * man.overlap * 0.3f);
     }
 }
 void DefaultSolver::processReaction(const CollisionInfo& info, const RigidManifold& m1, 
@@ -131,8 +131,14 @@ vec2f DefaultSolver::getFricImpulse(float p1inv_inertia, float mass1, vec2f rad1
     }
     return friction_impulse;
 }
-CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) {
-    return detectOverlap(col1->getPolygonShape(*trans1), col2->getPolygonShape(*trans2));
+std::vector<CollisionInfo> DefaultSolver::detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) {
+    std::vector<CollisionInfo> result;
+    for(const auto& poly1 : col1->getPolygonShape(*trans1)) {
+        for(const auto& poly2 : col2->getPolygonShape(*trans2)) {
+            result.push_back(detectOverlap(poly1, poly2));
+        }
+    }
+    return result; 
 }
 void DefaultSolver::solve(CollisionInfo man, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction)  {
     if(!man.detected) {

@@ -14,7 +14,7 @@ namespace epi {
 
 class SolverInterface {
 public:
-    virtual CollisionInfo detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) = 0;
+    virtual std::vector<CollisionInfo> detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) = 0;
     virtual void solve(CollisionInfo info, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) = 0;
 };
 class DefaultSolver : public SolverInterface {
@@ -28,7 +28,7 @@ private:
            const RigidManifold& rb2,float bounce, float sfric, float dfric);
 public:
 
-    CollisionInfo detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) override;
+    std::vector<CollisionInfo> detect(Transform* trans1, Collider* col1, Transform* trans2, Collider* col2) override;
     void solve(CollisionInfo info, RigidManifold rb1, RigidManifold rb2, float restitution, float sfriction, float dfriction) override;
 };
 
