@@ -34,11 +34,7 @@ static void DrawRigid(RigidManifold man, sf::RenderTarget& rw, Color color = Pas
     auto p = col.getPolygonShape(*man.transform);
     for(auto& poly : p) {
         drawFill(rw, poly, color);
-        drawOutline(rw, poly, sf::Color::Black);
         drawOutline(rw, poly, sf::Color::Red);
-        for(auto t : toTriangles(poly.getVertecies())) {
-            drawOutline(rw, t, sf::Color::White);
-        }
         sf::Vertex verts[2];
         verts[0].position = poly.getPos();
         verts[1].position = poly.getVertecies()[0];
@@ -66,11 +62,20 @@ public:
     RigidManifold getManifold() const {
         return {transform.get(), collider.get(), rigidbody.get(), material.get()};
     }
+    DemoObject(std::vector<vec2f> points) {
+        transform = std::unique_ptr<Transform>(new Transform());
+        auto triangles = toTriangles(points);
+        auto polygons = toBiggestConvexPolygons(triangles);
+        ConcavePolygon concave_poly(polygons);
+        transform->setPos(concave_poly.getPos());
+        collider = std::unique_ptr<Collider>(new Collider(concave_poly));
+        rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
+        material = std::unique_ptr<Material>(new Material());
+    }
     DemoObject(ConvexPolygon poly) {
         transform = std::unique_ptr<Transform>(new Transform());
-        transform->setPos(poly.getPos());
-        auto triangles = toTriangles(poly.getVertecies());
-        ConcavePolygon concave_poly(triangles);
+        ConcavePolygon concave_poly({poly});
+        transform->setPos(concave_poly.getPos());
         collider = std::unique_ptr<Collider>(new Collider(concave_poly));
         rigidbody = std::unique_ptr<Rigidbody>(new Rigidbody());
         material = std::unique_ptr<Material>(new Material());
@@ -142,8 +147,7 @@ protected:
             model.push_back(vec2f(aabb_inner.bx, aabb_inner.by));\
             model.push_back(vec2f(aabb_outer.bx, aabb_outer.by));\
             model.push_back(vec2f(aabb_outer.ax, aabb_outer.ay));\
-            auto t = ConvexPolygon::CreateFromPoints(model);\
-            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));\
+            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(model)));\
             demo_objects.back().get()->rigidbody->isStatic = true;\
             demo_objects.back().get()->collider->tag.add("ground");\
             physics_manager.add(demo_objects.back().get()->getManifold());\
@@ -152,6 +156,7 @@ protected:
         // ADD_SIDE(min.x, min.y, min.x, max.y);
         // ADD_SIDE(max.x, min.y, min.x, min.y);
         ADD_SIDE(max.x, max.y, min.x, max.y);
+        camera.transform.setPos(aabb_outer.size() / 2.f);
         // ADD_SIDE(max.x, max.y, max.x, min.y);
 
     }
@@ -209,8 +214,7 @@ protected:
                         if(opts.poly_creation.size() < 2) {
                             break;
                         }else {
-                            ConvexPolygon t = ConvexPolygon::CreateFromPoints(opts.poly_creation);
-                            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(t)));
+                            demo_objects.push_back(std::unique_ptr<DemoObject>(new DemoObject(opts.poly_creation)));
                         }
                         physics_manager.add(demo_objects.back().get()->getManifold());
                         opts.selection.object = demo_objects.back().get();
@@ -445,6 +449,7 @@ public:
 
 int main() {
     Demo demo;
+    std::cerr << "starting";
     run(demo);
     return 0;
 }

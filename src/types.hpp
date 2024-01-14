@@ -193,6 +193,9 @@ public:
     }
     ConvexPolygon() {}
     ConvexPolygon(vec2f pos_, float rot_, const std::vector<vec2f>& model_) : points(model_.size(), vec2f(0, 0)), model(model_), rotation(rot_), pos(pos_) {
+        std::sort(model.begin(), model.end(), [](vec2f a, vec2f b) {
+            return atan2(a.y, a.x) < atan2(b.y, b.x);
+        });
         m_updatePoints();
         m_avgPoints();
     }

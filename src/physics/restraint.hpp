@@ -13,7 +13,7 @@ struct Restraint {
 };
 
 struct RestraintPointTrans : public Restraint {
-    float damping_coef= 0.03f;
+    float damping_coef= 0.01f;
 
     RigidManifold a;
     Transform* trans;

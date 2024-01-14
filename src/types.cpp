@@ -80,13 +80,73 @@ std::vector<ConvexPolygon> toTriangles(const std::vector<vec2f>& points) {
     }
     return result;
 }
+bool hasSharedEdge(std::vector<vec2f> points0, const std::vector<vec2f>& points1) {
+    std::reverse(points0.begin(), points0.end());
+
+    auto last0 = points0.back();
+    for(auto vert0 : points0) {
+        auto last1 = points1.back();
+        for(auto vert1 : points1) {
+            if(vert0 == vert1 && last0 == last1)
+                return true;
+            last1 = vert1;
+        }
+        last0 = vert0;
+    }
+    return false;
+}
+std::pair<bool, std::vector<vec2f>> tryMergingToConvex(vec2f avg, const std::vector<vec2f>& points0, const std::vector<vec2f>& points1) {
+    std::vector<vec2f> point_merge = points0;
+    point_merge.insert(point_merge.end(), points1.begin(), points1.end());
+    for(auto& p : point_merge)
+        p -= avg;
+    std::sort(point_merge.begin(), point_merge.end(), [](vec2f a, vec2f b) {
+        return atan2(a.y, a.x) > atan2(b.y, b.x);
+    });
+    for(auto& p : point_merge)
+        p += avg;
+    for(int i = 0; i < point_merge.size() - 1; i++) {
+        if(point_merge[i] == point_merge[i + 1]) {
+            point_merge.erase(point_merge.begin() + i);
+            i--;
+        }
+    }
+
+    for(int i = 0; i < point_merge.size(); i++) {
+        auto first = point_merge[i];
+        auto mid = point_merge[(i + 1) % point_merge.size()];
+        auto last = point_merge[(i + 2) % point_merge.size()];
+        if(angleAround(first, mid, last) < 0.f)
+            return {false, {}};
+    }
+    return {true, point_merge};
+}
 std::vector<ConvexPolygon> toBiggestConvexPolygons(const std::vector<ConvexPolygon>& polygons) {
     std::vector<bool> wasIncluded(polygons.size(), false);
     std::vector<ConvexPolygon> result;
     for(int i = 0; i < polygons.size(); i++) {
         if(wasIncluded[i])
             continue;
+        ConvexPolygon current = polygons[i];
         wasIncluded[i] = true;
+        bool wasFound = true;
+        while(wasFound) {
+            wasFound = false;
+            for(int ii = i + 1; ii < polygons.size(); ii++) {
+                if(wasIncluded[ii])
+                    continue;
+                if(!hasSharedEdge(current.getVertecies(), polygons[ii].getVertecies())) 
+                    continue;
+                auto convexMerge = tryMergingToConvex(current.getPos(), current.getVertecies(), polygons[ii].getVertecies());
+                if(!convexMerge.first)
+                    continue;
+                current = ConvexPolygon::CreateFromPoints(convexMerge.second);
+                wasIncluded[ii] = true;
+                wasFound = true;
+                break;
+            }
+        }
+        result.push_back(current);
     }
     return result;
 }
