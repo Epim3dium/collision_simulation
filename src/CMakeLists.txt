@@ -27,8 +27,6 @@ add_compile_options(
   #-Wconversion
   #-Wsign-conversion
   $<$<CONFIG:DEBUG>:-glldb>
-  $<$<CONFIG:DEBUG>:-Og>
-  $<$<CONFIG:RELEASE>:-O3>
 )
 add_compile_definitions(
 $<$<CONFIG:DEBUG>:EPI_DEBUG>
