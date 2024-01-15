@@ -1,6 +1,5 @@
 #include <memory>
 #include <string>
-#include <sys/signal.h>
 #include <vector>
 #include <numeric>
 
