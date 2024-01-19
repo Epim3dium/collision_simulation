@@ -3,6 +3,12 @@
  * calculating  restitution reaction
  * calculating friction forces
  * rotational reaction  
-
-Aka the basics of rigidbody collision simulation
+### Collision detection
+Collision detection can be devided into two steps:
+* Broad-phase - detecting simple Axis aligned bounding boxes to see all possible collisions
+* Narrow-phase - based on results from broad-phase checks if polygons are actually overlapping (using separated axis theorem)
+#### TODO:
+* quad-tree instead of line-swipe
+* diffrenet materials for different parts of polygons
+* data-oriented design tesets
 
