@@ -11,4 +11,8 @@ Collision detection can be devided into two steps:
 * quad-tree instead of line-swipe
 * diffrenet materials for different parts of polygons
 * data-oriented design tesets
-
+#### Controls:
+* LClick anti-clockwise to create polygon
+* Enter to connect dots and create polygon
+* R to reset points
+* LClick+hold to move around polygons
