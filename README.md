@@ -18,4 +18,4 @@ Aka the basics of rigidbody collision simulation
 
 note that yellow color means, that the object is sleeping and won't be considered during collision detection
 
-note: rendering is done using SFML, GUI is done using imgui
+rendering is done using SFML, GUI is done using imgui
