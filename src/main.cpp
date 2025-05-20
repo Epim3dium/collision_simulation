@@ -84,7 +84,7 @@ static void setupImGuiFont() {
     io.WantCaptureMouse = true;
     io.WantCaptureMouseUnlessPopupClose = true;
     
-    io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 24.f);
+    io.Fonts->AddFontFromFileTTF(CONSOLAS_PATH, 12.f);
     if(!ImGui::SFML::UpdateFontTexture()) {
         std::cerr << "failed to update font texture";
     }
