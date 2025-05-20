@@ -1,5 +1,4 @@
 #include "col_utils.hpp"
-#include "debug.hpp"
 #include "types.hpp"
 #include <cmath>
 #include <cstddef>
@@ -195,7 +194,8 @@ std::vector<vec2f> findContactPoints(const Polygon& p0, const Polygon& p1) {
                     return s1.segID == a.segID;
             });
             if(itr == open[a.polyID].end()) {
-                Log(LogLevel::WARNING) << "tried to find a line segment that is not present";
+                //std::cerr << "tried to find a line segment that is not present";
+                continue;
             }
             open[a.polyID].erase(itr);
         }

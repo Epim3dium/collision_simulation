@@ -1,7 +1,6 @@
 #include "solver.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
-#include "debug.hpp"
 #include "rigidbody.hpp"
 
 #include <algorithm>
@@ -205,7 +204,7 @@ CollisionInfo DefaultSolver::detect(Transform* trans1, Collider* col1, Transform
                     man.cn *= -1.f;
                 break;
                 case eCollisionShape::Ray:
-                    Log(LogLevel::ERROR) << "ray and ray should not be colliding";
+                std::cerr << "ray and ray should not be colliding";
                 break;
             }
         }break;

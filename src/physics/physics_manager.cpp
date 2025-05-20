@@ -1,12 +1,10 @@
 #include "physics_manager.hpp"
 #include "col_utils.hpp"
 #include "collider.hpp"
-#include "debug.hpp"
 #include "imgui.h"
 
 #include "restraint.hpp"
 #include "solver.hpp"
-#include "particle_manager.hpp"
 #include "rigidbody.hpp"
 #include "transform.hpp"
 
